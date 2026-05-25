@@ -120,6 +120,7 @@ export default function NutritionApp() {
   const [healthSaved, setHealthSaved] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [history, setHistory] = useState([]);
+  const [selectedGoals, setSelectedGoals] = useState([]);
   const fileRef = useRef();
 
   const foodEntries = entries.filter(e => e.type === "food");
@@ -229,12 +230,14 @@ export default function NutritionApp() {
     try {
       const heightCm = profile.heightUnit === "cm" ? profile.heightCm : Math.round(parseInt(profile.heightFt) * 30.48 + parseInt(profile.heightIn || 0) * 2.54);
       const weightKg = profile.weightUnit === "kg" ? profile.weightKg : Math.round(parseFloat(profile.weightLbs) * 0.453592);
+      const goalsForSubmit = selectedGoals.join(", ");
       const text = await callClaude(
         "You are Nora, a warm nutritionist AI. Return ONLY valid JSON, no preamble.",
-        `Calculate daily nutrition targets. User: ${profile.name}, age ${profile.age}, height ${heightCm}cm, weight ${weightKg}kg, goals: ${goalsStr}, activity: ${profile.activity}, preferences: ${profile.preferences || "none"}. Use Mifflin-St Jeor. Return JSON: { "calories": number, "protein_g": number, "carbs_g": number, "fat_g": number, "fiber_g": number, "water_ml": number, "key_micronutrients": ["string"], "welcome_message": "2-3 warm sentences" }`
+        `Calculate daily nutrition targets. User: ${profile.name}, age ${profile.age}, height ${heightCm}cm, weight ${weightKg}kg, goals: ${goalsForSubmit}, activity: ${profile.activity}, preferences: ${profile.preferences || "none"}. Use Mifflin-St Jeor. Return JSON: { "calories": number, "protein_g": number, "carbs_g": number, "fat_g": number, "fiber_g": number, "water_ml": number, "key_micronutrients": ["string"], "welcome_message": "2-3 warm sentences" }`
       );
       const data = parseJSON(text);
       setTargets(data);
+      setProfile(p => ({ ...p, goals: selectedGoals }));
       setWelcomeMsg(data.welcome_message || `Welcome ${profile.name}! Let's build great habits together.`);
       setPhase("welcome");
     } catch { setError("Something went wrong calculating your targets. Please try again."); }
@@ -331,7 +334,7 @@ export default function NutritionApp() {
   const resetProfile = () => {
     try { localStorage.removeItem("nora_profile"); localStorage.removeItem("nora_targets"); } catch {}
     setProfile({ name:"",age:"",heightCm:"",heightFt:"",heightIn:"",weightKg:"",weightLbs:"",heightUnit:"cm",weightUnit:"kg",goals:[],activity:"",preferences:"" });
-    setTargets(null); setEntries([]); setWaterMl(0); setGreeting(""); setCheckin(""); setStep(0); setPhase("onboarding");
+    setTargets(null); setEntries([]); setWaterMl(0); setGreeting(""); setCheckin(""); setStep(0); setSelectedGoals([]); setPhase("onboarding");
   };
 
   // ─── ONBOARDING ───────────────────────────────────────────────────────────
@@ -340,14 +343,8 @@ export default function NutritionApp() {
     const activities = ["Sedentary","Lightly active","Moderately active","Very active","Athlete"];
     const isStep0Valid = profile.name.trim() && profile.age;
     const isStep1Valid = profile.heightUnit === "cm" ? profile.heightCm : profile.heightFt;
-    const isStep2Valid = (profile.weightUnit === "kg" ? profile.weightKg : profile.weightLbs) && profile.goals.length > 0 && profile.activity;
-    const toggleGoal = (g) => {
-      setProfile(prev => {
-        const current = Array.isArray(prev.goals) ? prev.goals : [];
-        const next = current.includes(g) ? current.filter(x => x !== g) : [...current, g];
-        return { ...prev, goals: next };
-      });
-    };
+    const isStep2Valid = (profile.weightUnit === "kg" ? profile.weightKg : profile.weightLbs) && selectedGoals.length > 0 && profile.activity;
+    const toggleGoal = (g) => setSelectedGoals(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">
@@ -415,7 +412,7 @@ export default function NutritionApp() {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     {goalOptions.map(g => {
-                      const selected = Array.isArray(profile.goals) && profile.goals.includes(g);
+                      const selected = selectedGoals.includes(g);
                       return (
                         <button type="button" key={g} onClick={() => toggleGoal(g)} className={`px-3 py-2 rounded-xl text-sm font-medium border transition-all text-left ${selected ? "bg-green-500 text-white border-green-500" : "bg-green-50 text-gray-600 border-green-100 hover:border-green-300"}`}>
                           {selected && <span className="mr-1">✓</span>}{g}
@@ -423,7 +420,7 @@ export default function NutritionApp() {
                       );
                     })}
                   </div>
-                  {profile.goals.length > 0 && <p className="text-xs text-green-600 mt-1 font-medium">{profile.goals.length} goal{profile.goals.length > 1 ? "s" : ""} selected</p>}
+                  {selectedGoals.length > 0 && <p className="text-xs text-green-600 mt-1 font-medium">{selectedGoals.length} goal{selectedGoals.length > 1 ? "s" : ""} selected</p>}
                 </div>
                 <div>
                   <label className="text-sm text-gray-500 font-medium block mb-2">Activity level</label>
