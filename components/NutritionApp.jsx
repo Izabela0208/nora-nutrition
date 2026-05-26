@@ -773,7 +773,7 @@ export default function NutritionApp() {
                   <h3 style={{ fontSize:14, fontWeight:600, color:C.text, margin:0 }}>Today's progress</h3>
                   <p style={{ fontSize:12, color:C.muted, margin:"3px 0 0" }}>
                     Net {Math.round(netCal)} kcal
-                    {burnedCals>0 ? ` · ${burnedCal} kcal burned` : ""}
+                    {burnedCal>0 ? ` · ${burnedCal} kcal burned` : ""}
                   </p>
                 </div>
                 <span style={{ fontSize:11, color:C.gold, fontWeight:600, backgroundColor:C.goldLight, padding:"4px 10px", borderRadius:20, border:`1px solid ${C.gold}40` }}>
