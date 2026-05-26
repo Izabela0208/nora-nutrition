@@ -1,64 +1,129 @@
 import { useState, useEffect, useRef } from "react";
 
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const C = {
+  bg:         "#F5F0E8",
+  card:       "#FAFAF7",
+  green:      "#2D4A3E",
+  greenDark:  "#1E3429",
+  greenLight: "#EBF0ED",
+  gold:       "#C9A96E",
+  goldLight:  "#FAF3E6",
+  text:       "#1C2B26",
+  muted:      "#7A8C86",
+  border:     "#E2DAD0",
+  sage:       "#7A9E8A",
+  tan:        "#A89070",
+  slate:      "#7A9BAE",
+  track:      "#E8E2D6",
+  error:      "#9E5E52",
+  errorBg:    "#F7EDE9",
+  amber:      "#B8922A",
+  amberBg:    "#FBF3E3",
+};
+
+const card = {
+  backgroundColor: C.card,
+  border: `1px solid ${C.border}`,
+  borderRadius: "16px",
+  boxShadow: "0 2px 12px rgba(28,43,38,0.06)",
+};
+
+const serif = "'Playfair Display', Georgia, 'Times New Roman', serif";
+const sans  = "'system-ui', '-apple-system', sans-serif";
+
+// ── SVG components ────────────────────────────────────────────────────────────
+
 const NoraAvatar = ({ size = 36 }) => (
-  <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="20" cy="20" r="20" fill="#4ade80"/>
-    <circle cx="20" cy="20" r="16" fill="#22c55e"/>
-    <path d="M20 10 C20 10 18 14 16 16 C14 18 10 18 10 20 C10 22 14 22 16 24 C18 26 20 30 20 30 C20 30 22 26 24 24 C26 22 30 22 30 20 C30 18 26 18 24 16 C22 14 20 10 20 10Z" fill="#bbf7d0" opacity="0.9"/>
-    <circle cx="15" cy="20" r="1.5" fill="white" opacity="0.8"/>
-    <circle cx="25" cy="20" r="1.5" fill="white" opacity="0.8"/>
-    <path d="M17 24 Q20 26.5 23 24" stroke="white" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+  <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
+    <circle cx="20" cy="20" r="20" fill={C.green}/>
+    <path d="M20 8 C20 8 14 14 14 20 C14 26 17 30 20 32 C23 30 26 26 26 20 C26 14 20 8 20 8Z" fill={C.gold} opacity="0.85"/>
+    <line x1="20" y1="10" x2="20" y2="31" stroke={C.card} strokeWidth="0.7" strokeLinecap="round" opacity="0.45"/>
+    <path d="M15.5 18 Q20 16 24.5 18" stroke={C.card} strokeWidth="0.7" strokeLinecap="round" fill="none" opacity="0.4"/>
+    <path d="M15 23 Q20 21 25 23" stroke={C.card} strokeWidth="0.7" strokeLinecap="round" fill="none" opacity="0.35"/>
   </svg>
 );
 
-const callClaude = async (systemPrompt, userContent, maxTokens = 1200) => {
-  const response = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-5",
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userContent }],
-    }),
-  });
-  const data = await response.json();
-  return data.content?.map(b => b.text || "").join("") || "";
+const LeafDecor = ({ size = 20 }) => (
+  <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
+    <path d="M10 18C10 18 4 13 4 8a6 6 0 0 1 12 0c0 5-6 10-6 10Z" fill={C.gold} opacity="0.35"/>
+    <line x1="10" y1="18" x2="10" y2="6" stroke={C.gold} strokeWidth="0.8" strokeLinecap="round" opacity="0.3"/>
+    <path d="M7.5 12 Q10 10.5 12.5 12" stroke={C.gold} strokeWidth="0.7" strokeLinecap="round" fill="none" opacity="0.35"/>
+    <path d="M8 9 Q10 7.5 12 9" stroke={C.gold} strokeWidth="0.7" strokeLinecap="round" fill="none" opacity="0.28"/>
+  </svg>
+);
+
+const TabIcon = ({ id, active }) => {
+  const color = active ? C.green : C.muted;
+  const w = 1.4;
+  if (id === "today") return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="10" r="3.5" stroke={color} strokeWidth={w}/>
+      <path d="M10 2v2.5M10 15.5V18M2 10h2.5M15.5 10H18M4.4 4.4l1.77 1.77M12.83 12.83l1.77 1.77M4.4 15.6l1.77-1.77M12.83 7.17l1.77-1.77" stroke={color} strokeWidth={w} strokeLinecap="round"/>
+    </svg>
+  );
+  if (id === "meals") return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M6 2v5a4 4 0 0 0 4 4v7" stroke={color} strokeWidth={w} strokeLinecap="round"/>
+      <path d="M14 2v16" stroke={color} strokeWidth={w} strokeLinecap="round"/>
+      <path d="M11.5 2c0 2-1 4-3.5 4S4.5 4 4.5 2" stroke={color} strokeWidth={w} strokeLinecap="round"/>
+    </svg>
+  );
+  if (id === "supplements") return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M10 18C10 18 3 12 3 7a7 7 0 0 1 14 0c0 5-7 11-7 11Z" stroke={color} strokeWidth={w} strokeLinejoin="round" fill="none"/>
+      <line x1="10" y1="18" x2="10" y2="5" stroke={color} strokeWidth={w * 0.7} strokeLinecap="round" opacity="0.6"/>
+    </svg>
+  );
+  if (id === "progress") return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <polyline points="2,16 6,10 10,13 14,7 18,4" stroke={color} strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+  if (id === "me") return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <circle cx="10" cy="7" r="3" stroke={color} strokeWidth={w}/>
+      <path d="M3.5 18c0-3.59 2.91-6.5 6.5-6.5s6.5 2.91 6.5 6.5" stroke={color} strokeWidth={w} strokeLinecap="round"/>
+    </svg>
+  );
+  return null;
 };
 
-const parseJSON = (text) => {
-  try {
-    return JSON.parse(text.replace(/```json|```/g, "").trim());
-  } catch {
-    const arr = text.match(/\[[\s\S]*\]/);
-    if (arr) { try { return JSON.parse(arr[0]); } catch {} }
-    const obj = text.match(/\{[\s\S]*\}/);
-    if (obj) return JSON.parse(obj[0]);
-    throw new Error("Could not parse JSON");
-  }
-};
+const FlameIcon = ({ size = 14, color = C.muted }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <path d="M8 14C8 14 3 10 3 6.5c0-2.5 2-4.5 4-4.5-1 1.5-0.5 3 1 4 0-1.5 1-3 2-4 0 2.5 2 4 2 6C12 10 10 14 8 14Z" stroke={color} strokeWidth="1.2" strokeLinejoin="round" fill="none"/>
+  </svg>
+);
 
-const ProgressRing = ({ value, max, color, label, unit, size = 90 }) => {
+const DropIcon = ({ size = 14, color = C.slate }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <path d="M8 2 C8 2 3 7 3 10.5a5 5 0 0 0 10 0C13 7 8 2 8 2Z" stroke={color} strokeWidth="1.2" strokeLinejoin="round" fill="none"/>
+  </svg>
+);
+
+// ── Shared UI components ──────────────────────────────────────────────────────
+
+const ProgressRing = ({ value, max, color, label, unit, size = 86 }) => {
   const pct = Math.min((value / max) * 100, 100);
-  const r = (size - 14) / 2;
+  const r = (size - 12) / 2;
   const circ = 2 * Math.PI * r;
   const offset = circ - (pct / 100) * circ;
   return (
     <div className="flex flex-col items-center gap-1">
       <div style={{ width: size, height: size }} className="relative">
         <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#f0fdf4" strokeWidth="8"/>
-          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="8"
+          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={C.track} strokeWidth="7"/>
+          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="7"
             strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
-            style={{ transition: "stroke-dashoffset 0.6s ease" }}/>
+            style={{ transition: "stroke-dashoffset 0.7s cubic-bezier(0.4,0,0.2,1)" }}/>
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-sm font-bold text-gray-800" style={{ lineHeight: 1 }}>{Math.round(value)}</span>
-          <span className="text-xs text-gray-400">{unit}</span>
+          <span className="font-semibold text-gray-800" style={{ fontSize: 13, lineHeight: 1, color: C.text }}>{Math.round(value)}</span>
+          <span style={{ fontSize: 10, color: C.muted, marginTop: 1 }}>{unit}</span>
         </div>
       </div>
-      <span className="text-xs text-gray-500 font-medium">{label}</span>
-      <span className="text-xs text-gray-400">{Math.round(max)} goal</span>
+      <span style={{ fontSize: 11, color: C.muted, fontWeight: 500 }}>{label}</span>
+      <span style={{ fontSize: 10, color: C.track === C.track ? C.muted : C.muted, opacity: 0.7 }}>/{Math.round(max)}</span>
     </div>
   );
 };
@@ -67,95 +132,111 @@ const BarProgress = ({ value, max, color, label, unit }) => {
   const pct = Math.min((value / max) * 100, 100);
   return (
     <div className="flex items-center gap-3">
-      <span className="text-xs text-gray-500 w-12 text-right font-medium">{label}</span>
-      <div className="flex-1 h-2.5 bg-green-50 rounded-full overflow-hidden">
-        <div style={{ width: `${pct}%`, backgroundColor: color, transition: "width 0.5s ease" }} className="h-full rounded-full"/>
+      <span style={{ fontSize: 11, color: C.muted, width: 36, textAlign: "right", fontWeight: 500 }}>{label}</span>
+      <div style={{ flex: 1, height: 5, backgroundColor: C.track, borderRadius: 10, overflow: "hidden" }}>
+        <div style={{ width: `${pct}%`, backgroundColor: color, height: "100%", borderRadius: 10, transition: "width 0.6s cubic-bezier(0.4,0,0.2,1)" }}/>
       </div>
-      <span className="text-xs text-gray-500 w-16">{Math.round(value)}/{max} {unit}</span>
+      <span style={{ fontSize: 11, color: C.muted, width: 72 }}>{Math.round(value)}/{max} {unit}</span>
     </div>
   );
 };
 
-const Skeleton = ({ className }) => <div className={`animate-pulse bg-green-100 rounded-xl ${className}`}/>;
+const Skeleton = ({ className }) => (
+  <div className={`animate-pulse rounded-xl ${className}`} style={{ backgroundColor: C.track }}/>
+);
+
+const Divider = () => (
+  <div style={{ height: 1, backgroundColor: C.border, margin: "4px 0" }}/>
+);
+
+// ── Demo data ─────────────────────────────────────────────────────────────────
 
 const DEMO_ENTRIES = [
-  { id: 1, type: "food", name: "Greek yogurt with berries & honey", time: "8:15 AM", mealGroup: "Morning", calories: 210, protein_g: 18, carbs_g: 28, fat_g: 3, fiber_g: 3, emoji: "🍓", notes: "Parfait-style" },
-  { id: 2, type: "food", name: "Oat milk latte", time: "8:30 AM", mealGroup: "Morning", calories: 110, protein_g: 2, carbs_g: 18, fat_g: 3, fiber_g: 1, emoji: "☕", notes: "" },
-  { id: 3, type: "exercise", name: "Morning run (4km)", time: "7:45 AM", mealGroup: "Morning", calories: -280, protein_g: 0, carbs_g: 0, fat_g: 0, fiber_g: 0, emoji: "🏃", notes: "Easy pace" },
-  { id: 4, type: "food", name: "Grilled chicken salad with avocado", time: "12:30 PM", mealGroup: "Midday", calories: 420, protein_g: 38, carbs_g: 22, fat_g: 18, fiber_g: 7, emoji: "🥗", notes: "Olive oil dressing" },
-  { id: 5, type: "food", name: "Whole grain crackers with hummus", time: "3:30 PM", mealGroup: "Snacks", calories: 180, protein_g: 6, carbs_g: 24, fat_g: 7, fiber_g: 4, emoji: "🧆", notes: "" },
-  { id: 6, type: "food", name: "Salmon with roasted veggies & quinoa", time: "7:00 PM", mealGroup: "Evening", calories: 560, protein_g: 42, carbs_g: 48, fat_g: 16, fiber_g: 8, emoji: "🐟", notes: "Lemon herb" },
+  { id:1, type:"food",     name:"Greek yogurt with berries", time:"8:15 AM", mealGroup:"Morning", calories:210, protein_g:18, carbs_g:28, fat_g:3,  fiber_g:3, emoji:"🍓", notes:"Honey & granola" },
+  { id:2, type:"food",     name:"Oat milk latte",            time:"8:30 AM", mealGroup:"Morning", calories:110, protein_g:2,  carbs_g:18, fat_g:3,  fiber_g:1, emoji:"☕", notes:"" },
+  { id:3, type:"exercise", name:"Morning run · 4 km",        time:"7:45 AM", mealGroup:"Morning", calories:-280, protein_g:0, carbs_g:0,  fat_g:0,  fiber_g:0, emoji:"→",  notes:"Easy pace" },
+  { id:4, type:"food",     name:"Grilled chicken salad",     time:"12:30 PM",mealGroup:"Midday",  calories:420, protein_g:38, carbs_g:22, fat_g:18, fiber_g:7, emoji:"🥗", notes:"Avocado & olive oil" },
+  { id:5, type:"food",     name:"Crackers with hummus",      time:"3:30 PM", mealGroup:"Snacks",  calories:180, protein_g:6,  carbs_g:24, fat_g:7,  fiber_g:4, emoji:"·",  notes:"Whole grain" },
+  { id:6, type:"food",     name:"Salmon with roasted veg",   time:"7:00 PM", mealGroup:"Evening", calories:560, protein_g:42, carbs_g:48, fat_g:16, fiber_g:8, emoji:"🐟", notes:"Quinoa & lemon herb" },
 ];
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function NutritionApp() {
   const [phase, setPhase] = useState("onboarding");
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState({
-    name: "", age: "", heightCm: "", heightFt: "", heightIn: "",
-    weightKg: "", weightLbs: "", heightUnit: "cm", weightUnit: "kg",
-    goals: [], activity: "", preferences: "",
+    name:"", age:"", heightCm:"", heightFt:"", heightIn:"",
+    weightKg:"", weightLbs:"", heightUnit:"cm", weightUnit:"kg",
+    goals:[], activity:"", preferences:"",
   });
-  const [targets, setTargets] = useState(null);
-  const [welcomeMsg, setWelcomeMsg] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState("today");
-  const [entries, setEntries] = useState([]);
-  const [waterMl, setWaterMl] = useState(0);
-  const [logMode, setLogMode] = useState("text");
-  const [logInput, setLogInput] = useState("");
-  const [logLoading, setLogLoading] = useState(false);
-  const [logError, setLogError] = useState("");
-  const [greeting, setGreeting] = useState("");
-  const [greetingLoading, setGreetingLoading] = useState(false);
-  const [checkin, setCheckin] = useState("");
-  const [checkinLoading, setCheckinLoading] = useState(false);
-  const [weeklyReport, setWeeklyReport] = useState(null);
-  const [weeklyLoading, setWeeklyLoading] = useState(false);
-  const [meals, setMeals] = useState([]);
-  const [mealsLoading, setMealsLoading] = useState(false);
-  const [mealsError, setMealsError] = useState("");
-  const [healthData, setHealthData] = useState({ steps: "", sleep: "", sleepQuality: "ok", heartRate: "", workoutDuration: "" });
-  const [healthSaved, setHealthSaved] = useState(false);
-  const [imageFile, setImageFile] = useState(null);
-  const [history, setHistory] = useState([]);
+  const [targets,       setTargets]       = useState(null);
+  const [welcomeMsg,    setWelcomeMsg]    = useState("");
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState("");
+  const [activeTab,     setActiveTab]     = useState("today");
+  const [entries,       setEntries]       = useState([]);
+  const [waterMl,       setWaterMl]       = useState(0);
+  const [logMode,       setLogMode]       = useState("text");
+  const [logInput,      setLogInput]      = useState("");
+  const [logLoading,    setLogLoading]    = useState(false);
+  const [logError,      setLogError]      = useState("");
+  const [greeting,      setGreeting]      = useState("");
+  const [greetingLoad,  setGreetingLoad]  = useState(false);
+  const [checkin,       setCheckin]       = useState("");
+  const [checkinLoad,   setCheckinLoad]   = useState(false);
+  const [weeklyReport,  setWeeklyReport]  = useState(null);
+  const [weeklyLoad,    setWeeklyLoad]    = useState(false);
+  const [meals,         setMeals]         = useState([]);
+  const [mealsLoad,     setMealsLoad]     = useState(false);
+  const [mealsError,    setMealsError]    = useState("");
+  const [healthData,    setHealthData]    = useState({ steps:"", sleep:"", sleepQuality:"ok", heartRate:"", workoutDuration:"" });
+  const [healthSaved,   setHealthSaved]   = useState(false);
+  const [imageFile,     setImageFile]     = useState(null);
+  const [history,       setHistory]       = useState([]);
   const [selectedGoals, setSelectedGoals] = useState([]);
-  // Supplements state
-  const [supplementRecs, setSupplementRecs] = useState([]);
-  const [supplementWarnings, setSupplementWarnings] = useState([]);
-  const [supplementOverall, setSupplementOverall] = useState("");
-  const [supplementsLoading, setSupplementsLoading] = useState(false);
-  const [userSupplements, setUserSupplements] = useState([]);
-  const [newSupName, setNewSupName] = useState("");
-  const [newSupDose, setNewSupDose] = useState("");
-  const fileRef = useRef();
+  // Barcode
+  const [barcodeInput,  setBarcodeInput]  = useState("");
+  const [barcodeResult, setBarcodeResult] = useState(null);
+  const [barcodeLoad,   setBarcodeLoad]   = useState(false);
+  const [barcodeError,  setBarcodeError]  = useState("");
+  // Supplements
+  const [supRecs,       setSupRecs]       = useState([]);
+  const [supWarnings,   setSupWarnings]   = useState([]);
+  const [supOverall,    setSupOverall]    = useState("");
+  const [supLoad,       setSupLoad]       = useState(false);
+  const [userSupps,     setUserSupps]     = useState([]);
+  const [newSupName,    setNewSupName]    = useState("");
+  const [newSupDose,    setNewSupDose]    = useState("");
+  const fileRef        = useRef();
+  const barcodeFileRef = useRef();
 
-  const foodEntries = entries.filter(e => e.type === "food");
-  const exerciseEntries = entries.filter(e => e.type === "exercise");
-  const totalCals = foodEntries.reduce((s, e) => s + (e.calories || 0), 0);
-  const burnedCals = exerciseEntries.reduce((s, e) => s + Math.abs(e.calories || 0), 0);
-  const netCals = totalCals - burnedCals;
-  const totalProtein = foodEntries.reduce((s, e) => s + (e.protein_g || 0), 0);
-  const totalCarbs = foodEntries.reduce((s, e) => s + (e.carbs_g || 0), 0);
-  const totalFat = foodEntries.reduce((s, e) => s + (e.fat_g || 0), 0);
-  const totalFiber = foodEntries.reduce((s, e) => s + (e.fiber_g || 0), 0);
-  const goalsStr = profile.goals.join(", ");
+  // ── Derived values ──────────────────────────────────────────────────────────
+  const foodE   = entries.filter(e => e.type === "food");
+  const exerE   = entries.filter(e => e.type === "exercise");
+  const totalCal  = foodE.reduce((s,e) => s + (e.calories||0), 0);
+  const burnedCal = exerE.reduce((s,e) => s + Math.abs(e.calories||0), 0);
+  const netCal    = totalCal - burnedCal;
+  const totalPro  = foodE.reduce((s,e) => s + (e.protein_g||0), 0);
+  const totalCarb = foodE.reduce((s,e) => s + (e.carbs_g||0), 0);
+  const totalFat  = foodE.reduce((s,e) => s + (e.fat_g||0), 0);
+  const totalFib  = foodE.reduce((s,e) => s + (e.fiber_g||0), 0);
+  const goalsStr  = profile.goals.join(", ");
 
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    const dateStr = d.toISOString().split("T")[0];
+  const last7 = Array.from({ length:7 }, (_,i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6-i));
+    const ds = d.toISOString().split("T")[0];
     const isToday = i === 6;
-    const rec = !isToday ? history.find(r => r.date === dateStr) : null;
+    const rec = !isToday ? history.find(r => r.date === ds) : null;
     return {
       day: ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()],
-      date: dateStr, isToday,
-      calories: isToday ? Math.round(netCals) : (rec?.calories || 0),
-      protein: isToday ? Math.round(totalProtein) : (rec?.protein || 0),
-      carbs: isToday ? Math.round(totalCarbs) : (rec?.carbs || 0),
-      fat: isToday ? Math.round(totalFat) : (rec?.fat || 0),
-      waterMl: isToday ? waterMl : (rec?.waterMl || 0),
-      entryCount: isToday ? entries.length : (rec?.entryCount || 0),
+      date: ds, isToday,
+      calories: isToday ? Math.round(netCal)   : (rec?.calories||0),
+      protein:  isToday ? Math.round(totalPro)  : (rec?.protein||0),
+      carbs:    isToday ? Math.round(totalCarb) : (rec?.carbs||0),
+      fat:      isToday ? Math.round(totalFat)  : (rec?.fat||0),
+      waterMl:  isToday ? waterMl              : (rec?.waterMl||0),
+      entryCount: isToday ? entries.length     : (rec?.entryCount||0),
     };
   });
 
@@ -163,19 +244,18 @@ export default function NutritionApp() {
     let n = 0;
     const today = new Date().toISOString().split("T")[0];
     for (let i = 0; i < 30; i++) {
-      const d = new Date(); d.setDate(d.getDate() - i);
+      const d = new Date(); d.setDate(d.getDate()-i);
       const ds = d.toISOString().split("T")[0];
-      const ec = ds === today ? entries.length : (history.find(r => r.date === ds)?.entryCount || 0);
-      if (ec > 0) n++;
-      else if (ds !== today) break;
+      const ec = ds === today ? entries.length : (history.find(r => r.date===ds)?.entryCount||0);
+      if (ec > 0) n++; else if (ds !== today) break;
     }
     return n;
   })();
 
-  const daysWithData = last7Days.filter(d => d.calories > 0);
-  const avg = (key) => daysWithData.length > 0 ? Math.round(daysWithData.reduce((s, d) => s + (d[key] || 0), 0) / daysWithData.length) : 0;
+  const daysWithData = last7.filter(d => d.calories > 0);
+  const avg = (k) => daysWithData.length > 0 ? Math.round(daysWithData.reduce((s,d)=>s+(d[k]||0),0)/daysWithData.length) : 0;
 
-  // Load from localStorage on mount
+  // ── Effects ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     try {
       const today = new Date().toISOString().split("T")[0];
@@ -185,81 +265,91 @@ export default function NutritionApp() {
       const t = localStorage.getItem("nora_targets");
       if (p && t) {
         const parsed = JSON.parse(p);
-        if (parsed.goal && !parsed.goals) { parsed.goals = [parsed.goal]; delete parsed.goal; }
-        if (!Array.isArray(parsed.goals)) parsed.goals = [];
-        setProfile(parsed);
-        setTargets(JSON.parse(t));
-        setPhase("app");
+        if (parsed.goal && !parsed.goals) { parsed.goals=[parsed.goal]; delete parsed.goal; }
+        if (!Array.isArray(parsed.goals)) parsed.goals=[];
+        setProfile(parsed); setTargets(JSON.parse(t)); setPhase("app");
       }
-      const supData = localStorage.getItem("nora_user_supplements");
-      if (supData) {
-        const parsed = JSON.parse(supData);
-        setUserSupplements(parsed.date === today
-          ? parsed.list
-          : parsed.list.map(s => ({ ...s, taken: false })));
+      const sd = localStorage.getItem("nora_user_supps");
+      if (sd) {
+        const ps = JSON.parse(sd);
+        setUserSupps(ps.date===today ? ps.list : ps.list.map(s=>({...s,taken:false})));
       }
     } catch {}
   }, []);
 
-  // Auto-save today's snapshot
   useEffect(() => {
-    if (phase !== "app" || !targets) return;
+    if (phase!=="app"||!targets) return;
     const today = new Date().toISOString().split("T")[0];
-    const rec = { date: today, calories: Math.round(netCals), protein: Math.round(totalProtein), carbs: Math.round(totalCarbs), fat: Math.round(totalFat), fiber: Math.round(totalFiber), waterMl, entryCount: entries.length };
+    const rec = { date:today, calories:Math.round(netCal), protein:Math.round(totalPro), carbs:Math.round(totalCarb), fat:Math.round(totalFat), fiber:Math.round(totalFib), waterMl, entryCount:entries.length };
     setHistory(prev => {
-      const updated = [...prev.filter(r => r.date !== today), rec];
+      const updated = [...prev.filter(r=>r.date!==today), rec];
       try { localStorage.setItem("nora_history", JSON.stringify(updated.slice(-30))); } catch {}
       return updated;
     });
   }, [entries, waterMl, phase]);
 
-  // Persist profile/targets on entering app
   useEffect(() => {
-    if (phase === "app" && targets) {
-      try {
-        localStorage.setItem("nora_profile", JSON.stringify(profile));
-        localStorage.setItem("nora_targets", JSON.stringify(targets));
-      } catch {}
+    if (phase==="app"&&targets) {
+      try { localStorage.setItem("nora_profile",JSON.stringify(profile)); localStorage.setItem("nora_targets",JSON.stringify(targets)); } catch {}
     }
   }, [phase]);
 
   useEffect(() => {
-    if (phase === "app" && activeTab === "today" && !greeting) fetchGreeting();
+    if (phase==="app"&&activeTab==="today"&&!greeting) fetchGreeting();
   }, [phase, activeTab]);
 
-  const saveUserSupplements = (list) => {
-    const today = new Date().toISOString().split("T")[0];
-    try { localStorage.setItem("nora_user_supplements", JSON.stringify({ list, date: today })); } catch {}
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+  const callClaude = async (sys, user, maxTokens=1200) => {
+    const res = await fetch("/api/chat", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ model:"claude-sonnet-4-5", max_tokens:maxTokens, system:sys, messages:[{role:"user",content:user}] }),
+    });
+    const data = await res.json();
+    return data.content?.map(b=>b.text||"").join("")||"";
   };
 
+  const parseJSON = (text) => {
+    try { return JSON.parse(text.replace(/```json|```/g,"").trim()); } catch {
+      const a=text.match(/\[[\s\S]*\]/); if(a){try{return JSON.parse(a[0]);}catch{}}
+      const o=text.match(/\{[\s\S]*\}/); if(o) return JSON.parse(o[0]);
+      throw new Error("parse error");
+    }
+  };
+
+  const saveUserSupps = (list) => {
+    const today = new Date().toISOString().split("T")[0];
+    try { localStorage.setItem("nora_user_supps", JSON.stringify({list,date:today})); } catch {}
+  };
+
+  // ── Handlers ─────────────────────────────────────────────────────────────────
   const fetchGreeting = async () => {
-    setGreetingLoading(true);
+    setGreetingLoad(true);
     try {
-      const health = healthSaved ? `Health: steps=${healthData.steps}, sleep=${healthData.sleep}h (${healthData.sleepQuality}).` : "";
+      const hr = new Date().getHours();
       const text = await callClaude(
         "You are Nora, a warm nutritionist AI. 1-2 sentences max. Never mention your own name.",
-        `User: ${profile.name}, goals: ${goalsStr}, activity: ${profile.activity}. Time: ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 17 ? "afternoon" : "evening"}. ${health} Short personalised greeting + one actionable tip.`
+        `User: ${profile.name}, goals: ${goalsStr}, activity: ${profile.activity}. Time: ${hr<12?"morning":hr<17?"afternoon":"evening"}. Short personalised greeting + one actionable tip.`
       );
       setGreeting(text);
-    } catch { setGreeting("Ready to make today a great nutrition day? Let's do this! 🌿"); }
-    setGreetingLoading(false);
+    } catch { setGreeting("Ready to make today count? Let's track with intention."); }
+    setGreetingLoad(false);
   };
 
   const handleOnboardingSubmit = async () => {
     setLoading(true); setError("");
     try {
-      const heightCm = profile.heightUnit === "cm" ? profile.heightCm : Math.round(parseInt(profile.heightFt) * 30.48 + parseInt(profile.heightIn || 0) * 2.54);
-      const weightKg = profile.weightUnit === "kg" ? profile.weightKg : Math.round(parseFloat(profile.weightLbs) * 0.453592);
+      const hCm = profile.heightUnit==="cm" ? profile.heightCm : Math.round(parseInt(profile.heightFt)*30.48+parseInt(profile.heightIn||0)*2.54);
+      const wKg = profile.weightUnit==="kg" ? profile.weightKg : Math.round(parseFloat(profile.weightLbs)*0.453592);
       const text = await callClaude(
         "You are Nora, a warm nutritionist AI. Return ONLY valid JSON, no preamble.",
-        `Calculate daily nutrition targets. User: ${profile.name}, age ${profile.age}, height ${heightCm}cm, weight ${weightKg}kg, goals: ${selectedGoals.join(", ")}, activity: ${profile.activity}, preferences: ${profile.preferences || "none"}. Use Mifflin-St Jeor. Return JSON: { "calories": number, "protein_g": number, "carbs_g": number, "fat_g": number, "fiber_g": number, "water_ml": number, "key_micronutrients": ["string"], "welcome_message": "2-3 warm sentences" }`
+        `Calculate daily nutrition targets. User: ${profile.name}, age ${profile.age}, height ${hCm}cm, weight ${wKg}kg, goals: ${selectedGoals.join(", ")}, activity: ${profile.activity}, preferences: ${profile.preferences||"none"}. Use Mifflin-St Jeor. Return JSON: { "calories":number, "protein_g":number, "carbs_g":number, "fat_g":number, "fiber_g":number, "water_ml":number, "key_micronutrients":["string"], "welcome_message":"2-3 warm sentences" }`
       );
       const data = parseJSON(text);
       setTargets(data);
-      setProfile(p => ({ ...p, goals: selectedGoals }));
-      setWelcomeMsg(data.welcome_message || `Welcome ${profile.name}! Let's build great habits together.`);
+      setProfile(p=>({...p,goals:selectedGoals}));
+      setWelcomeMsg(data.welcome_message||`Welcome, ${profile.name}. Let's build great habits together.`);
       setPhase("welcome");
-    } catch { setError("Something went wrong calculating your targets. Please try again."); }
+    } catch { setError("Something went wrong. Please try again."); }
     setLoading(false);
   };
 
@@ -267,13 +357,12 @@ export default function NutritionApp() {
     if (!logInput.trim()) return;
     setLogLoading(true); setLogError("");
     try {
-      const text = await callClaude(
-        "You are a nutrition AI. Return ONLY valid JSON.",
-        `Parse: "${logInput}". Return JSON: { "type": "food"|"exercise", "name": "string", "time": "H:MM AM", "mealGroup": "Morning"|"Midday"|"Snacks"|"Evening", "calories": number (negative for exercise), "protein_g": number, "carbs_g": number, "fat_g": number, "fiber_g": number, "notes": "string", "emoji": "emoji" }`
+      const text = await callClaude("You are a nutrition AI. Return ONLY valid JSON.",
+        `Parse: "${logInput}". Return JSON: { "type":"food"|"exercise", "name":"string", "time":"H:MM AM", "mealGroup":"Morning"|"Midday"|"Snacks"|"Evening", "calories":number (negative for exercise), "protein_g":number, "carbs_g":number, "fat_g":number, "fiber_g":number, "notes":"string", "emoji":"emoji" }`
       );
-      setEntries(prev => [...prev, { ...parseJSON(text), id: Date.now() }]);
+      setEntries(prev=>[...prev,{...parseJSON(text),id:Date.now()}]);
       setLogInput("");
-    } catch { setLogError("Couldn't parse that. Try rephrasing."); }
+    } catch { setLogError("Couldn't parse that. Please rephrase."); }
     setLogLoading(false);
   };
 
@@ -281,375 +370,541 @@ export default function NutritionApp() {
     if (!imageFile) return;
     setLogLoading(true); setLogError("");
     try {
-      const base64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = rej; r.readAsDataURL(imageFile); });
+      const b64 = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(",")[1]); r.onerror=rej; r.readAsDataURL(imageFile); });
       const content = [
-        { type: "image", source: { type: "base64", media_type: imageFile.type, data: base64 } },
-        { type: "text", text: `Identify food. Return ONLY valid JSON: { "type": "food", "name": "string", "time": "${new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}", "mealGroup": "Snacks", "calories": number, "protein_g": number, "carbs_g": number, "fat_g": number, "fiber_g": number, "notes": "string", "emoji": "emoji" }` }
+        { type:"image", source:{type:"base64",media_type:imageFile.type,data:b64} },
+        { type:"text", text:`Identify food. Return ONLY valid JSON: { "type":"food", "name":"string", "time":"${new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}", "mealGroup":"Snacks", "calories":number, "protein_g":number, "carbs_g":number, "fat_g":number, "fiber_g":number, "notes":"string", "emoji":"emoji" }` }
       ];
       const text = await callClaude("You are a nutrition AI with vision. Return ONLY valid JSON.", content);
-      setEntries(prev => [...prev, { ...parseJSON(text), id: Date.now() }]);
+      setEntries(prev=>[...prev,{...parseJSON(text),id:Date.now()}]);
       setImageFile(null);
     } catch { setLogError("Couldn't read the image. Try a clearer photo."); }
     setLogLoading(false);
   };
 
-  const handleCheckin = async () => {
-    setCheckinLoading(true); setCheckin("");
+  const handleBarcodeSearch = async (code) => {
+    if (!code.trim()) return;
+    setBarcodeLoad(true); setBarcodeError(""); setBarcodeResult(null);
     try {
-      const summary = `Cal: ${Math.round(netCals)}/${targets?.calories}, P: ${Math.round(totalProtein)}/${targets?.protein_g}g, C: ${Math.round(totalCarbs)}/${targets?.carbs_g}g, Fat: ${Math.round(totalFat)}/${targets?.fat_g}g, Water: ${waterMl}/${targets?.water_ml}ml. Logged: ${entries.map(e => e.name).join(", ")}.`;
-      const text = await callClaude(
-        "You are Nora. Be encouraging, use we/let's. 2-3 sentences.",
-        `${profile.name}'s day. Goals: ${goalsStr}. ${summary} Warm check-in.`
-      );
+      const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code.trim()}.json`);
+      const data = await res.json();
+      if (data.status===1&&data.product) {
+        const p=data.product, n=p.nutriments||{};
+        setBarcodeResult({
+          name: p.product_name||p.product_name_en||"Unknown product",
+          brand: p.brands||"",
+          calories: Math.round(n["energy-kcal_100g"]||n["energy-kcal"]||0),
+          protein_g: Math.round((n.proteins_100g||0)*10)/10,
+          carbs_g: Math.round((n.carbohydrates_100g||0)*10)/10,
+          fat_g: Math.round((n.fat_100g||0)*10)/10,
+          fiber_g: Math.round((n.fiber_100g||0)*10)/10,
+          serving_size: p.serving_size||"per 100 g",
+          nutriscore: p.nutriscore_grade?.toLowerCase()||null,
+          image: p.image_small_url||null,
+        });
+      } else {
+        setBarcodeError("Product not found. Try entering the barcode manually.");
+      }
+    } catch { setBarcodeError("Network error. Please check your connection."); }
+    setBarcodeLoad(false);
+  };
+
+  const handleBarcodeCapture = async (file) => {
+    if (!file) return;
+    if (!("BarcodeDetector" in window)) {
+      setBarcodeError("Automatic detection is not supported on this browser. Please enter the barcode number manually.");
+      return;
+    }
+    setBarcodeLoad(true); setBarcodeError(""); setBarcodeResult(null);
+    try {
+      const bitmap = await createImageBitmap(file);
+      const detector = new window.BarcodeDetector({ formats:["ean_13","ean_8","upc_a","upc_e","code_128"] });
+      const barcodes = await detector.detect(bitmap);
+      bitmap.close();
+      if (barcodes.length>0) {
+        const code = barcodes[0].rawValue;
+        setBarcodeInput(code);
+        const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`);
+        const data = await res.json();
+        if (data.status===1&&data.product) {
+          const p=data.product, n=p.nutriments||{};
+          setBarcodeResult({ name:p.product_name||"Unknown product", brand:p.brands||"", calories:Math.round(n["energy-kcal_100g"]||0), protein_g:Math.round((n.proteins_100g||0)*10)/10, carbs_g:Math.round((n.carbohydrates_100g||0)*10)/10, fat_g:Math.round((n.fat_100g||0)*10)/10, fiber_g:Math.round((n.fiber_100g||0)*10)/10, serving_size:p.serving_size||"per 100 g", nutriscore:p.nutriscore_grade?.toLowerCase()||null, image:p.image_small_url||null });
+        } else { setBarcodeError("Product not found in database."); }
+      } else { setBarcodeError("No barcode detected. Please enter the number manually."); }
+    } catch { setBarcodeError("Could not process image. Please enter the barcode manually."); }
+    setBarcodeLoad(false);
+  };
+
+  const handleAddBarcode = (r) => {
+    const h = new Date().getHours();
+    setEntries(prev=>[...prev,{
+      id:Date.now(), type:"food",
+      name:r.name+(r.brand?` — ${r.brand}`:""),
+      time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),
+      mealGroup:h<11?"Morning":h<15?"Midday":h<18?"Snacks":"Evening",
+      calories:r.calories, protein_g:r.protein_g, carbs_g:r.carbs_g,
+      fat_g:r.fat_g, fiber_g:r.fiber_g, emoji:"·", notes:"Scanned product",
+    }]);
+    setBarcodeResult(null); setBarcodeInput("");
+  };
+
+  const handleCheckin = async () => {
+    setCheckinLoad(true); setCheckin("");
+    try {
+      const summary = `Cal:${Math.round(netCal)}/${targets?.calories}, P:${Math.round(totalPro)}/${targets?.protein_g}g, C:${Math.round(totalCarb)}/${targets?.carbs_g}g, Fat:${Math.round(totalFat)}/${targets?.fat_g}g, Water:${waterMl}/${targets?.water_ml}ml. Logged:${entries.map(e=>e.name).join(", ")}.`;
+      const text = await callClaude("You are Nora. Be encouraging, use we/let's. 2-3 sentences.",
+        `${profile.name}'s day. Goals:${goalsStr}. ${summary} Warm check-in.`);
       setCheckin(text);
-    } catch { setCheckin("You're doing wonderfully — every mindful choice adds up! 🌿"); }
-    setCheckinLoading(false);
+    } catch { setCheckin("You're doing wonderfully — every mindful choice adds up."); }
+    setCheckinLoad(false);
   };
 
   const handleGetMeals = async () => {
-    setMealsLoading(true); setMealsError("");
+    setMealsLoad(true); setMealsError("");
     try {
-      const remCal = Math.max(0, Math.round((targets?.calories || 0) - netCals));
-      const remProt = Math.max(0, Math.round((targets?.protein_g || 0) - totalProtein));
-      const remCarb = Math.max(0, Math.round((targets?.carbs_g || 0) - totalCarbs));
-      const remFat = Math.max(0, Math.round((targets?.fat_g || 0) - totalFat));
-      const text = await callClaude(
-        "You are Nora. Return ONLY a valid JSON array, no preamble or markdown.",
-        `Suggest 4 meals for ${profile.name}. Goals: ${goalsStr}. Preferences: ${profile.preferences || "none"}. Remaining today: ~${remCal} kcal, protein ${remProt}g, carbs ${remCarb}g, fat ${remFat}g. Return array: [{ "name": "string", "emoji": "single emoji", "prepTime": "X min", "mealGroup": "Morning"|"Midday"|"Snacks"|"Evening", "calories": number, "protein_g": number, "carbs_g": number, "fat_g": number, "fiber_g": number, "ingredients": ["short string"], "tip": "one-line tip" }]`
+      const rCal=Math.max(0,Math.round((targets?.calories||0)-netCal));
+      const rPro=Math.max(0,Math.round((targets?.protein_g||0)-totalPro));
+      const rCarb=Math.max(0,Math.round((targets?.carbs_g||0)-totalCarb));
+      const rFat=Math.max(0,Math.round((targets?.fat_g||0)-totalFat));
+      const text = await callClaude("You are Nora. Return ONLY a valid JSON array, no preamble.",
+        `Suggest 4 meals for ${profile.name}. Goals:${goalsStr}. Preferences:${profile.preferences||"none"}. Remaining:~${rCal}kcal, protein ${rPro}g, carbs ${rCarb}g, fat ${rFat}g. Return:[{"name":"string","emoji":"emoji","prepTime":"X min","mealGroup":"Morning"|"Midday"|"Snacks"|"Evening","calories":number,"protein_g":number,"carbs_g":number,"fat_g":number,"fiber_g":number,"ingredients":["string"],"tip":"string"}]`
       );
-      const data = parseJSON(text);
-      setMeals(Array.isArray(data) ? data : (data.meals || []));
-    } catch { setMealsError("Couldn't get suggestions. Please try again."); }
-    setMealsLoading(false);
+      const data=parseJSON(text);
+      setMeals(Array.isArray(data)?data:(data.meals||[]));
+    } catch { setMealsError("Unable to retrieve suggestions. Please try again."); }
+    setMealsLoad(false);
   };
 
   const addMealToLog = (meal) => {
-    const h = new Date().getHours();
-    const mealGroup = meal.mealGroup || (h < 11 ? "Morning" : h < 15 ? "Midday" : h < 18 ? "Snacks" : "Evening");
-    setEntries(prev => [...prev, { id: Date.now(), type: "food", name: meal.name, time: new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}), mealGroup, calories: meal.calories, protein_g: meal.protein_g, carbs_g: meal.carbs_g, fat_g: meal.fat_g, fiber_g: meal.fiber_g || 0, emoji: meal.emoji, notes: "From Nora's suggestions" }]);
+    const h=new Date().getHours();
+    const mg=meal.mealGroup||(h<11?"Morning":h<15?"Midday":h<18?"Snacks":"Evening");
+    setEntries(prev=>[...prev,{id:Date.now(),type:"food",name:meal.name,time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),mealGroup:mg,calories:meal.calories,protein_g:meal.protein_g,carbs_g:meal.carbs_g,fat_g:meal.fat_g,fiber_g:meal.fiber_g||0,emoji:meal.emoji,notes:"From Nora's suggestions"}]);
     setActiveTab("today");
   };
 
-  const handleGetSupplementRecs = async () => {
-    setSupplementsLoading(true);
-    setSupplementRecs([]); setSupplementWarnings([]); setSupplementOverall("");
+  const handleGetSupRecs = async () => {
+    setSupLoad(true); setSupRecs([]); setSupWarnings([]); setSupOverall("");
     try {
-      const foodLog = foodEntries.map(e => e.name).join(", ") || "nothing logged yet";
-      const macros = `calories: ${Math.round(netCals)} of ${targets?.calories} target, protein: ${Math.round(totalProtein)}g of ${targets?.protein_g}g, carbs: ${Math.round(totalCarbs)}g, fat: ${Math.round(totalFat)}g, fiber: ${Math.round(totalFiber)}g of ${targets?.fiber_g}g`;
-      const currentSupps = userSupplements.length > 0 ? userSupplements.map(s => `${s.name}${s.dose ? ` ${s.dose}` : ""}`).join(", ") : "none";
-      const text = await callClaude(
-        "You are Nora, a nutrition AI. Return ONLY valid JSON, no preamble.",
-        `Analyse today's nutrition for ${profile.name}. Goals: ${goalsStr}. Preferences: ${profile.preferences || "none"}. Foods eaten today: ${foodLog}. Macros: ${macros}. Currently taking: ${currentSupps}. Based on nutritional gaps (low fiber, low iron, low omega-3, etc.), recommend supplements. Also warn about any conflicts (e.g. calcium blocks iron absorption, vitamin K affects blood thinners, etc.). Return JSON: { "recommendations": [{ "name": "string", "dose": "string", "reason": "string", "priority": "high"|"medium"|"low" }], "warnings": ["concise conflict/overlap warning"], "overall": "1-2 warm sentences summarising their nutritional gaps today" }`,
+      const log=foodE.map(e=>e.name).join(", ")||"nothing logged yet";
+      const macros=`calories:${Math.round(netCal)}/${targets?.calories}, protein:${Math.round(totalPro)}g/${targets?.protein_g}g, fiber:${Math.round(totalFib)}g/${targets?.fiber_g}g`;
+      const curr=userSupps.length>0?userSupps.map(s=>`${s.name}${s.dose?` ${s.dose}`:""}`).join(", "):"none";
+      const text = await callClaude("You are Nora, a nutrition AI. Return ONLY valid JSON, no preamble.",
+        `Analyse today's nutrition for ${profile.name}. Goals:${goalsStr}. Preferences:${profile.preferences||"none"}. Foods today:${log}. Macros:${macros}. Currently taking:${curr}. Identify nutritional gaps and recommend supplements. Warn about any absorption conflicts or interactions. Return JSON: { "recommendations":[{"name":"string","dose":"string","reason":"string","priority":"high"|"medium"|"low"}], "warnings":["string"], "overall":"1-2 warm sentences on their nutritional gaps today" }`,
         1500
       );
-      const data = parseJSON(text);
-      setSupplementRecs(data.recommendations || []);
-      setSupplementWarnings(data.warnings || []);
-      setSupplementOverall(data.overall || "");
-    } catch { setSupplementOverall("Unable to analyse right now. Please try again."); }
-    setSupplementsLoading(false);
+      const data=parseJSON(text);
+      setSupRecs(data.recommendations||[]);
+      setSupWarnings(data.warnings||[]);
+      setSupOverall(data.overall||"");
+    } catch { setSupOverall("Unable to analyse at this time. Please try again."); }
+    setSupLoad(false);
   };
 
-  const addUserSupplement = () => {
+  const addRecommendedSupp = (rec) => {
+    if (userSupps.find(s=>s.name.toLowerCase()===rec.name.toLowerCase())) return;
+    const updated=[...userSupps,{id:Date.now(),name:rec.name,dose:rec.dose||"",taken:false}];
+    setUserSupps(updated); saveUserSupps(updated);
+  };
+
+  const addUserSupp = () => {
     if (!newSupName.trim()) return;
-    const s = { id: Date.now(), name: newSupName.trim(), dose: newSupDose.trim(), taken: false };
-    const updated = [...userSupplements, s];
-    setUserSupplements(updated);
-    saveUserSupplements(updated);
+    const updated=[...userSupps,{id:Date.now(),name:newSupName.trim(),dose:newSupDose.trim(),taken:false}];
+    setUserSupps(updated); saveUserSupps(updated);
     setNewSupName(""); setNewSupDose("");
   };
 
-  const addRecommendedSupplement = (rec) => {
-    if (userSupplements.find(s => s.name.toLowerCase() === rec.name.toLowerCase())) return;
-    const s = { id: Date.now(), name: rec.name, dose: rec.dose || "", taken: false };
-    const updated = [...userSupplements, s];
-    setUserSupplements(updated);
-    saveUserSupplements(updated);
+  const toggleSupp = (id) => {
+    const updated=userSupps.map(s=>s.id===id?{...s,taken:!s.taken}:s);
+    setUserSupps(updated); saveUserSupps(updated);
   };
 
-  const toggleSupplementTaken = (id) => {
-    const updated = userSupplements.map(s => s.id === id ? { ...s, taken: !s.taken } : s);
-    setUserSupplements(updated);
-    saveUserSupplements(updated);
-  };
-
-  const removeUserSupplement = (id) => {
-    const updated = userSupplements.filter(s => s.id !== id);
-    setUserSupplements(updated);
-    saveUserSupplements(updated);
+  const removeSupp = (id) => {
+    const updated=userSupps.filter(s=>s.id!==id);
+    setUserSupps(updated); saveUserSupps(updated);
   };
 
   const handleWeeklyReport = async () => {
-    setWeeklyLoading(true); setWeeklyReport(null);
+    setWeeklyLoad(true); setWeeklyReport(null);
     try {
-      const weekSummary = last7Days.filter(d => d.calories > 0).map(d => `${d.day}: ${d.calories} kcal`).join(", ");
-      const text = await callClaude(
-        "You are Nora. Return ONLY valid JSON.",
-        `Weekly report for ${profile.name}, goals: ${goalsStr}. Target: ${targets?.calories} kcal/day. Data: ${weekSummary || "just started"}. Foods today: ${foodEntries.map(e=>e.name).join(", ") || "various"}. Return JSON: { "headline": "uplifting sentence", "wins": ["w1","w2","w3"], "suggestions": ["s1","s2"], "fun_fact": "nutrition fact" }`
+      const ws=last7.filter(d=>d.calories>0).map(d=>`${d.day}:${d.calories}kcal`).join(", ");
+      const text = await callClaude("You are Nora. Return ONLY valid JSON.",
+        `Weekly report for ${profile.name}, goals:${goalsStr}. Target:${targets?.calories}kcal/day. Data:${ws||"just started"}. Today's foods:${foodE.map(e=>e.name).join(", ")||"various"}. Return JSON:{"headline":"uplifting sentence","wins":["w1","w2","w3"],"suggestions":["s1","s2"],"fun_fact":"nutrition fact"}`
       );
       setWeeklyReport(parseJSON(text));
     } catch {
-      setWeeklyReport({ headline: "You showed up this week — that's what matters!", wins: ["Tracked consistently", "Balanced your macros", "Stayed hydrated"], suggestions: ["Try adding more leafy greens", "Consider a mid-morning snack"], fun_fact: "Salmon is one of the best sources of omega-3 fatty acids!" });
+      setWeeklyReport({headline:"You showed up this week — that's what matters.",wins:["Tracked consistently","Balanced your macros","Stayed hydrated"],suggestions:["Try adding more leafy greens","Consider a mid-morning snack"],fun_fact:"Salmon is one of the finest sources of omega-3 fatty acids."});
     }
-    setWeeklyLoading(false);
+    setWeeklyLoad(false);
   };
-
-  const mealGroups = ["Morning", "Midday", "Snacks", "Evening"];
-  const groupedEntries = mealGroups.reduce((acc, g) => { acc[g] = entries.filter(e => e.mealGroup === g); return acc; }, {});
 
   const resetProfile = () => {
     try { localStorage.removeItem("nora_profile"); localStorage.removeItem("nora_targets"); } catch {}
-    setProfile({ name:"",age:"",heightCm:"",heightFt:"",heightIn:"",weightKg:"",weightLbs:"",heightUnit:"cm",weightUnit:"kg",goals:[],activity:"",preferences:"" });
+    setProfile({name:"",age:"",heightCm:"",heightFt:"",heightIn:"",weightKg:"",weightLbs:"",heightUnit:"cm",weightUnit:"kg",goals:[],activity:"",preferences:""});
     setTargets(null); setEntries([]); setWaterMl(0); setGreeting(""); setCheckin(""); setStep(0); setSelectedGoals([]); setPhase("onboarding");
   };
 
-  // ─── ONBOARDING ───────────────────────────────────────────────────────────
+  const mealGroups = ["Morning","Midday","Snacks","Evening"];
+  const grouped    = mealGroups.reduce((a,g)=>{a[g]=entries.filter(e=>e.mealGroup===g);return a;},{});
+
+  // ── Shared input style ───────────────────────────────────────────────────────
+  const inp = {
+    width:"100%", backgroundColor:C.card, border:`1px solid ${C.border}`,
+    borderRadius:10, padding:"11px 14px", fontSize:14, color:C.text,
+    fontFamily:sans, transition:"border-color 0.15s ease",
+  };
+
+  // ── ONBOARDING ───────────────────────────────────────────────────────────────
   if (phase === "onboarding") {
     const goalOptions = ["Lose weight","Build muscle","Maintain weight","Improve energy","Just be healthier","Be aware of my intakes"];
-    const activities = ["Sedentary","Lightly active","Moderately active","Very active","Athlete"];
+    const activities  = ["Sedentary","Lightly active","Moderately active","Very active","Athlete"];
     const isStep0Valid = profile.name.trim() && profile.age;
-    const isStep1Valid = profile.heightUnit === "cm" ? profile.heightCm : profile.heightFt;
-    const isStep2Valid = (profile.weightUnit === "kg" ? profile.weightKg : profile.weightLbs) && selectedGoals.length > 0 && profile.activity;
-    const toggleGoal = (g) => setSelectedGoals(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
+    const isStep1Valid = profile.heightUnit==="cm" ? profile.heightCm : profile.heightFt;
+    const isStep2Valid = (profile.weightUnit==="kg"?profile.weightKg:profile.weightLbs) && selectedGoals.length>0 && profile.activity;
+    const toggleGoal   = (g) => setSelectedGoals(prev => prev.includes(g)?prev.filter(x=>x!==g):[...prev,g]);
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="flex flex-col items-center mb-8">
-            <NoraAvatar size={56}/>
-            <h1 className="text-3xl font-bold text-gray-800 mt-3" style={{fontFamily:"'Georgia',serif"}}>Nora</h1>
-            <p className="text-gray-500 text-sm mt-1">Your personal nutrition companion</p>
+      <div style={{ minHeight:"100vh", backgroundColor:C.bg, display:"flex", alignItems:"center", justifyContent:"center", padding:20, fontFamily:sans }}>
+        <div style={{ width:"100%", maxWidth:400 }}>
+          {/* Logo */}
+          <div style={{ textAlign:"center", marginBottom:40 }}>
+            <NoraAvatar size={52}/>
+            <h1 style={{ fontFamily:serif, fontSize:28, color:C.green, margin:"10px 0 4px", fontWeight:600 }}>Nora</h1>
+            <p style={{ color:C.muted, fontSize:13, letterSpacing:"0.04em" }}>Your personal nutrition companion</p>
           </div>
-          <div className="flex justify-center gap-2 mb-6">
-            {[0,1,2].map(i => <div key={i} className={`h-2 rounded-full transition-all ${i <= step ? "bg-green-500 w-6" : "bg-green-200 w-2"}`}/>)}
+
+          {/* Step indicators */}
+          <div style={{ display:"flex", justifyContent:"center", gap:8, marginBottom:28 }}>
+            {[0,1,2].map(i => (
+              <div key={i} style={{ height:2, width: i===step?28:12, borderRadius:2, backgroundColor: i<=step?C.gold:C.border, transition:"all 0.3s ease" }}/>
+            ))}
           </div>
-          <div className="bg-white rounded-3xl shadow-xl p-6 border border-green-100">
+
+          <div style={{ ...card, padding:28 }}>
             {step === 0 && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold text-gray-800">Let's get to know you 👋</h2>
+              <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
                 <div>
-                  <label className="text-sm text-gray-500 font-medium">Your name</label>
-                  <input className="w-full mt-1 px-4 py-3 rounded-xl border border-green-100 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-300 text-gray-800" placeholder="E.g. Alex" value={profile.name} onChange={e => setProfile(p => ({...p,name:e.target.value}))}/>
+                  <p style={{ fontFamily:serif, fontSize:18, color:C.green, fontWeight:500, marginBottom:16 }}>Let's get acquainted</p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-500 font-medium">Age</label>
-                  <input type="number" className="w-full mt-1 px-4 py-3 rounded-xl border border-green-100 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-300 text-gray-800" placeholder="E.g. 28" value={profile.age} onChange={e => setProfile(p => ({...p,age:e.target.value}))}/>
+                  <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", display:"block", marginBottom:6 }}>Your name</label>
+                  <input className="focus-gold" style={inp} placeholder="e.g. Alexandra" value={profile.name} onChange={e=>setProfile(p=>({...p,name:e.target.value}))}/>
                 </div>
-                <button disabled={!isStep0Valid} onClick={() => setStep(1)} className="w-full py-3 bg-green-500 hover:bg-green-600 disabled:opacity-40 text-white font-semibold rounded-xl transition-all">Continue →</button>
+                <div>
+                  <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", display:"block", marginBottom:6 }}>Age</label>
+                  <input className="focus-gold" type="number" style={inp} placeholder="e.g. 28" value={profile.age} onChange={e=>setProfile(p=>({...p,age:e.target.value}))}/>
+                </div>
+                <button disabled={!isStep0Valid} onClick={()=>setStep(1)} style={{ backgroundColor:isStep0Valid?C.green:"#C8D5D1", color:C.bg, border:"none", borderRadius:10, padding:"13px 20px", fontFamily:sans, fontSize:14, fontWeight:500, cursor:isStep0Valid?"pointer":"not-allowed", letterSpacing:"0.03em", transition:"background-color 0.15s ease" }}>
+                  Continue
+                </button>
               </div>
             )}
+
             {step === 1 && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold text-gray-800">Your measurements</h2>
+              <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
+                <p style={{ fontFamily:serif, fontSize:18, color:C.green, fontWeight:500 }}>Your measurements</p>
                 <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="text-sm text-gray-500 font-medium">Height</label>
-                    <div className="flex gap-1 bg-green-50 rounded-lg p-1">
-                      {["cm","ft"].map(u => <button key={u} onClick={() => setProfile(p => ({...p,heightUnit:u}))} className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${profile.heightUnit===u?"bg-white shadow text-green-700":"text-gray-400"}`}>{u}</button>)}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                    <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase" }}>Height</label>
+                    <div style={{ display:"flex", gap:2, backgroundColor:C.greenLight, borderRadius:8, padding:3 }}>
+                      {["cm","ft"].map(u=>(
+                        <button key={u} onClick={()=>setProfile(p=>({...p,heightUnit:u}))} style={{ padding:"4px 12px", borderRadius:6, border:"none", fontSize:12, fontWeight:500, cursor:"pointer", backgroundColor:profile.heightUnit===u?"white":C.greenLight, color:profile.heightUnit===u?C.green:C.muted, boxShadow:profile.heightUnit===u?"0 1px 4px rgba(0,0,0,0.1)":"none", transition:"all 0.15s" }}>{u}</button>
+                      ))}
                     </div>
                   </div>
-                  {profile.heightUnit === "cm"
-                    ? <input type="number" className="w-full px-4 py-3 rounded-xl border border-green-100 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-300" placeholder="E.g. 170" value={profile.heightCm} onChange={e => setProfile(p => ({...p,heightCm:e.target.value}))}/>
-                    : <div className="flex gap-2"><input type="number" className="w-1/2 px-4 py-3 rounded-xl border border-green-100 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-300" placeholder="Feet" value={profile.heightFt} onChange={e => setProfile(p => ({...p,heightFt:e.target.value}))}/><input type="number" className="w-1/2 px-4 py-3 rounded-xl border border-green-100 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-300" placeholder="Inches" value={profile.heightIn} onChange={e => setProfile(p => ({...p,heightIn:e.target.value}))}/></div>
+                  {profile.heightUnit==="cm"
+                    ? <input className="focus-gold" type="number" style={inp} placeholder="e.g. 170" value={profile.heightCm} onChange={e=>setProfile(p=>({...p,heightCm:e.target.value}))}/>
+                    : <div style={{ display:"flex", gap:8 }}>
+                        <input className="focus-gold" type="number" style={{...inp,width:"50%"}} placeholder="Feet" value={profile.heightFt} onChange={e=>setProfile(p=>({...p,heightFt:e.target.value}))}/>
+                        <input className="focus-gold" type="number" style={{...inp,width:"50%"}} placeholder="Inches" value={profile.heightIn} onChange={e=>setProfile(p=>({...p,heightIn:e.target.value}))}/>
+                      </div>
                   }
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => setStep(0)} className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl">← Back</button>
-                  <button disabled={!isStep1Valid} onClick={() => setStep(2)} className="flex-1 py-3 bg-green-500 hover:bg-green-600 disabled:opacity-40 text-white font-semibold rounded-xl">Continue →</button>
+                <div style={{ display:"flex", gap:10 }}>
+                  <button onClick={()=>setStep(0)} style={{ flex:1, backgroundColor:C.greenLight, color:C.green, border:"none", borderRadius:10, padding:"13px", fontSize:14, fontWeight:500, cursor:"pointer" }}>← Back</button>
+                  <button disabled={!isStep1Valid} onClick={()=>setStep(2)} style={{ flex:2, backgroundColor:isStep1Valid?C.green:"#C8D5D1", color:C.bg, border:"none", borderRadius:10, padding:"13px", fontSize:14, fontWeight:500, cursor:isStep1Valid?"pointer":"not-allowed" }}>Continue</button>
                 </div>
               </div>
             )}
+
             {step === 2 && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold text-gray-800">Goals & lifestyle</h2>
+              <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
+                <p style={{ fontFamily:serif, fontSize:18, color:C.green, fontWeight:500 }}>Goals & lifestyle</p>
                 <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="text-sm text-gray-500 font-medium">Weight</label>
-                    <div className="flex gap-1 bg-green-50 rounded-lg p-1">
-                      {["kg","lbs"].map(u => <button key={u} onClick={() => setProfile(p => ({...p,weightUnit:u}))} className={`px-3 py-1 rounded-md text-sm font-medium transition-all ${profile.weightUnit===u?"bg-white shadow text-green-700":"text-gray-400"}`}>{u}</button>)}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                    <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase" }}>Weight</label>
+                    <div style={{ display:"flex", gap:2, backgroundColor:C.greenLight, borderRadius:8, padding:3 }}>
+                      {["kg","lbs"].map(u=>(
+                        <button key={u} onClick={()=>setProfile(p=>({...p,weightUnit:u}))} style={{ padding:"4px 12px", borderRadius:6, border:"none", fontSize:12, fontWeight:500, cursor:"pointer", backgroundColor:profile.weightUnit===u?"white":C.greenLight, color:profile.weightUnit===u?C.green:C.muted, boxShadow:profile.weightUnit===u?"0 1px 4px rgba(0,0,0,0.1)":"none", transition:"all 0.15s" }}>{u}</button>
+                      ))}
                     </div>
                   </div>
-                  <input type="number" className="w-full px-4 py-3 rounded-xl border border-green-100 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-300" placeholder={profile.weightUnit==="kg"?"E.g. 68":"E.g. 150"} value={profile.weightUnit==="kg"?profile.weightKg:profile.weightLbs} onChange={e => setProfile(p => profile.weightUnit==="kg"?{...p,weightKg:e.target.value}:{...p,weightLbs:e.target.value})}/>
+                  <input className="focus-gold" type="number" style={inp} placeholder={profile.weightUnit==="kg"?"e.g. 68":"e.g. 150"} value={profile.weightUnit==="kg"?profile.weightKg:profile.weightLbs} onChange={e=>setProfile(p=>profile.weightUnit==="kg"?{...p,weightKg:e.target.value}:{...p,weightLbs:e.target.value})}/>
                 </div>
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-sm text-gray-500 font-medium">Goals</label>
-                    <span className="text-xs text-gray-400">Select all that apply</span>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                    <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase" }}>Goals</label>
+                    {selectedGoals.length>0 && <span style={{ fontSize:11, color:C.gold, fontWeight:500 }}>{selectedGoals.length} selected</span>}
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
                     {goalOptions.map(g => {
-                      const selected = selectedGoals.includes(g);
+                      const sel=selectedGoals.includes(g);
                       return (
-                        <button type="button" key={g} onClick={() => toggleGoal(g)} className={`px-3 py-2 rounded-xl text-sm font-medium border transition-all text-left ${selected ? "bg-green-500 text-white border-green-500" : "bg-green-50 text-gray-600 border-green-100 hover:border-green-300"}`}>
-                          {selected && <span className="mr-1">✓</span>}{g}
+                        <button type="button" key={g} onClick={()=>toggleGoal(g)} style={{ padding:"10px 12px", borderRadius:10, border:`1px solid ${sel?C.green:C.border}`, backgroundColor:sel?C.green:C.card, color:sel?C.bg:C.text, fontSize:13, fontWeight:sel?500:400, cursor:"pointer", textAlign:"left", transition:"all 0.15s ease" }}>
+                          {sel && <span style={{ marginRight:5, opacity:0.8 }}>✓</span>}{g}
                         </button>
                       );
                     })}
                   </div>
-                  {selectedGoals.length > 0 && <p className="text-xs text-green-600 mt-1 font-medium">{selectedGoals.length} goal{selectedGoals.length > 1 ? "s" : ""} selected</p>}
                 </div>
                 <div>
-                  <label className="text-sm text-gray-500 font-medium block mb-2">Activity level</label>
-                  <div className="flex flex-wrap gap-2">
-                    {activities.map(a => <button key={a} onClick={() => setProfile(p => ({...p,activity:a}))} className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${profile.activity===a?"bg-green-500 text-white border-green-500":"bg-green-50 text-gray-600 border-green-100 hover:border-green-300"}`}>{a}</button>)}
+                  <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", display:"block", marginBottom:8 }}>Activity level</label>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                    {activities.map(a=>(
+                      <button key={a} onClick={()=>setProfile(p=>({...p,activity:a}))} style={{ padding:"7px 12px", borderRadius:8, border:`1px solid ${profile.activity===a?C.green:C.border}`, backgroundColor:profile.activity===a?C.green:C.card, color:profile.activity===a?C.bg:C.text, fontSize:12, fontWeight:profile.activity===a?500:400, cursor:"pointer", transition:"all 0.15s" }}>{a}</button>
+                    ))}
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-500 font-medium">Dietary preferences (optional)</label>
-                  <input className="w-full mt-1 px-4 py-3 rounded-xl border border-green-100 bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-300 text-sm" placeholder="E.g. vegetarian, gluten-free..." value={profile.preferences} onChange={e => setProfile(p => ({...p,preferences:e.target.value}))}/>
+                  <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", display:"block", marginBottom:6 }}>Dietary preferences <span style={{ color:C.border }}>— optional</span></label>
+                  <input className="focus-gold" style={inp} placeholder="e.g. vegetarian, gluten-free" value={profile.preferences} onChange={e=>setProfile(p=>({...p,preferences:e.target.value}))}/>
                 </div>
-                {error && <div className="text-red-500 text-sm bg-red-50 p-3 rounded-xl">{error} <button onClick={handleOnboardingSubmit} className="ml-2 underline font-medium">Retry</button></div>}
-                <div className="flex gap-2">
-                  <button onClick={() => setStep(1)} className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold rounded-xl">← Back</button>
-                  <button disabled={!isStep2Valid || loading} onClick={handleOnboardingSubmit} className="flex-1 py-3 bg-green-500 hover:bg-green-600 disabled:opacity-40 text-white font-semibold rounded-xl transition-all">
-                    {loading ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> Calculating...</span> : "Get my targets ✨"}
+                {error && <div style={{ padding:"10px 14px", backgroundColor:C.errorBg, border:`1px solid ${C.error}20`, borderRadius:10, fontSize:13, color:C.error }}>{error}</div>}
+                <div style={{ display:"flex", gap:10 }}>
+                  <button onClick={()=>setStep(1)} style={{ flex:1, backgroundColor:C.greenLight, color:C.green, border:"none", borderRadius:10, padding:"13px", fontSize:14, fontWeight:500, cursor:"pointer" }}>← Back</button>
+                  <button disabled={!isStep2Valid||loading} onClick={handleOnboardingSubmit} style={{ flex:2, backgroundColor:isStep2Valid&&!loading?C.green:"#C8D5D1", color:C.bg, border:"none", borderRadius:10, padding:"13px", fontSize:14, fontWeight:500, cursor:isStep2Valid&&!loading?"pointer":"not-allowed", transition:"background-color 0.15s" }}>
+                    {loading
+                      ? <span style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+                          <span style={{ width:14, height:14, border:`2px solid ${C.bg}`, borderTopColor:"transparent", borderRadius:"50%", display:"inline-block", animation:"spin 0.8s linear infinite" }}/>
+                          Calculating…
+                        </span>
+                      : "Calculate my targets"}
                   </button>
                 </div>
               </div>
             )}
           </div>
         </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
 
-  // ─── WELCOME ──────────────────────────────────────────────────────────────
+  // ── WELCOME ──────────────────────────────────────────────────────────────────
   if (phase === "welcome") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="bg-white rounded-3xl shadow-xl p-8 border border-green-100 text-center">
-            <NoraAvatar size={64}/>
-            <h2 className="text-2xl font-bold text-gray-800 mt-4" style={{fontFamily:"'Georgia',serif"}}>Hi {profile.name}! 🌿</h2>
-            <p className="text-gray-600 mt-3 leading-relaxed">{welcomeMsg}</p>
+      <div style={{ minHeight:"100vh", backgroundColor:C.bg, display:"flex", alignItems:"center", justifyContent:"center", padding:20, fontFamily:sans }}>
+        <div style={{ width:"100%", maxWidth:400 }}>
+          <div style={{ ...card, padding:32, textAlign:"center" }}>
+            <NoraAvatar size={56}/>
+            <h2 style={{ fontFamily:serif, fontSize:22, color:C.green, margin:"14px 0 10px", fontWeight:600 }}>Welcome, {profile.name}</h2>
+            <p style={{ color:C.muted, fontSize:14, lineHeight:1.7, marginBottom:24 }}>{welcomeMsg}</p>
             {targets && (
-              <div className="mt-6 grid grid-cols-2 gap-3 text-left">
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:24 }}>
                 {[
-                  {label:"Calories",val:`${targets.calories} kcal`,icon:"🔥"},
-                  {label:"Protein",val:`${targets.protein_g}g`,icon:"💪"},
-                  {label:"Carbs",val:`${targets.carbs_g}g`,icon:"🌾"},
-                  {label:"Fat",val:`${targets.fat_g}g`,icon:"🥑"},
-                  {label:"Fiber",val:`${targets.fiber_g}g`,icon:"🥦"},
-                  {label:"Water",val:`${Math.round(targets.water_ml/1000*10)/10}L`,icon:"💧"},
-                ].map(item => (
-                  <div key={item.label} className="bg-green-50 rounded-2xl p-3 flex items-center gap-3">
-                    <span className="text-xl">{item.icon}</span>
-                    <div>
-                      <div className="text-xs text-gray-400 font-medium">{item.label}</div>
-                      <div className="text-sm font-bold text-gray-800">{item.val}</div>
-                    </div>
+                  {label:"Energy",   val:`${targets.calories} kcal`},
+                  {label:"Protein",  val:`${targets.protein_g} g`},
+                  {label:"Carbs",    val:`${targets.carbs_g} g`},
+                  {label:"Fat",      val:`${targets.fat_g} g`},
+                  {label:"Fibre",    val:`${targets.fiber_g} g`},
+                  {label:"Water",    val:`${Math.round(targets.water_ml/100)/10} L`},
+                ].map(item=>(
+                  <div key={item.label} style={{ backgroundColor:C.greenLight, borderRadius:12, padding:"12px 14px", textAlign:"left" }}>
+                    <div style={{ fontSize:11, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", marginBottom:3 }}>{item.label}</div>
+                    <div style={{ fontSize:15, fontWeight:600, color:C.green }}>{item.val}</div>
                   </div>
                 ))}
               </div>
             )}
-            <button onClick={() => setPhase("app")} className="mt-6 w-full py-4 bg-green-500 hover:bg-green-600 text-white font-bold rounded-2xl text-lg transition-all shadow-lg shadow-green-200">Let's start tracking! 🚀</button>
+            <button onClick={()=>setPhase("app")} style={{ width:"100%", backgroundColor:C.green, color:C.bg, border:"none", borderRadius:12, padding:"15px", fontSize:15, fontWeight:500, cursor:"pointer", letterSpacing:"0.03em" }}>
+              Begin tracking
+            </button>
           </div>
         </div>
       </div>
     );
   }
 
-  // ─── MAIN APP ─────────────────────────────────────────────────────────────
-  return (
-    <div className="min-h-screen bg-gray-50 flex flex-col max-w-md mx-auto relative" style={{fontFamily:"'system-ui',sans-serif"}}>
+  // ── MAIN APP ─────────────────────────────────────────────────────────────────
+  const secHead = (title, sub) => (
+    <div style={{ marginBottom:20 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+        <LeafDecor size={18}/>
+        <h2 style={{ fontFamily:serif, fontSize:22, color:C.green, fontWeight:600, margin:0 }}>{title}</h2>
+      </div>
+      {sub && <p style={{ color:C.muted, fontSize:13, marginTop:4, marginLeft:26 }}>{sub}</p>}
+    </div>
+  );
 
-      {/* TODAY */}
+  return (
+    <div style={{ minHeight:"100vh", backgroundColor:C.bg, maxWidth:480, margin:"0 auto", position:"relative", fontFamily:sans }}>
+      <style>{`@keyframes spin { to { transform:rotate(360deg); } } @keyframes fadeIn { from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)} }`}</style>
+
+      {/* TODAY ─────────────────────────────────────────────────────────────── */}
       {activeTab === "today" && (
-        <div className="flex-1 overflow-y-auto pb-24 pt-4 px-4 space-y-4">
-          <div className="bg-white rounded-2xl p-4 border border-green-100 shadow-sm flex gap-3">
-            <NoraAvatar size={40}/>
-            <div className="flex-1">
-              {greetingLoading ? <><Skeleton className="h-4 w-full mb-2"/><Skeleton className="h-4 w-3/4"/></> : (
-                <p className="text-sm text-gray-700 leading-relaxed">{greeting || "Ready to track your day? You've got this! 🌿"}</p>
-              )}
+        <div style={{ padding:"20px 16px 100px", display:"flex", flexDirection:"column", gap:14 }}>
+          {/* Greeting */}
+          <div style={{ ...card, padding:"18px 20px", display:"flex", gap:14, alignItems:"flex-start" }}>
+            <NoraAvatar size={38}/>
+            <div style={{ flex:1 }}>
+              {greetingLoad
+                ? <><Skeleton className="h-3 w-full mb-2"/><Skeleton className="h-3 w-3/4"/></>
+                : <p style={{ fontSize:14, color:C.text, lineHeight:1.65, margin:0 }}>{greeting||"Ready to track your day with intention."}</p>
+              }
             </div>
           </div>
 
+          {/* Health summary */}
           {healthSaved && (
-            <div className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl p-4 border border-teal-100 grid grid-cols-4 gap-2 text-center">
-              {[{icon:"👟",label:"Steps",val:healthData.steps||"—"},{icon:"😴",label:"Sleep",val:healthData.sleep?`${healthData.sleep}h`:"—"},{icon:"❤️",label:"HR",val:healthData.heartRate?`${healthData.heartRate}bpm`:"—"},{icon:"🏋️",label:"Workout",val:healthData.workoutDuration?`${healthData.workoutDuration}m`:"—"}].map(item => (
-                <div key={item.label}><div className="text-lg">{item.icon}</div><div className="text-xs font-bold text-gray-700">{item.val}</div><div className="text-xs text-gray-400">{item.label}</div></div>
+            <div style={{ ...card, padding:"14px 16px", display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:8, textAlign:"center" }}>
+              {[{label:"Steps",val:healthData.steps||"—"},{label:"Sleep",val:healthData.sleep?`${healthData.sleep}h`:"—"},{label:"HR",val:healthData.heartRate?`${healthData.heartRate}`:("—")},{label:"Workout",val:healthData.workoutDuration?`${healthData.workoutDuration}m`:"—"}].map(item=>(
+                <div key={item.label}>
+                  <div style={{ fontSize:14, fontWeight:600, color:C.green }}>{item.val}</div>
+                  <div style={{ fontSize:10, color:C.muted, textTransform:"uppercase", letterSpacing:"0.05em" }}>{item.label}</div>
+                </div>
               ))}
             </div>
           )}
 
+          {/* Progress rings */}
           {targets && (
-            <div className="bg-white rounded-2xl p-5 border border-green-100 shadow-sm">
-              <div className="flex justify-between items-center mb-4">
+            <div style={{ ...card, padding:"20px 16px 18px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
                 <div>
-                  <h3 className="font-bold text-gray-800">Today's Progress</h3>
-                  <p className="text-xs text-gray-400 mt-0.5">Net {Math.round(netCals)} kcal · {burnedCals > 0 ? `🔥 ${burnedCals} burned` : "log exercise to earn more"}</p>
+                  <h3 style={{ fontSize:14, fontWeight:600, color:C.text, margin:0 }}>Today's progress</h3>
+                  <p style={{ fontSize:12, color:C.muted, margin:"3px 0 0" }}>
+                    Net {Math.round(netCal)} kcal
+                    {burnedCals>0 ? ` · ${burnedCal} kcal burned` : ""}
+                  </p>
                 </div>
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">{Math.round((netCals/targets.calories)*100)}%</span>
+                <span style={{ fontSize:11, color:C.gold, fontWeight:600, backgroundColor:C.goldLight, padding:"4px 10px", borderRadius:20, border:`1px solid ${C.gold}40` }}>
+                  {Math.round((netCal/targets.calories)*100)}%
+                </span>
               </div>
-              <div className="flex justify-around mb-4">
-                <ProgressRing value={netCals} max={targets.calories} color="#22c55e" label="Calories" unit="kcal" size={88}/>
-                <ProgressRing value={totalProtein} max={targets.protein_g} color="#0ea5e9" label="Protein" unit="g" size={88}/>
-                <ProgressRing value={totalCarbs} max={targets.carbs_g} color="#f59e0b" label="Carbs" unit="g" size={88}/>
-                <ProgressRing value={totalFat} max={targets.fat_g} color="#a78bfa" label="Fat" unit="g" size={88}/>
+              <div style={{ display:"flex", justifyContent:"space-around", marginBottom:18 }}>
+                <ProgressRing value={netCal}     max={targets.calories}  color={C.green} label="Energy"  unit="kcal"/>
+                <ProgressRing value={totalPro}   max={targets.protein_g} color={C.gold}  label="Protein" unit="g"/>
+                <ProgressRing value={totalCarb}  max={targets.carbs_g}   color={C.sage}  label="Carbs"   unit="g"/>
+                <ProgressRing value={totalFat}   max={targets.fat_g}     color={C.tan}   label="Fat"     unit="g"/>
               </div>
-              <div className="space-y-2.5 pt-2 border-t border-gray-50">
-                <BarProgress value={totalFiber} max={targets.fiber_g} color="#10b981" label="Fiber" unit="g"/>
-                <BarProgress value={waterMl} max={targets.water_ml} color="#38bdf8" label="Water" unit="ml"/>
-                <div className="flex items-center gap-2 pl-16">
-                  {[150,250,500].map(ml => (
-                    <button key={ml} onClick={() => setWaterMl(w => Math.min(w + ml, targets.water_ml * 2))} className="px-2.5 py-1 text-xs rounded-lg bg-sky-50 text-sky-600 border border-sky-100 hover:bg-sky-100 font-medium transition-all">+{ml}ml</button>
+              <div style={{ borderTop:`1px solid ${C.border}`, paddingTop:14, display:"flex", flexDirection:"column", gap:10 }}>
+                <BarProgress value={totalFib} max={targets.fiber_g} color={C.green} label="Fibre" unit="g"/>
+                <BarProgress value={waterMl}  max={targets.water_ml} color={C.slate} label="Water" unit="ml"/>
+                <div style={{ display:"flex", gap:6, paddingLeft:48, marginTop:2 }}>
+                  {[150,250,500].map(ml=>(
+                    <button key={ml} onClick={()=>setWaterMl(w=>Math.min(w+ml,targets.water_ml*2))} style={{ padding:"5px 10px", fontSize:11, borderRadius:8, border:`1px solid ${C.border}`, backgroundColor:C.card, color:C.slate, cursor:"pointer", fontWeight:500, transition:"all 0.15s" }}>
+                      +{ml} ml
+                    </button>
                   ))}
-                  {waterMl > 0 && <button onClick={() => setWaterMl(0)} className="text-xs text-gray-300 hover:text-gray-400 ml-auto transition-colors">↺ reset</button>}
+                  {waterMl>0 && <button onClick={()=>setWaterMl(0)} style={{ marginLeft:"auto", fontSize:11, color:C.muted, background:"none", border:"none", cursor:"pointer", opacity:0.6 }}>reset</button>}
                 </div>
               </div>
             </div>
           )}
 
-          {entries.length === 0 && (
-            <button onClick={() => setEntries(DEMO_ENTRIES)} className="w-full py-3 border-2 border-dashed border-green-200 rounded-2xl text-sm text-green-600 font-medium hover:bg-green-50 transition-all">✨ Load demo data to explore</button>
+          {/* Demo prompt */}
+          {entries.length===0 && (
+            <button onClick={()=>setEntries(DEMO_ENTRIES)} style={{ width:"100%", padding:"14px", backgroundColor:"transparent", border:`1.5px dashed ${C.border}`, borderRadius:12, fontSize:13, color:C.muted, cursor:"pointer", letterSpacing:"0.02em" }}>
+              Load demo data to explore the app
+            </button>
           )}
 
-          <div className="bg-white rounded-2xl border border-green-100 shadow-sm overflow-hidden">
-            <div className="flex border-b border-gray-50">
-              {[{id:"text",label:"📝 Type entry"},{id:"photo",label:"📷 Upload photo"}].map(({id,label}) => (
-                <button key={id} onClick={() => setLogMode(id)} className={`flex-1 py-3 text-sm font-medium transition-all ${logMode===id?"bg-green-50 text-green-700 border-b-2 border-green-500":"text-gray-400"}`}>{label}</button>
+          {/* Log input */}
+          <div style={{ ...card, overflow:"hidden" }}>
+            <div style={{ display:"flex", borderBottom:`1px solid ${C.border}` }}>
+              {[{id:"text",label:"Type"},{id:"photo",label:"Photo"},{id:"barcode",label:"Scan"}].map(({id,label})=>(
+                <button key={id} onClick={()=>{setLogMode(id);setBarcodeResult(null);setBarcodeError("");}} style={{ flex:1, padding:"13px 0", fontSize:13, fontWeight:logMode===id?600:400, color:logMode===id?C.green:C.muted, backgroundColor:"transparent", border:"none", cursor:"pointer", borderBottom:logMode===id?`2px solid ${C.gold}`:"2px solid transparent", letterSpacing:"0.03em", transition:"all 0.15s" }}>{label}</button>
               ))}
             </div>
-            <div className="p-4">
-              {logMode === "text" ? (
-                <div className="flex gap-2">
-                  <input className="flex-1 px-4 py-3 rounded-xl bg-green-50 border border-green-100 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" placeholder='E.g. "scrambled eggs" or "30 min run"' value={logInput} onChange={e => setLogInput(e.target.value)} onKeyDown={e => e.key==="Enter" && handleLogText()}/>
-                  <button onClick={handleLogText} disabled={logLoading || !logInput.trim()} className="px-4 py-3 bg-green-500 hover:bg-green-600 disabled:opacity-40 text-white rounded-xl text-sm font-bold transition-all">
-                    {logLoading ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block"/> : "Add"}
+            <div style={{ padding:16 }}>
+              {logMode === "text" && (
+                <div style={{ display:"flex", gap:8 }}>
+                  <input className="focus-gold" style={{...inp,flex:1}} placeholder='e.g. "two scrambled eggs" or "30 min run"' value={logInput} onChange={e=>setLogInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleLogText()}/>
+                  <button onClick={handleLogText} disabled={logLoading||!logInput.trim()} style={{ padding:"11px 18px", backgroundColor:logLoading||!logInput.trim()?"#C8D5D1":C.green, color:C.bg, border:"none", borderRadius:10, fontSize:13, fontWeight:500, cursor:logLoading||!logInput.trim()?"not-allowed":"pointer", minWidth:60 }}>
+                    {logLoading ? <span style={{ width:14,height:14,border:`2px solid ${C.bg}`,borderTopColor:"transparent",borderRadius:"50%",display:"inline-block",animation:"spin 0.8s linear infinite" }}/> : "Add"}
                   </button>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <div onClick={() => fileRef.current?.click()} className="border-2 border-dashed border-green-200 rounded-xl p-6 text-center cursor-pointer hover:bg-green-50 transition-all">
-                    {imageFile ? <p className="text-sm text-green-700 font-medium">📷 {imageFile.name}</p> : <><p className="text-2xl mb-1">📸</p><p className="text-sm text-gray-400">Tap to upload a food photo</p></>}
-                    <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => setImageFile(e.target.files[0])}/>
+              )}
+              {logMode === "photo" && (
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  <div onClick={()=>fileRef.current?.click()} style={{ border:`1.5px dashed ${C.border}`, borderRadius:12, padding:"24px", textAlign:"center", cursor:"pointer", transition:"background-color 0.15s" }}>
+                    {imageFile
+                      ? <p style={{ fontSize:13, color:C.green, margin:0 }}>{imageFile.name}</p>
+                      : <><p style={{ fontSize:24, margin:"0 0 6px" }}>⬆</p><p style={{ fontSize:13, color:C.muted, margin:0 }}>Tap to upload a food photo</p></>
+                    }
+                    <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={e=>setImageFile(e.target.files[0])}/>
                   </div>
-                  {imageFile && <button onClick={handleLogImage} disabled={logLoading} className="w-full py-3 bg-green-500 text-white rounded-xl font-medium disabled:opacity-40">{logLoading?"Analysing...":"Analyse & Log 🔍"}</button>}
+                  {imageFile && <button onClick={handleLogImage} disabled={logLoading} style={{ padding:"12px", backgroundColor:logLoading?"#C8D5D1":C.green, color:C.bg, border:"none", borderRadius:10, fontSize:13, fontWeight:500, cursor:logLoading?"not-allowed":"pointer" }}>{logLoading?"Analysing…":"Analyse & log"}</button>}
                 </div>
               )}
-              {logError && <p className="text-red-500 text-xs mt-2 bg-red-50 p-2 rounded-lg">{logError} <button onClick={() => setLogError("")} className="underline ml-1">Dismiss</button></p>}
+              {logMode === "barcode" && (
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <input className="focus-gold" type="text" inputMode="numeric" style={{...inp,flex:1}} placeholder="Enter barcode number…" value={barcodeInput} onChange={e=>setBarcodeInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleBarcodeSearch(barcodeInput)}/>
+                    <button onClick={()=>handleBarcodeSearch(barcodeInput)} disabled={barcodeLoad||!barcodeInput.trim()} style={{ padding:"11px 18px", backgroundColor:barcodeLoad||!barcodeInput.trim()?"#C8D5D1":C.green, color:C.bg, border:"none", borderRadius:10, fontSize:13, fontWeight:500, cursor:barcodeLoad||!barcodeInput.trim()?"not-allowed":"pointer", minWidth:72 }}>
+                      {barcodeLoad ? <span style={{ width:14,height:14,border:`2px solid ${C.bg}`,borderTopColor:"transparent",borderRadius:"50%",display:"inline-block",animation:"spin 0.8s linear infinite" }}/> : "Search"}
+                    </button>
+                  </div>
+                  <div onClick={()=>barcodeFileRef.current?.click()} style={{ border:`1.5px dashed ${C.border}`, borderRadius:12, padding:"16px", textAlign:"center", cursor:"pointer" }}>
+                    <p style={{ fontSize:13, color:C.muted, margin:0 }}>Photograph a barcode to scan</p>
+                    <p style={{ fontSize:11, color:C.border, margin:"3px 0 0" }}>Works in Chrome & Edge on Android</p>
+                    <input ref={barcodeFileRef} type="file" accept="image/*" capture="environment" style={{ display:"none" }} onChange={e=>{ if(e.target.files[0]) handleBarcodeCapture(e.target.files[0]); }}/>
+                  </div>
+                  {barcodeError && <p style={{ fontSize:12, color:C.error, backgroundColor:C.errorBg, padding:"10px 12px", borderRadius:10, margin:0 }}>{barcodeError}</p>}
+                  {barcodeLoad && <Skeleton className="h-28 w-full"/>}
+                  {barcodeResult && !barcodeLoad && (
+                    <div style={{ backgroundColor:C.greenLight, border:`1px solid ${C.border}`, borderRadius:12, padding:14, animation:"fadeIn 0.25s ease" }}>
+                      <div style={{ display:"flex", gap:12, marginBottom:12 }}>
+                        {barcodeResult.image && <img src={barcodeResult.image} alt="" style={{ width:52,height:52,objectFit:"contain",borderRadius:8,backgroundColor:"white",border:`1px solid ${C.border}` }}/>}
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <p style={{ fontSize:14, fontWeight:600, color:C.text, margin:"0 0 2px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{barcodeResult.name}</p>
+                          {barcodeResult.brand && <p style={{ fontSize:12, color:C.muted, margin:"0 0 4px" }}>{barcodeResult.brand}</p>}
+                          {barcodeResult.nutriscore && (
+                            <span style={{ display:"inline-block", fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:20, backgroundColor: barcodeResult.nutriscore==="a"?C.green:barcodeResult.nutriscore==="b"?C.sage:barcodeResult.nutriscore==="c"?C.gold:barcodeResult.nutriscore==="d"?"#B8922A":C.error, color:"white", letterSpacing:"0.05em" }}>
+                              NUTRI-SCORE {barcodeResult.nutriscore.toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:6, marginBottom:10 }}>
+                        {[{l:"Energy",v:`${barcodeResult.calories}kcal`},{l:"Protein",v:`${barcodeResult.protein_g}g`},{l:"Carbs",v:`${barcodeResult.carbs_g}g`},{l:"Fat",v:`${barcodeResult.fat_g}g`}].map(m=>(
+                          <div key={m.l} style={{ backgroundColor:"white", borderRadius:8, padding:"8px 6px", textAlign:"center", border:`1px solid ${C.border}` }}>
+                            <p style={{ fontSize:12, fontWeight:600, color:C.green, margin:0 }}>{m.v}</p>
+                            <p style={{ fontSize:10, color:C.muted, margin:"2px 0 0", textTransform:"uppercase", letterSpacing:"0.04em" }}>{m.l}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <p style={{ fontSize:11, color:C.muted, margin:"0 0 10px" }}>{barcodeResult.serving_size}</p>
+                      <button onClick={()=>handleAddBarcode(barcodeResult)} style={{ width:"100%", padding:"11px", backgroundColor:C.green, color:C.bg, border:"none", borderRadius:10, fontSize:13, fontWeight:500, cursor:"pointer" }}>Log this product</button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {logError && <p style={{ fontSize:12, color:C.error, margin:"10px 0 0", backgroundColor:C.errorBg, padding:"8px 12px", borderRadius:8 }}>{logError} <button onClick={()=>setLogError("")} style={{ background:"none",border:"none",color:C.error,cursor:"pointer",textDecoration:"underline",fontSize:12 }}>Dismiss</button></p>}
             </div>
           </div>
 
+          {/* Entry list */}
           {entries.length > 0 && (
-            <div className="space-y-3">
-              {mealGroups.filter(g => groupedEntries[g]?.length > 0).map(group => (
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              {mealGroups.filter(g=>grouped[g]?.length>0).map(group=>(
                 <div key={group}>
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">{group}</h4>
-                  <div className="bg-white rounded-2xl border border-green-100 shadow-sm divide-y divide-gray-50">
-                    {groupedEntries[group].map(entry => (
-                      <div key={entry.id} className="p-3 flex items-center gap-3">
-                        <span className="text-2xl">{entry.emoji}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-800 truncate">{entry.name}</p>
-                          <p className="text-xs text-gray-400">{entry.time}{entry.notes ? ` · ${entry.notes}` : ""}</p>
+                  <p style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 8px 2px" }}>{group}</p>
+                  <div style={{ ...card, overflow:"hidden" }}>
+                    {grouped[group].map((entry, idx) => (
+                      <div key={entry.id}>
+                        {idx>0 && <Divider/>}
+                        <div style={{ padding:"12px 14px", display:"flex", alignItems:"center", gap:12 }}>
+                          <span style={{ fontSize:20, flexShrink:0 }}>{entry.emoji}</span>
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <p style={{ fontSize:13, fontWeight:500, color:C.text, margin:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{entry.name}</p>
+                            <p style={{ fontSize:11, color:C.muted, margin:"2px 0 0" }}>{entry.time}{entry.notes?` · ${entry.notes}`:""}</p>
+                          </div>
+                          <div style={{ textAlign:"right", flexShrink:0 }}>
+                            <p style={{ fontSize:13, fontWeight:600, color:entry.type==="exercise"?C.sage:C.text, margin:0 }}>{entry.type==="exercise"?`−${Math.abs(entry.calories)}`:entry.calories} kcal</p>
+                            {entry.type==="food" && <p style={{ fontSize:10, color:C.muted, margin:"1px 0 0" }}>P {Math.round(entry.protein_g)}  C {Math.round(entry.carbs_g)}  F {Math.round(entry.fat_g)}</p>}
+                          </div>
+                          <button onClick={()=>setEntries(prev=>prev.filter(e=>e.id!==entry.id))} style={{ background:"none",border:"none",color:C.border,cursor:"pointer",fontSize:18,lineHeight:1,padding:2,flexShrink:0,transition:"color 0.15s" }}>×</button>
                         </div>
-                        <div className="text-right">
-                          <p className={`text-sm font-bold ${entry.type==="exercise"?"text-green-600":"text-gray-700"}`}>{entry.type==="exercise"?`-${Math.abs(entry.calories)}`:entry.calories} kcal</p>
-                          {entry.type==="food" && <p className="text-xs text-gray-400">P:{Math.round(entry.protein_g)}g C:{Math.round(entry.carbs_g)}g F:{Math.round(entry.fat_g)}g</p>}
-                        </div>
-                        <button onClick={() => setEntries(prev => prev.filter(e => e.id !== entry.id))} className="text-gray-200 hover:text-red-400 ml-1 text-lg transition-colors">×</button>
                       </div>
                     ))}
                   </div>
@@ -658,373 +913,324 @@ export default function NutritionApp() {
             </div>
           )}
 
-          <div className="pb-2">
-            <button onClick={handleCheckin} disabled={checkinLoading || entries.length === 0} className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 disabled:opacity-40 text-white font-semibold rounded-2xl shadow-lg shadow-green-200 transition-all">
-              {checkinLoading ? "Nora is checking in..." : "💬 How am I doing?"}
+          {/* Check-in */}
+          <div>
+            <button onClick={handleCheckin} disabled={checkinLoad||entries.length===0} style={{ width:"100%", padding:"15px", backgroundColor:checkinLoad||entries.length===0?"#C8D5D1":C.green, color:C.bg, border:"none", borderRadius:12, fontSize:14, fontWeight:500, cursor:checkinLoad||entries.length===0?"not-allowed":"pointer", letterSpacing:"0.02em", transition:"background-color 0.15s" }}>
+              {checkinLoad ? "Nora is reviewing your day…" : "How am I doing?"}
             </button>
             {checkin && (
-              <div className="mt-3 bg-white rounded-2xl p-4 border border-green-100 shadow-sm flex gap-3">
-                <NoraAvatar size={36}/>
-                <p className="text-sm text-gray-700 leading-relaxed flex-1">{checkin}</p>
+              <div style={{ ...card, padding:"16px 18px", display:"flex", gap:12, marginTop:12, animation:"fadeIn 0.3s ease" }}>
+                <NoraAvatar size={34}/>
+                <p style={{ fontSize:14, color:C.text, lineHeight:1.65, margin:0, flex:1 }}>{checkin}</p>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* MEALS */}
+      {/* MEALS ──────────────────────────────────────────────────────────────── */}
       {activeTab === "meals" && (
-        <div className="flex-1 overflow-y-auto pb-24 pt-4 px-4 space-y-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800" style={{fontFamily:"'Georgia',serif"}}>Meal Ideas</h2>
-            <p className="text-sm text-gray-400 mt-1">Personalised suggestions based on your goals and remaining macros</p>
-          </div>
+        <div style={{ padding:"20px 16px 100px" }}>
+          {secHead("Meal Ideas","Personalised suggestions based on your goals and remaining macros")}
 
+          {/* Remaining */}
           {targets && (
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-4 border border-green-100">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Remaining today</p>
-              <div className="grid grid-cols-4 gap-2 text-center">
+            <div style={{ ...card, padding:"16px", marginBottom:14 }}>
+              <p style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 12px" }}>Remaining today</p>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:6, textAlign:"center" }}>
                 {[
-                  {label:"Calories",val:Math.max(0,Math.round(targets.calories-netCals)),unit:"kcal",color:"text-green-600"},
-                  {label:"Protein",val:Math.max(0,Math.round(targets.protein_g-totalProtein)),unit:"g",color:"text-sky-600"},
-                  {label:"Carbs",val:Math.max(0,Math.round(targets.carbs_g-totalCarbs)),unit:"g",color:"text-amber-600"},
-                  {label:"Fat",val:Math.max(0,Math.round(targets.fat_g-totalFat)),unit:"g",color:"text-purple-600"},
-                ].map(item => (
-                  <div key={item.label}>
-                    <p className={`text-sm font-bold ${item.color}`}>{item.val}<span className="text-xs">{item.unit}</span></p>
-                    <p className="text-xs text-gray-400">{item.label}</p>
+                  {l:"Energy",  v:Math.max(0,Math.round(targets.calories-netCal)),  u:"kcal", col:C.green},
+                  {l:"Protein", v:Math.max(0,Math.round(targets.protein_g-totalPro)),u:"g",    col:C.gold},
+                  {l:"Carbs",   v:Math.max(0,Math.round(targets.carbs_g-totalCarb)), u:"g",    col:C.sage},
+                  {l:"Fat",     v:Math.max(0,Math.round(targets.fat_g-totalFat)),    u:"g",    col:C.tan},
+                ].map(item=>(
+                  <div key={item.l}>
+                    <p style={{ fontSize:15, fontWeight:600, color:item.col, margin:0 }}>{item.v}<span style={{ fontSize:11 }}>{item.u}</span></p>
+                    <p style={{ fontSize:10, color:C.muted, margin:"2px 0 0", textTransform:"uppercase", letterSpacing:"0.05em" }}>{item.l}</p>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          <button onClick={handleGetMeals} disabled={mealsLoading} className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 disabled:opacity-40 text-white font-semibold rounded-2xl shadow-lg shadow-green-200 transition-all">
-            {mealsLoading ? "Finding ideas for you..." : meals.length > 0 ? "🔄 Refresh suggestions" : "✨ Get meal suggestions"}
+          <button onClick={handleGetMeals} disabled={mealsLoad} style={{ width:"100%", padding:"15px", backgroundColor:mealsLoad?"#C8D5D1":C.green, color:C.bg, border:"none", borderRadius:12, fontSize:14, fontWeight:500, cursor:mealsLoad?"not-allowed":"pointer", marginBottom:14, letterSpacing:"0.02em", transition:"background-color 0.15s" }}>
+            {mealsLoad ? "Finding ideas for you…" : meals.length>0 ? "Refresh suggestions" : "Get meal suggestions"}
           </button>
 
-          {mealsLoading && <div className="space-y-3">{[1,2,3,4].map(i => <Skeleton key={i} className="h-36 w-full"/>)}</div>}
-          {mealsError && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-xl">{mealsError} <button onClick={handleGetMeals} className="underline ml-1">Retry</button></p>}
+          {mealsLoad && <div style={{ display:"flex", flexDirection:"column", gap:10 }}>{[1,2,3,4].map(i=><Skeleton key={i} className="h-36 w-full"/>)}</div>}
+          {mealsError && <p style={{ fontSize:13, color:C.error, backgroundColor:C.errorBg, padding:"12px 14px", borderRadius:10, marginBottom:12 }}>{mealsError}</p>}
 
-          {meals.map((meal, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-green-100 shadow-sm p-4">
-              <div className="flex items-start gap-3 mb-3">
-                <span className="text-3xl leading-none">{meal.emoji}</span>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-bold text-gray-800 leading-tight">{meal.name}</h3>
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">⏱ {meal.prepTime}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-x-3 mt-1.5 text-xs">
-                    <span className="text-green-600 font-bold">{meal.calories} kcal</span>
-                    <span className="text-sky-600">P: {meal.protein_g}g</span>
-                    <span className="text-amber-600">C: {meal.carbs_g}g</span>
-                    <span className="text-purple-600">F: {meal.fat_g}g</span>
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            {meals.map((meal,i)=>(
+              <div key={i} style={{ ...card, padding:18 }}>
+                <div style={{ display:"flex", gap:12, marginBottom:12 }}>
+                  <span style={{ fontSize:28, flexShrink:0, lineHeight:1 }}>{meal.emoji}</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:8 }}>
+                      <h3 style={{ fontSize:15, fontWeight:600, color:C.text, margin:0, lineHeight:1.3 }}>{meal.name}</h3>
+                      <span style={{ fontSize:11, color:C.muted, whiteSpace:"nowrap", backgroundColor:C.greenLight, padding:"3px 8px", borderRadius:8, border:`1px solid ${C.border}`, flexShrink:0 }}>{meal.prepTime}</span>
+                    </div>
+                    <div style={{ display:"flex", gap:12, marginTop:6, fontSize:12 }}>
+                      <span style={{ color:C.green, fontWeight:600 }}>{meal.calories} kcal</span>
+                      <span style={{ color:C.muted }}>P {meal.protein_g}g</span>
+                      <span style={{ color:C.muted }}>C {meal.carbs_g}g</span>
+                      <span style={{ color:C.muted }}>F {meal.fat_g}g</span>
+                    </div>
                   </div>
                 </div>
+                {meal.ingredients?.length>0 && (
+                  <div style={{ marginBottom:10 }}>
+                    <p style={{ fontSize:10, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 5px" }}>Ingredients</p>
+                    <p style={{ fontSize:12, color:C.muted, margin:0, lineHeight:1.6 }}>{meal.ingredients.join("  ·  ")}</p>
+                  </div>
+                )}
+                {meal.tip && (
+                  <div style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:14, padding:"10px 12px", backgroundColor:C.greenLight, borderRadius:10 }}>
+                    <NoraAvatar size={18}/>
+                    <p style={{ fontSize:12, color:C.muted, fontStyle:"italic", margin:0, flex:1, lineHeight:1.5 }}>{meal.tip}</p>
+                  </div>
+                )}
+                <button onClick={()=>addMealToLog(meal)} style={{ width:"100%", padding:"11px", backgroundColor:C.green, color:C.bg, border:"none", borderRadius:10, fontSize:13, fontWeight:500, cursor:"pointer" }}>Log this meal</button>
               </div>
-              {meal.ingredients?.length > 0 && (
-                <div className="mb-2">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Ingredients</p>
-                  <p className="text-xs text-gray-600 leading-relaxed">{meal.ingredients.join(" · ")}</p>
-                </div>
-              )}
-              {meal.tip && (
-                <div className="flex gap-2 items-start mb-3">
-                  <NoraAvatar size={18}/>
-                  <p className="text-xs text-gray-500 italic flex-1">{meal.tip}</p>
-                </div>
-              )}
-              <button onClick={() => addMealToLog(meal)} className="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-xl transition-all">+ Log this meal</button>
-            </div>
-          ))}
+            ))}
+          </div>
 
-          {meals.length === 0 && !mealsLoading && (
-            <div className="text-center py-12 text-gray-400">
-              <p className="text-5xl mb-3">🍽️</p>
-              <p className="text-sm">Tap above for personalised meal ideas</p>
+          {meals.length===0&&!mealsLoad && (
+            <div style={{ textAlign:"center", padding:"48px 0", color:C.muted }}>
+              <p style={{ fontSize:32, marginBottom:8 }}>🌿</p>
+              <p style={{ fontSize:14 }}>Tap above for personalised meal ideas</p>
             </div>
           )}
         </div>
       )}
 
-      {/* SUPPLEMENTS */}
+      {/* SUPPLEMENTS ────────────────────────────────────────────────────────── */}
       {activeTab === "supplements" && (
-        <div className="flex-1 overflow-y-auto pb-24 pt-4 px-4 space-y-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800" style={{fontFamily:"'Georgia',serif"}}>Supplements</h2>
-            <p className="text-sm text-gray-400 mt-1">AI-powered recommendations based on your daily nutrition</p>
-          </div>
+        <div style={{ padding:"20px 16px 100px" }}>
+          {secHead("Supplements","AI-powered recommendations from your daily nutrition")}
 
-          {/* Nora's Analysis */}
-          <div className="bg-white rounded-2xl border border-green-100 shadow-sm overflow-hidden">
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-5 py-4 border-b border-green-100 flex items-center gap-3">
-              <NoraAvatar size={36}/>
+          {/* Nora's analysis */}
+          <div style={{ ...card, overflow:"hidden", marginBottom:14 }}>
+            <div style={{ backgroundColor:C.green, padding:"16px 18px", display:"flex", gap:12, alignItems:"center" }}>
+              <NoraAvatar size={34}/>
               <div>
-                <h3 className="font-bold text-gray-700">Nora's Recommendations</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Based on your food log and nutritional gaps</p>
+                <p style={{ fontSize:14, fontWeight:600, color:C.bg, margin:0 }}>Nora's Recommendations</p>
+                <p style={{ fontSize:11, color:"rgba(245,240,232,0.65)", margin:"2px 0 0" }}>Based on today's food log and nutritional gaps</p>
               </div>
             </div>
-            <div className="p-4 space-y-3">
-              {supplementsLoading && (
-                <div className="space-y-2">
-                  <Skeleton className="h-16 w-full"/>
-                  <Skeleton className="h-16 w-full"/>
-                  <Skeleton className="h-16 w-full"/>
-                </div>
-              )}
+            <div style={{ padding:16, display:"flex", flexDirection:"column", gap:10 }}>
+              {supLoad && <div style={{ display:"flex", flexDirection:"column", gap:8 }}><Skeleton className="h-16 w-full"/><Skeleton className="h-16 w-full"/><Skeleton className="h-16 w-full"/></div>}
 
-              {!supplementsLoading && supplementOverall && (
-                <div className="flex gap-2 items-start bg-green-50 rounded-xl p-3">
+              {!supLoad && supOverall && (
+                <div style={{ display:"flex", gap:10, backgroundColor:C.greenLight, borderRadius:10, padding:"12px 14px" }}>
                   <NoraAvatar size={22}/>
-                  <p className="text-sm text-gray-600 italic leading-relaxed flex-1">{supplementOverall}</p>
+                  <p style={{ fontSize:13, color:C.text, fontStyle:"italic", lineHeight:1.6, margin:0, flex:1 }}>{supOverall}</p>
                 </div>
               )}
 
-              {!supplementsLoading && supplementWarnings.length > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 space-y-1.5">
-                  <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">⚠️ Conflicts & Warnings</p>
-                  {supplementWarnings.map((w, i) => (
-                    <p key={i} className="text-sm text-amber-800 leading-snug">• {w}</p>
+              {!supLoad && supWarnings.length>0 && (
+                <div style={{ backgroundColor:C.amberBg, border:`1px solid ${C.gold}40`, borderRadius:10, padding:"12px 14px" }}>
+                  <p style={{ fontSize:11, fontWeight:700, color:C.amber, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 8px" }}>Interactions & Cautions</p>
+                  {supWarnings.map((w,i)=>(
+                    <p key={i} style={{ fontSize:13, color:C.amber, margin:"4px 0 0", lineHeight:1.5 }}>· {w}</p>
                   ))}
                 </div>
               )}
 
-              {!supplementsLoading && supplementRecs.map((rec, i) => {
-                const alreadyAdded = userSupplements.some(s => s.name.toLowerCase() === rec.name.toLowerCase());
-                const priorityStyle = rec.priority === "high"
-                  ? "bg-red-50 border-red-200"
-                  : rec.priority === "medium"
-                  ? "bg-amber-50 border-amber-200"
-                  : "bg-blue-50 border-blue-200";
-                const badgeStyle = rec.priority === "high"
-                  ? "bg-red-500 text-white"
-                  : rec.priority === "medium"
-                  ? "bg-amber-400 text-white"
-                  : "bg-blue-400 text-white";
+              {!supLoad && supRecs.map((rec,i)=>{
+                const borderCol = rec.priority==="high"?C.error:rec.priority==="medium"?C.gold:C.sage;
+                const isAdded = userSupps.some(s=>s.name.toLowerCase()===rec.name.toLowerCase());
                 return (
-                  <div key={i} className={`rounded-xl p-3 border ${priorityStyle}`}>
-                    <div className="flex items-start gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-bold text-gray-800">{rec.name}</span>
-                          {rec.dose && <span className="text-xs text-gray-500">{rec.dose}</span>}
-                          <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${badgeStyle}`}>{rec.priority}</span>
+                  <div key={i} style={{ borderRadius:10, border:`1px solid ${C.border}`, borderLeft:`3px solid ${borderCol}`, padding:"12px 14px", backgroundColor:C.card }}>
+                    <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                          <span style={{ fontSize:13, fontWeight:600, color:C.text }}>{rec.name}</span>
+                          {rec.dose && <span style={{ fontSize:11, color:C.muted }}>{rec.dose}</span>}
                         </div>
-                        <p className="text-xs text-gray-600 mt-1 leading-relaxed">{rec.reason}</p>
+                        <p style={{ fontSize:12, color:C.muted, margin:0, lineHeight:1.5 }}>{rec.reason}</p>
                       </div>
-                      <button
-                        onClick={() => addRecommendedSupplement(rec)}
-                        disabled={alreadyAdded}
-                        className={`text-xs px-2.5 py-1.5 rounded-lg flex-shrink-0 border font-medium transition-all ${alreadyAdded ? "bg-green-100 text-green-600 border-green-200 cursor-default" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"}`}
-                      >
-                        {alreadyAdded ? "✓ Added" : "+ Add"}
+                      <button onClick={()=>addRecommendedSupp(rec)} disabled={isAdded} style={{ padding:"5px 10px", borderRadius:8, border:`1px solid ${isAdded?C.sage:C.border}`, backgroundColor:isAdded?C.greenLight:C.card, color:isAdded?C.sage:C.muted, fontSize:11, fontWeight:500, cursor:isAdded?"default":"pointer", flexShrink:0, transition:"all 0.15s" }}>
+                        {isAdded?"Added ✓":"+ Add"}
                       </button>
                     </div>
                   </div>
                 );
               })}
 
-              {!supplementsLoading && supplementRecs.length === 0 && !supplementOverall && (
-                <p className="text-sm text-gray-400 text-center py-4">
-                  {foodEntries.length === 0
-                    ? "Log some food first, then Nora will analyse your nutritional gaps."
-                    : "Tap below to get personalised supplement recommendations."}
+              {!supLoad && supRecs.length===0 && !supOverall && (
+                <p style={{ fontSize:13, color:C.muted, textAlign:"center", padding:"16px 0", margin:0 }}>
+                  {foodE.length===0 ? "Log some food first, then analyse your nutritional gaps." : "Tap below to receive personalised supplement guidance."}
                 </p>
               )}
 
-              <button
-                onClick={handleGetSupplementRecs}
-                disabled={supplementsLoading}
-                className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 disabled:opacity-40 text-white font-semibold rounded-xl transition-all text-sm"
-              >
-                {supplementsLoading
-                  ? "Analysing your nutrition..."
-                  : supplementRecs.length > 0
-                  ? "🔄 Re-analyse my nutrition"
-                  : "🔍 Analyse my nutrition gaps"}
+              <button onClick={handleGetSupRecs} disabled={supLoad} style={{ width:"100%", padding:"13px", backgroundColor:supLoad?"#C8D5D1":C.green, color:C.bg, border:"none", borderRadius:10, fontSize:13, fontWeight:500, cursor:supLoad?"not-allowed":"pointer", letterSpacing:"0.02em", transition:"background-color 0.15s" }}>
+                {supLoad ? "Analysing your nutrition…" : supRecs.length>0 ? "Re-analyse" : "Analyse my nutrition gaps"}
               </button>
             </div>
           </div>
 
-          {/* My Daily Supplements */}
-          <div className="bg-white rounded-2xl border border-green-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-50 flex items-center justify-between">
+          {/* My supplements */}
+          <div style={{ ...card, overflow:"hidden" }}>
+            <div style={{ padding:"15px 18px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
               <div>
-                <h3 className="font-bold text-gray-700">💊 My Daily Supplements</h3>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {userSupplements.length === 0
-                    ? "No supplements added yet"
-                    : `${userSupplements.filter(s=>s.taken).length} of ${userSupplements.length} taken today`}
+                <p style={{ fontSize:14, fontWeight:600, color:C.text, margin:0 }}>My Daily Supplements</p>
+                <p style={{ fontSize:11, color:C.muted, margin:"2px 0 0" }}>
+                  {userSupps.length===0 ? "None added yet" : `${userSupps.filter(s=>s.taken).length} of ${userSupps.length} taken today`}
                 </p>
               </div>
-              {userSupplements.length > 0 && userSupplements.every(s => s.taken) && (
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">All done ✓</span>
+              {userSupps.length>0 && userSupps.every(s=>s.taken) && (
+                <span style={{ fontSize:11, color:C.sage, fontWeight:600, backgroundColor:C.greenLight, padding:"4px 10px", borderRadius:20, border:`1px solid ${C.sage}40` }}>All taken</span>
               )}
             </div>
-            <div className="p-4 space-y-3">
-              <div className="flex gap-2">
-                <input
-                  className="flex-1 px-3 py-2.5 rounded-xl border border-green-100 bg-green-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-300"
-                  placeholder="Supplement name (e.g. Vitamin D)"
-                  value={newSupName}
-                  onChange={e => setNewSupName(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && addUserSupplement()}
-                />
-                <input
-                  className="w-20 px-3 py-2.5 rounded-xl border border-green-100 bg-green-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-300"
-                  placeholder="Dose"
-                  value={newSupDose}
-                  onChange={e => setNewSupDose(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && addUserSupplement()}
-                />
-                <button
-                  onClick={addUserSupplement}
-                  disabled={!newSupName.trim()}
-                  className="px-3 py-2.5 bg-green-500 hover:bg-green-600 disabled:opacity-40 text-white rounded-xl text-lg font-bold transition-all leading-none"
-                >+</button>
+            <div style={{ padding:16, display:"flex", flexDirection:"column", gap:10 }}>
+              <div style={{ display:"flex", gap:8 }}>
+                <input className="focus-gold" style={{...inp,flex:1}} placeholder="Supplement name (e.g. Vitamin D)" value={newSupName} onChange={e=>setNewSupName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addUserSupp()}/>
+                <input className="focus-gold" style={{...inp,width:72}} placeholder="Dose" value={newSupDose} onChange={e=>setNewSupDose(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addUserSupp()}/>
+                <button onClick={addUserSupp} disabled={!newSupName.trim()} style={{ padding:"11px 14px", backgroundColor:newSupName.trim()?C.green:"#C8D5D1", color:C.bg, border:"none", borderRadius:10, fontSize:17, fontWeight:500, cursor:newSupName.trim()?"pointer":"not-allowed", lineHeight:1 }}>+</button>
               </div>
 
-              {userSupplements.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-4">
-                  Add your supplements above, or tap "+ Add" on a recommendation.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {userSupplements.map(s => (
-                    <div key={s.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${s.taken ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-100 hover:border-green-100"}`}>
-                      <button
-                        type="button"
-                        onClick={() => toggleSupplementTaken(s.id)}
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs flex-shrink-0 transition-all ${s.taken ? "bg-green-500 border-green-500 text-white" : "border-gray-300 hover:border-green-400"}`}
-                      >
-                        {s.taken && "✓"}
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <span className={`text-sm font-medium ${s.taken ? "text-gray-400 line-through" : "text-gray-700"}`}>{s.name}</span>
-                        {s.dose && <span className="text-xs text-gray-400 ml-2">{s.dose}</span>}
+              {userSupps.length===0
+                ? <p style={{ fontSize:13, color:C.muted, textAlign:"center", padding:"16px 0", margin:0 }}>Add your supplements above, or tap "+ Add" on a recommendation.</p>
+                : <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                    {userSupps.map(s=>(
+                      <div key={s.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 12px", borderRadius:10, border:`1px solid ${s.taken?C.sage:C.border}`, backgroundColor:s.taken?C.greenLight:C.card, transition:"all 0.2s ease" }}>
+                        <button type="button" onClick={()=>toggleSupp(s.id)} style={{ width:22, height:22, borderRadius:"50%", border:`1.5px solid ${s.taken?C.sage:C.border}`, backgroundColor:s.taken?C.sage:"transparent", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0, transition:"all 0.2s ease", color:"white", fontSize:11, fontWeight:700 }}>
+                          {s.taken && "✓"}
+                        </button>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <span style={{ fontSize:13, fontWeight:500, color:s.taken?C.muted:C.text, textDecoration:s.taken?"line-through":"none" }}>{s.name}</span>
+                          {s.dose && <span style={{ fontSize:11, color:C.muted, marginLeft:8 }}>{s.dose}</span>}
+                        </div>
+                        <button onClick={()=>removeSupp(s.id)} style={{ background:"none", border:"none", color:C.border, cursor:"pointer", fontSize:18, lineHeight:1, padding:2, flexShrink:0, transition:"color 0.15s" }}>×</button>
                       </div>
-                      <button
-                        onClick={() => removeUserSupplement(s.id)}
-                        className="text-gray-300 hover:text-red-400 transition-colors text-xl leading-none flex-shrink-0"
-                      >×</button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+              }
             </div>
           </div>
         </div>
       )}
 
-      {/* PROGRESS */}
+      {/* PROGRESS ───────────────────────────────────────────────────────────── */}
       {activeTab === "progress" && (
-        <div className="flex-1 overflow-y-auto pb-24 pt-4 px-4 space-y-4">
-          <h2 className="text-2xl font-bold text-gray-800" style={{fontFamily:"'Georgia',serif"}}>Progress</h2>
+        <div style={{ padding:"20px 16px 100px", display:"flex", flexDirection:"column", gap:14 }}>
+          {secHead("Progress")}
 
-          <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl p-4 border border-orange-100 flex items-center gap-4">
-            <span className="text-4xl">🔥</span>
-            <div>
-              <p className="text-2xl font-bold text-gray-800">{streak} day{streak !== 1 ? "s" : ""}</p>
-              <p className="text-sm text-gray-500">{streak >= 7 ? "Amazing streak!" : streak >= 3 ? "Great momentum!" : streak > 0 ? "Keep it going!" : "Start logging to build your streak"}</p>
+          {/* Streak */}
+          <div style={{ ...card, padding:"18px 20px", display:"flex", alignItems:"center", gap:16 }}>
+            <div style={{ width:52, height:52, borderRadius:14, backgroundColor:C.goldLight, border:`1px solid ${C.gold}30`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <FlameIcon size={22} color={C.gold}/>
             </div>
-            <div className="ml-auto text-right">
-              <p className="text-xs text-gray-400">Days logged</p>
-              <p className="text-lg font-bold text-gray-700">{last7Days.filter(d => d.calories > 0).length}<span className="text-xs text-gray-400">/7</span></p>
+            <div style={{ flex:1 }}>
+              <p style={{ fontFamily:serif, fontSize:22, fontWeight:600, color:C.text, margin:0 }}>{streak} <span style={{ fontSize:14, fontWeight:400, color:C.muted }}>day{streak!==1?"s":""}</span></p>
+              <p style={{ fontSize:12, color:C.muted, margin:"2px 0 0" }}>{streak>=7?"Exceptional streak":streak>=3?"Fine momentum":streak>0?"Keep going":"Begin logging to build your streak"}</p>
+            </div>
+            <div style={{ textAlign:"right" }}>
+              <p style={{ fontSize:22, fontWeight:600, color:C.green, margin:0 }}>{last7.filter(d=>d.calories>0).length}<span style={{ fontSize:12, color:C.muted, fontWeight:400 }}>/7</span></p>
+              <p style={{ fontSize:10, color:C.muted, margin:"2px 0 0", textTransform:"uppercase", letterSpacing:"0.05em" }}>Days logged</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 border border-green-100 shadow-sm">
-            <h3 className="text-sm font-bold text-gray-600 mb-4">Calories vs Target (7 days)</h3>
-            <div className="flex items-end justify-between gap-1 h-32">
-              {last7Days.map(d => {
-                const h = targets ? Math.round((d.calories / targets.calories) * 100) : 0;
-                const color = h === 0 ? "#e5e7eb" : h <= 105 ? "#22c55e" : h <= 120 ? "#f59e0b" : "#f87171";
+          {/* 7-day chart */}
+          <div style={{ ...card, padding:"20px 16px" }}>
+            <p style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 16px" }}>Energy · 7 days</p>
+            <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"space-between", gap:4, height:100 }}>
+              {last7.map(d => {
+                const h = targets ? Math.round((d.calories/targets.calories)*100) : 0;
+                const col = h===0?C.track:h<=105?C.green:h<=120?C.gold:C.error;
                 return (
-                  <div key={d.date} className="flex-1 flex flex-col items-center gap-1">
-                    <div className="w-full relative flex items-end" style={{height:96}}>
-                      <div style={{height:`${Math.min(h||0,150)}%`,backgroundColor:color,transition:"height 0.5s ease"}} className="w-full rounded-t-lg"/>
-                      {targets && <div className="absolute w-full border-t-2 border-dashed border-gray-200" style={{bottom:"66.67%"}}/>}
+                  <div key={d.date} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+                    <div style={{ width:"100%", position:"relative", display:"flex", alignItems:"flex-end", height:80 }}>
+                      <div style={{ width:"100%", height:`${Math.min(h||0,150)}%`, backgroundColor:col, borderRadius:"4px 4px 0 0", transition:"height 0.6s cubic-bezier(0.4,0,0.2,1)" }}/>
+                      {targets && <div style={{ position:"absolute", width:"100%", borderTop:`1px dashed ${C.border}`, bottom:"66.67%" }}/>}
                     </div>
-                    <span className={`text-xs font-medium ${d.isToday?"text-green-600 font-bold":"text-gray-400"}`}>{d.day}</span>
-                    {d.calories > 0 && <span className="text-xs text-gray-400">{Math.round(d.calories/100)/10}k</span>}
+                    <span style={{ fontSize:10, color:d.isToday?C.green:C.muted, fontWeight:d.isToday?700:400 }}>{d.day}</span>
+                    {d.calories>0 && <span style={{ fontSize:9, color:C.muted }}>{Math.round(d.calories/100)/10}k</span>}
                   </div>
                 );
               })}
             </div>
-            <div className="flex gap-3 mt-3 text-xs text-gray-400">
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-400 inline-block"/>On target</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-400 inline-block"/>Slightly over</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-300 inline-block"/>Over</span>
+            <div style={{ display:"flex", gap:12, marginTop:12, flexWrap:"wrap" }}>
+              {[{col:C.green,label:"On target"},{col:C.gold,label:"Slightly over"},{col:C.error,label:"Over"}].map(item=>(
+                <div key={item.label} style={{ display:"flex", alignItems:"center", gap:4 }}>
+                  <div style={{ width:10, height:10, borderRadius:3, backgroundColor:item.col }}/>
+                  <span style={{ fontSize:10, color:C.muted }}>{item.label}</span>
+                </div>
+              ))}
             </div>
           </div>
 
+          {/* Averages */}
           {targets && (
-            <div className="bg-white rounded-2xl p-5 border border-green-100 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-600 mb-3">7-day averages {daysWithData.length === 0 && <span className="text-gray-400 font-normal text-xs">(no data yet)</span>}</h3>
-              <div className="grid grid-cols-2 gap-3">
+            <div style={{ ...card, padding:"18px 16px" }}>
+              <p style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 14px" }}>7-day averages {daysWithData.length===0&&<span style={{ fontWeight:400, textTransform:"none" }}>— no data yet</span>}</p>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                 {[
-                  {label:"Avg Calories",val:`${avg("calories")} kcal`,icon:"🔥",target:`${targets.calories} kcal`},
-                  {label:"Avg Protein",val:`${avg("protein")}g`,icon:"💪",target:`${targets.protein_g}g`},
-                  {label:"Avg Carbs",val:`${avg("carbs")}g`,icon:"🌾",target:`${targets.carbs_g}g`},
-                  {label:"Avg Fat",val:`${avg("fat")}g`,icon:"🥑",target:`${targets.fat_g}g`},
-                ].map(item => (
-                  <div key={item.label} className="bg-green-50 rounded-xl p-3 flex items-center gap-2">
-                    <span className="text-lg">{item.icon}</span>
-                    <div>
-                      <div className="text-xs text-gray-400">{item.label}</div>
-                      <div className="text-sm font-bold text-gray-800">{daysWithData.length > 0 ? item.val : "—"}</div>
-                      <div className="text-xs text-gray-400">target: {item.target}</div>
-                    </div>
+                  {label:"Avg Energy",  val:`${avg("calories")} kcal`, target:`${targets.calories} kcal`},
+                  {label:"Avg Protein", val:`${avg("protein")}g`,      target:`${targets.protein_g}g`},
+                  {label:"Avg Carbs",   val:`${avg("carbs")}g`,        target:`${targets.carbs_g}g`},
+                  {label:"Avg Fat",     val:`${avg("fat")}g`,          target:`${targets.fat_g}g`},
+                ].map(item=>(
+                  <div key={item.label} style={{ backgroundColor:C.greenLight, borderRadius:12, padding:"12px 14px" }}>
+                    <p style={{ fontSize:11, color:C.muted, margin:"0 0 4px", textTransform:"uppercase", letterSpacing:"0.05em" }}>{item.label}</p>
+                    <p style={{ fontSize:16, fontWeight:600, color:C.green, margin:0 }}>{daysWithData.length>0?item.val:"—"}</p>
+                    <p style={{ fontSize:10, color:C.muted, margin:"2px 0 0" }}>Target: {item.target}</p>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {targets && daysWithData.length > 0 && (
-            <div className="bg-white rounded-2xl p-5 border border-sky-100 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-600 mb-3">💧 Hydration this week</h3>
-              <div className="space-y-2">
-                {last7Days.slice().reverse().filter(d => d.isToday || d.waterMl > 0 || d.entryCount > 0).slice(0,5).map(d => (
-                  <div key={d.date} className="flex items-center gap-3">
-                    <span className={`text-xs w-8 ${d.isToday?"text-green-600 font-bold":"text-gray-400"}`}>{d.day}</span>
-                    <div className="flex-1 h-2 bg-sky-50 rounded-full overflow-hidden">
-                      <div style={{width:`${Math.min((d.waterMl/(targets.water_ml||1))*100,100)}%`,backgroundColor:"#38bdf8",transition:"width 0.5s"}} className="h-full rounded-full"/>
+          {/* Hydration */}
+          {targets && daysWithData.length>0 && (
+            <div style={{ ...card, padding:"18px 16px" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:14 }}>
+                <DropIcon size={14} color={C.slate}/>
+                <p style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:0 }}>Hydration · this week</p>
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {last7.slice().reverse().filter(d=>d.isToday||d.waterMl>0||d.entryCount>0).slice(0,5).map(d=>(
+                  <div key={d.date} style={{ display:"flex", alignItems:"center", gap:10 }}>
+                    <span style={{ fontSize:11, color:d.isToday?C.green:C.muted, width:28, fontWeight:d.isToday?700:400 }}>{d.day}</span>
+                    <div style={{ flex:1, height:5, backgroundColor:C.track, borderRadius:6, overflow:"hidden" }}>
+                      <div style={{ width:`${Math.min((d.waterMl/(targets.water_ml||1))*100,100)}%`, backgroundColor:C.slate, height:"100%", borderRadius:6, transition:"width 0.5s ease" }}/>
                     </div>
-                    <span className="text-xs text-gray-500 w-12 text-right">{d.waterMl > 0 ? `${(d.waterMl/1000).toFixed(1)}L` : "—"}</span>
+                    <span style={{ fontSize:11, color:C.muted, width:36, textAlign:"right" }}>{d.waterMl>0?`${(d.waterMl/1000).toFixed(1)}L`:"—"}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          <button onClick={handleWeeklyReport} disabled={weeklyLoading} className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 disabled:opacity-40 text-white font-semibold rounded-2xl shadow-lg shadow-green-200 transition-all">
-            {weeklyLoading ? "Generating your report..." : "📊 Generate Weekly Report"}
+          {/* Weekly report */}
+          <button onClick={handleWeeklyReport} disabled={weeklyLoad} style={{ width:"100%", padding:"15px", backgroundColor:weeklyLoad?"#C8D5D1":C.green, color:C.bg, border:"none", borderRadius:12, fontSize:14, fontWeight:500, cursor:weeklyLoad?"not-allowed":"pointer", letterSpacing:"0.02em", transition:"background-color 0.15s" }}>
+            {weeklyLoad ? "Generating your report…" : "Generate weekly report"}
           </button>
 
-          {weeklyLoading && <div className="bg-white rounded-2xl p-5 border border-green-100 space-y-3"><Skeleton className="h-5 w-full"/><Skeleton className="h-4 w-3/4"/><Skeleton className="h-4 w-5/6"/></div>}
+          {weeklyLoad && <div style={{ ...card, padding:20, display:"flex", flexDirection:"column", gap:10 }}><Skeleton className="h-4 w-full"/><Skeleton className="h-4 w-3/4"/><Skeleton className="h-4 w-5/6"/></div>}
           {weeklyReport && (
-            <div className="bg-white rounded-2xl border border-green-100 shadow-sm overflow-hidden">
-              <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-5 flex gap-3 items-start">
-                <NoraAvatar size={40}/>
+            <div style={{ ...card, overflow:"hidden", animation:"fadeIn 0.3s ease" }}>
+              <div style={{ backgroundColor:C.green, padding:"18px 20px", display:"flex", gap:14 }}>
+                <NoraAvatar size={38}/>
                 <div>
-                  <p className="text-white font-bold text-sm">Weekly Report from Nora</p>
-                  <p className="text-green-100 text-sm mt-1">{weeklyReport.headline}</p>
+                  <p style={{ fontSize:12, color:"rgba(245,240,232,0.6)", margin:"0 0 4px", textTransform:"uppercase", letterSpacing:"0.06em" }}>Weekly Report</p>
+                  <p style={{ fontSize:14, color:C.bg, lineHeight:1.5, margin:0 }}>{weeklyReport.headline}</p>
                 </div>
               </div>
-              <div className="p-5 space-y-4">
+              <div style={{ padding:20, display:"flex", flexDirection:"column", gap:16 }}>
                 <div>
-                  <h4 className="text-xs font-bold text-green-600 uppercase tracking-wider mb-2">🏆 Your wins</h4>
-                  {weeklyReport.wins?.map((w,i) => <p key={i} className="text-sm text-gray-700 flex gap-2 mb-1"><span className="text-green-500">✓</span>{w}</p>)}
+                  <p style={{ fontSize:11, fontWeight:700, color:C.sage, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 8px" }}>Wins this week</p>
+                  {weeklyReport.wins?.map((w,i)=><p key={i} style={{ fontSize:13, color:C.text, margin:"4px 0", display:"flex", gap:8 }}><span style={{ color:C.sage }}>✓</span>{w}</p>)}
                 </div>
+                <Divider/>
                 <div>
-                  <h4 className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-2">💡 For next week</h4>
-                  {weeklyReport.suggestions?.map((s,i) => <p key={i} className="text-sm text-gray-700 flex gap-2 mb-1"><span className="text-amber-500">→</span>{s}</p>)}
+                  <p style={{ fontSize:11, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 8px" }}>For next week</p>
+                  {weeklyReport.suggestions?.map((s,i)=><p key={i} style={{ fontSize:13, color:C.text, margin:"4px 0", display:"flex", gap:8 }}><span style={{ color:C.gold }}>→</span>{s}</p>)}
                 </div>
-                <div className="bg-green-50 rounded-xl p-3">
-                  <h4 className="text-xs font-bold text-green-600 uppercase tracking-wider mb-1">🌿 Fun fact</h4>
-                  <p className="text-sm text-gray-700">{weeklyReport.fun_fact}</p>
+                <div style={{ backgroundColor:C.greenLight, borderRadius:10, padding:"12px 14px" }}>
+                  <p style={{ fontSize:10, fontWeight:700, color:C.green, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 5px" }}>Did you know</p>
+                  <p style={{ fontSize:13, color:C.text, margin:0, lineHeight:1.6 }}>{weeklyReport.fun_fact}</p>
                 </div>
               </div>
             </div>
@@ -1032,91 +1238,108 @@ export default function NutritionApp() {
         </div>
       )}
 
-      {/* ME */}
+      {/* ME ─────────────────────────────────────────────────────────────────── */}
       {activeTab === "me" && (
-        <div className="flex-1 overflow-y-auto pb-24 pt-4 px-4 space-y-4">
-          <h2 className="text-2xl font-bold text-gray-800" style={{fontFamily:"'Georgia',serif"}}>Profile</h2>
+        <div style={{ padding:"20px 16px 100px", display:"flex", flexDirection:"column", gap:14 }}>
+          {secHead("Profile")}
 
-          <div className="bg-white rounded-2xl p-5 border border-green-100 shadow-sm">
-            <div className="flex items-center gap-4 mb-5">
-              <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-2xl font-bold text-white">{profile.name[0]?.toUpperCase()}</div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-gray-800 text-lg">{profile.name}</h3>
-                <p className="text-sm text-gray-400">{profile.activity}</p>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {profile.goals.map(g => <span key={g} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{g}</span>)}
+          {/* Profile card */}
+          <div style={{ ...card, padding:"20px" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:20 }}>
+              <div style={{ width:52, height:52, borderRadius:"50%", backgroundColor:C.green, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, fontWeight:700, color:C.bg, flexShrink:0 }}>{profile.name[0]?.toUpperCase()}</div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <h3 style={{ fontSize:17, fontWeight:600, color:C.text, margin:0 }}>{profile.name}</h3>
+                <p style={{ fontSize:12, color:C.muted, margin:"2px 0 6px" }}>{profile.activity}</p>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
+                  {profile.goals.map(g=>(
+                    <span key={g} style={{ fontSize:11, backgroundColor:C.greenLight, color:C.green, padding:"3px 8px", borderRadius:20, border:`1px solid ${C.border}` }}>{g}</span>
+                  ))}
                 </div>
               </div>
             </div>
             {targets && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Daily Targets</h4>
+              <>
+                <p style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 10px" }}>Daily Targets</p>
                 {[
-                  {label:"Calories",val:`${targets.calories} kcal`,color:"bg-green-100 text-green-800"},
-                  {label:"Protein",val:`${targets.protein_g}g`,color:"bg-sky-100 text-sky-800"},
-                  {label:"Carbohydrates",val:`${targets.carbs_g}g`,color:"bg-amber-100 text-amber-800"},
-                  {label:"Fat",val:`${targets.fat_g}g`,color:"bg-purple-100 text-purple-800"},
-                  {label:"Fiber",val:`${targets.fiber_g}g`,color:"bg-emerald-100 text-emerald-800"},
-                  {label:"Water",val:`${Math.round(targets.water_ml/100)/10}L`,color:"bg-blue-100 text-blue-800"},
-                ].map(item => (
-                  <div key={item.label} className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0">
-                    <span className="text-sm text-gray-600">{item.label}</span>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${item.color}`}>{item.val}</span>
+                  {label:"Energy",        val:`${targets.calories} kcal`},
+                  {label:"Protein",       val:`${targets.protein_g} g`},
+                  {label:"Carbohydrates", val:`${targets.carbs_g} g`},
+                  {label:"Fat",           val:`${targets.fat_g} g`},
+                  {label:"Fibre",         val:`${targets.fiber_g} g`},
+                  {label:"Water",         val:`${Math.round(targets.water_ml/100)/10} L`},
+                ].map((item,i,arr)=>(
+                  <div key={item.label} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom: i<arr.length-1?`1px solid ${C.border}`:"none" }}>
+                    <span style={{ fontSize:13, color:C.text }}>{item.label}</span>
+                    <span style={{ fontSize:13, fontWeight:600, color:C.green }}>{item.val}</span>
                   </div>
                 ))}
-              </div>
+              </>
             )}
           </div>
 
-          <div className="bg-white rounded-2xl border border-green-100 shadow-sm overflow-hidden">
-            <div className="bg-gradient-to-r from-teal-50 to-emerald-50 px-5 py-4 border-b border-green-100">
-              <h3 className="font-bold text-gray-700">🔗 Health Data</h3>
-              <p className="text-xs text-gray-400 mt-0.5">Manually sync your activity and sleep</p>
+          {/* Health data */}
+          <div style={{ ...card, overflow:"hidden" }}>
+            <div style={{ padding:"15px 18px", borderBottom:`1px solid ${C.border}` }}>
+              <p style={{ fontSize:14, fontWeight:600, color:C.text, margin:0 }}>Health Data</p>
+              <p style={{ fontSize:11, color:C.muted, margin:"2px 0 0" }}>Manually sync your activity and sleep</p>
             </div>
-            <div className="p-5 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className="text-xs text-gray-500 font-medium">Steps today</label><input type="number" className="w-full mt-1 px-3 py-2.5 rounded-xl border border-green-100 bg-green-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" placeholder="E.g. 8500" value={healthData.steps} onChange={e => setHealthData(p => ({...p,steps:e.target.value}))}/></div>
-                <div><label className="text-xs text-gray-500 font-medium">Sleep (hours)</label><input type="number" className="w-full mt-1 px-3 py-2.5 rounded-xl border border-green-100 bg-green-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" placeholder="E.g. 7.5" value={healthData.sleep} onChange={e => setHealthData(p => ({...p,sleep:e.target.value}))}/></div>
+            <div style={{ padding:16, display:"flex", flexDirection:"column", gap:12 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                <div><label style={{ fontSize:11, color:C.muted, fontWeight:500, textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:5 }}>Steps today</label><input className="focus-gold" type="number" style={inp} placeholder="e.g. 8500" value={healthData.steps} onChange={e=>setHealthData(p=>({...p,steps:e.target.value}))}/></div>
+                <div><label style={{ fontSize:11, color:C.muted, fontWeight:500, textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:5 }}>Sleep hours</label><input className="focus-gold" type="number" style={inp} placeholder="e.g. 7.5" value={healthData.sleep} onChange={e=>setHealthData(p=>({...p,sleep:e.target.value}))}/></div>
               </div>
               <div>
-                <label className="text-xs text-gray-500 font-medium">Sleep quality</label>
-                <div className="flex gap-2 mt-1">
-                  {["poor","ok","good","great"].map(q => <button key={q} onClick={() => setHealthData(p => ({...p,sleepQuality:q}))} className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-all capitalize ${healthData.sleepQuality===q?"bg-green-500 text-white border-green-500":"bg-green-50 text-gray-500 border-green-100"}`}>{q}</button>)}
+                <label style={{ fontSize:11, color:C.muted, fontWeight:500, textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:5 }}>Sleep quality</label>
+                <div style={{ display:"flex", gap:6 }}>
+                  {["poor","ok","good","great"].map(q=>(
+                    <button key={q} onClick={()=>setHealthData(p=>({...p,sleepQuality:q}))} style={{ flex:1, padding:"8px 0", borderRadius:8, border:`1px solid ${healthData.sleepQuality===q?C.green:C.border}`, backgroundColor:healthData.sleepQuality===q?C.green:C.card, color:healthData.sleepQuality===q?C.bg:C.muted, fontSize:12, fontWeight:healthData.sleepQuality===q?500:400, cursor:"pointer", textTransform:"capitalize", transition:"all 0.15s" }}>{q}</button>
+                  ))}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className="text-xs text-gray-500 font-medium">Resting HR (bpm)</label><input type="number" className="w-full mt-1 px-3 py-2.5 rounded-xl border border-green-100 bg-green-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" placeholder="E.g. 62" value={healthData.heartRate} onChange={e => setHealthData(p => ({...p,heartRate:e.target.value}))}/></div>
-                <div><label className="text-xs text-gray-500 font-medium">Workout (min)</label><input type="number" className="w-full mt-1 px-3 py-2.5 rounded-xl border border-green-100 bg-green-50 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" placeholder="E.g. 45" value={healthData.workoutDuration} onChange={e => setHealthData(p => ({...p,workoutDuration:e.target.value}))}/></div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                <div><label style={{ fontSize:11, color:C.muted, fontWeight:500, textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:5 }}>Resting HR</label><input className="focus-gold" type="number" style={inp} placeholder="e.g. 62 bpm" value={healthData.heartRate} onChange={e=>setHealthData(p=>({...p,heartRate:e.target.value}))}/></div>
+                <div><label style={{ fontSize:11, color:C.muted, fontWeight:500, textTransform:"uppercase", letterSpacing:"0.05em", display:"block", marginBottom:5 }}>Workout min</label><input className="focus-gold" type="number" style={inp} placeholder="e.g. 45" value={healthData.workoutDuration} onChange={e=>setHealthData(p=>({...p,workoutDuration:e.target.value}))}/></div>
               </div>
-              <button onClick={() => { setHealthSaved(true); fetchGreeting(); }} className="w-full py-3 bg-teal-500 hover:bg-teal-600 text-white font-medium rounded-xl text-sm transition-all">{healthSaved ? "✓ Health data updated" : "Save health data"}</button>
+              <button onClick={()=>setHealthSaved(true)} style={{ width:"100%", padding:"12px", backgroundColor:C.green, color:C.bg, border:"none", borderRadius:10, fontSize:13, fontWeight:500, cursor:"pointer", letterSpacing:"0.02em" }}>{healthSaved?"Health data updated":"Save health data"}</button>
             </div>
           </div>
 
-          <button onClick={() => { setEntries([]); setCheckin(""); setWaterMl(0); }} className="w-full py-3 border border-red-200 text-red-500 rounded-2xl text-sm font-medium hover:bg-red-50 transition-all">🗑️ Reset today's log</button>
-          <button onClick={resetProfile} className="w-full py-3 border border-gray-200 text-gray-500 rounded-2xl text-sm font-medium hover:bg-gray-50 transition-all">↩ Change profile / restart onboarding</button>
+          {/* Reset buttons */}
+          <button onClick={()=>{setEntries([]);setCheckin("");setWaterMl(0);}} style={{ width:"100%", padding:"13px", backgroundColor:"transparent", border:`1px solid ${C.border}`, borderRadius:12, fontSize:13, color:C.error, cursor:"pointer", letterSpacing:"0.02em" }}>Reset today's log</button>
+          <button onClick={resetProfile} style={{ width:"100%", padding:"13px", backgroundColor:"transparent", border:`1px solid ${C.border}`, borderRadius:12, fontSize:13, color:C.muted, cursor:"pointer", letterSpacing:"0.02em" }}>Change profile</button>
 
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-5 border border-green-100">
-            <div className="flex items-center gap-3 mb-3"><NoraAvatar size={36}/><div><h3 className="font-bold text-gray-800">About Nora</h3><p className="text-xs text-gray-400">AI Nutrition Companion</p></div></div>
-            <p className="text-sm text-gray-600 leading-relaxed">Nora is powered by Claude, Anthropic's AI. She analyses your nutrition data, provides personalised targets, and offers warm, evidence-based guidance. Nora is not a medical professional — always consult a registered dietitian for clinical advice.</p>
+          {/* About */}
+          <div style={{ ...card, padding:"18px 20px" }}>
+            <div style={{ display:"flex", gap:12, alignItems:"center", marginBottom:10 }}>
+              <NoraAvatar size={32}/>
+              <div>
+                <p style={{ fontSize:14, fontWeight:600, color:C.text, margin:0 }}>About Nora</p>
+                <p style={{ fontSize:11, color:C.muted, margin:0 }}>AI Nutrition Companion</p>
+              </div>
+            </div>
+            <p style={{ fontSize:13, color:C.muted, lineHeight:1.7, margin:0 }}>Nora is powered by Claude, Anthropic's AI. She analyses your nutrition data, provides personalised daily targets, and offers warm, evidence-based guidance. Nora is not a medical professional — always consult a registered dietitian for clinical advice.</p>
           </div>
         </div>
       )}
 
-      {/* TAB BAR */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur border-t border-green-100 px-1 py-2 flex justify-around z-10">
+      {/* TAB BAR ────────────────────────────────────────────────────────────── */}
+      <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, backgroundColor:"rgba(250,250,247,0.96)", borderTop:`1px solid ${C.border}`, padding:"8px 4px 10px", display:"flex", justifyContent:"space-around", zIndex:10, backdropFilter:"blur(8px)" }}>
         {[
-          {id:"today",icon:"☀️",label:"Today"},
-          {id:"meals",icon:"🍽️",label:"Meals"},
-          {id:"supplements",icon:"💊",label:"Supps"},
-          {id:"progress",icon:"📈",label:"Progress"},
-          {id:"me",icon:"👤",label:"Me"},
-        ].map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all ${activeTab===tab.id?"text-green-600":"text-gray-400"}`}>
-            <span className="text-xl">{tab.icon}</span>
-            <span className={`text-xs font-medium ${activeTab===tab.id?"text-green-600":"text-gray-400"}`}>{tab.label}</span>
-            {activeTab===tab.id && <span className="w-1 h-1 rounded-full bg-green-500"/>}
-          </button>
-        ))}
+          {id:"today",      label:"Today"},
+          {id:"meals",      label:"Meals"},
+          {id:"supplements",label:"Supps"},
+          {id:"progress",   label:"Progress"},
+          {id:"me",         label:"Me"},
+        ].map(tab=>{
+          const active = activeTab===tab.id;
+          return (
+            <button key={tab.id} onClick={()=>setActiveTab(tab.id)} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:3, padding:"6px 10px", borderRadius:10, border:"none", backgroundColor:"transparent", cursor:"pointer", transition:"all 0.15s" }}>
+              <TabIcon id={tab.id} active={active}/>
+              <span style={{ fontSize:10, fontWeight:active?600:400, color:active?C.green:C.muted, letterSpacing:"0.03em" }}>{tab.label}</span>
+              {active && <div style={{ width:16, height:2, borderRadius:2, backgroundColor:C.gold }}/>}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
