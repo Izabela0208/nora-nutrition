@@ -4,8 +4,8 @@ const books    = require('../data/books.json');
 const podcasts = require('../data/podcasts.json');
 
 const supabase = createClient(
-  'process.env.SUPABASE_URL',
-  'process.env.SUPABASE_SERVICE_KEY'
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 async function seed() {
