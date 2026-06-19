@@ -676,24 +676,46 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
           </div>
         )}
 
-        {/* Evening summary */}
-        {eveningSummaryLoad&&<div style={{...card,padding:"14px 16px"}}><div style={{display:"flex",gap:5}}>{[0,1,2].map(j=><div key={j} style={{width:7,height:7,borderRadius:"50%",backgroundColor:C.muted,animation:`dotPulse 1.2s ease ${j*0.2}s infinite`}}/>)}</div></div>}
-        {eveningSummary&&(
-          <div style={{...card,padding:"14px 16px",display:"flex",gap:10,alignItems:"flex-start",animation:"fadeIn 0.3s ease",borderLeft:`3px solid ${C.gold}`}}>
-            <NoraAvatar size={28}/>
-            <div style={{flex:1,minWidth:0}}>
-              <p style={{fontSize:11,fontWeight:700,color:C.gold,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 4px"}}>Today's summary</p>
-              <p style={{fontSize:13,color:C.text,lineHeight:1.6,margin:0}}>{eveningSummary}</p>
+        {/* Nora's daily insight */}
+        {eveningSummaryLoad&&(
+          <div style={{...card,padding:"18px 20px",background:`linear-gradient(160deg,${C.card} 60%,#FBF4E8 100%)`,boxShadow:"0 4px 24px rgba(201,169,110,0.10)",borderLeft:`4px solid ${C.gold}`}}>
+            <div style={{display:"flex",gap:12,alignItems:"center"}}>
+              <NoraAvatar size={28}/>
+              <div style={{display:"flex",gap:5}}>
+                {[0,1,2].map(j=><div key={j} style={{width:6,height:6,borderRadius:"50%",backgroundColor:C.gold,opacity:0.5,animation:`dotPulse 1.2s ease ${j*0.2}s infinite`}}/>)}
+              </div>
             </div>
+          </div>
+        )}
+        {eveningSummary&&(
+          <div style={{...card,padding:"20px 22px",animation:"fadeIn 0.4s ease",background:`linear-gradient(160deg,${C.card} 60%,#FBF4E8 100%)`,boxShadow:"0 4px 24px rgba(201,169,110,0.10),0 2px 8px rgba(28,43,38,0.05)",borderLeft:`4px solid ${C.gold}`}}>
+            <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
+              <NoraAvatar size={34}/>
+              <div>
+                <p style={{fontFamily:serif,fontSize:13,fontWeight:600,color:C.gold,margin:0,letterSpacing:"0.01em"}}>Nora</p>
+                <p style={{fontSize:10,color:C.muted,margin:0,letterSpacing:"0.03em"}}>{timeOfDay==="morning"?"Morning Insight":timeOfDay==="afternoon"?"Afternoon Check-in":"Evening Reflection"}</p>
+              </div>
+            </div>
+            <p style={{fontFamily:serif,fontSize:14,color:C.text,lineHeight:1.75,margin:0,fontStyle:"italic"}}>{eveningSummary}</p>
           </div>
         )}
 
         {/* Cycle & hormonal insights — compact */}
         {isFemale&&cyclePhase&&(
-          <div style={{...card,padding:"10px 14px",borderLeft:`2px solid ${cyclePhase.color}55`}}>
-            <p style={{fontSize:10,fontWeight:700,color:cyclePhase.color,textTransform:"uppercase",letterSpacing:"0.05em",margin:"0 0 3px"}}>{cyclePhase.label} · Day {cyclePhase.day}</p>
-            <p style={{fontSize:11,color:C.muted,margin:"0 0 6px",lineHeight:1.45}}>{cyclePhase.tip}</p>
-            <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45}}>{getHormonalTip().tip}</p>
+          <div style={{...card,padding:"16px 18px",borderLeft:`3px solid ${cyclePhase.color}`,background:`linear-gradient(135deg,${C.card} 0%,${cyclePhase.color}08 100%)`}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+              <p style={{fontFamily:serif,fontSize:13,fontWeight:600,color:cyclePhase.color,margin:0}}>{cyclePhase.label} Phase</p>
+              <span style={{fontSize:10,color:cyclePhase.color,backgroundColor:`${cyclePhase.color}18`,padding:"2px 9px",borderRadius:20,fontWeight:600,letterSpacing:"0.04em"}}>Day {cyclePhase.day}</span>
+            </div>
+            <div style={{marginBottom:10}}>
+              <p style={{fontSize:9,fontWeight:700,color:cyclePhase.color,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 4px"}}>✦ Cycle Insight</p>
+              <p style={{fontFamily:serif,fontSize:12,color:C.text,margin:0,lineHeight:1.6}}>{cyclePhase.tip}</p>
+            </div>
+            <div style={{height:1,backgroundColor:`${cyclePhase.color}20`,margin:"0 0 10px"}}/>
+            <div>
+              <p style={{fontSize:9,fontWeight:700,color:C.gold,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 4px"}}>✦ Today's Tip</p>
+              <p style={{fontFamily:serif,fontSize:12,color:C.text,margin:0,lineHeight:1.6}}>{getHormonalTip().tip}</p>
+            </div>
           </div>
         )}
         {isFemale&&isPeri&&(
@@ -975,6 +997,7 @@ function getFallbackCircadianTip() {
 
 function CircadianCard() {
   const [tip, setTip] = useState(null);
+  const [sunTimes, setSunTimes] = useState(null);
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -983,7 +1006,11 @@ function CircadianCard() {
       return null;
     })();
 
-    if (cached) { setTip(computeCircadianTip(cached.srH, cached.ssH)); return; }
+    if (cached) {
+      setSunTimes({ srH: cached.srH, ssH: cached.ssH });
+      setTip(computeCircadianTip(cached.srH, cached.ssH));
+      return;
+    }
 
     if (!navigator.geolocation) { setTip(getFallbackCircadianTip()); return; }
 
@@ -997,6 +1024,7 @@ function CircadianCard() {
             const ssH = parseTimeToH(data.results.sunset);
             if (srH && ssH) {
               try { localStorage.setItem("nora_circadian", JSON.stringify({ date: today, srH, ssH })); } catch {}
+              setSunTimes({ srH, ssH });
               setTip(computeCircadianTip(srH, ssH));
               return;
             }
@@ -1011,12 +1039,104 @@ function CircadianCard() {
 
   if (!tip) return null;
 
+  if (tip.title === "Dinner window" || tip.title === "Dinner timing") {
+    return <EatingWindowTimeline sunTimes={sunTimes} />;
+  }
+
   return (
     <div style={{ ...card, padding: "14px 16px", borderLeft: `3px solid ${C.slate}`, animation: "fadeIn 0.3s ease" }}>
       <p style={{ fontSize: 11, fontWeight: 700, color: C.slate, textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 5px" }}>
         {tip.icon} {tip.title}
       </p>
       <p style={{ fontSize: 13, color: C.text, lineHeight: 1.55, margin: 0 }}>{tip.tip}</p>
+    </div>
+  );
+}
+
+function EatingWindowTimeline({ sunTimes }) {
+  const now  = new Date();
+  const nowH = now.getHours() + now.getMinutes() / 60;
+
+  const eatStart = sunTimes ? sunTimes.srH + 1   : 7;
+  const eatEnd   = sunTimes ? sunTimes.ssH + 0.5  : 19;
+  const bedtime  = sunTimes ? sunTimes.ssH + 3.5  : 22.5;
+
+  const TL_START = 5, TL_END = 24;
+  const span = TL_END - TL_START;
+  const pct  = (h) => Math.max(0, Math.min(100, ((h - TL_START) / span) * 100));
+
+  const fmtH = (h) => {
+    const hr  = Math.floor(h) % 24;
+    const min = Math.round((h % 1) * 60);
+    const lbl = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
+    return min > 0 ? `${lbl}:${String(min).padStart(2,"0")}${hr < 12 ? "am":"pm"}` : `${lbl}${hr < 12 ? "am":"pm"}`;
+  };
+
+  const nowPct     = pct(nowH);
+  const eatStartPct = pct(eatStart);
+  const eatEndPct   = pct(eatEnd);
+  const bedtimePct  = pct(bedtime);
+
+  return (
+    <div style={{ ...card, padding: "14px 16px", borderLeft: `3px solid ${C.slate}`, animation: "fadeIn 0.3s ease" }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: C.slate, textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 12px" }}>
+        🌆 Eating Window
+      </p>
+
+      {/* Bar */}
+      <div style={{ position: "relative", marginBottom: 6 }}>
+        <div style={{ height: 12, borderRadius: 8, backgroundColor: C.track, position: "relative", overflow: "hidden" }}>
+          {/* Green: eat freely */}
+          <div style={{
+            position: "absolute", top: 0, height: "100%",
+            left: `${eatStartPct}%`, width: `${eatEndPct - eatStartPct}%`,
+            background: `linear-gradient(90deg, ${C.green}BB, ${C.green}EE)`,
+          }}/>
+          {/* Gold: wind-down caution */}
+          <div style={{
+            position: "absolute", top: 0, height: "100%",
+            left: `${eatEndPct}%`, width: `${bedtimePct - eatEndPct}%`,
+            background: `linear-gradient(90deg, ${C.gold}99, ${C.amber}BB)`,
+          }}/>
+        </div>
+        {/* Current-time needle */}
+        <div style={{
+          position: "absolute", top: -4, height: 20, width: 2,
+          left: `${nowPct}%`, transform: "translateX(-50%)",
+          backgroundColor: C.text, borderRadius: 1, zIndex: 3,
+        }}/>
+        <div style={{
+          position: "absolute", top: "50%", width: 10, height: 10,
+          left: `${nowPct}%`, transform: "translate(-50%, -50%)",
+          borderRadius: "50%", backgroundColor: C.text,
+          border: `2px solid ${C.card}`, zIndex: 4,
+        }}/>
+      </div>
+
+      {/* Time labels */}
+      <div style={{ position: "relative", height: 16, marginBottom: 10 }}>
+        {[[eatStart, fmtH(eatStart)], [eatEnd, fmtH(eatEnd)], [bedtime, fmtH(bedtime)]].map(([h, lbl]) => (
+          <span key={h} style={{
+            position: "absolute", left: `${pct(h)}%`,
+            transform: "translateX(-50%)", fontSize: 9,
+            color: C.muted, letterSpacing: "0.02em", whiteSpace: "nowrap",
+          }}>{lbl}</span>
+        ))}
+      </div>
+
+      {/* Legend */}
+      <div style={{ display: "flex", gap: 14 }}>
+        {[
+          { color: C.green, label: "Eat freely" },
+          { color: C.gold,  label: "Wind down" },
+          { color: C.track, label: "Overnight fast", border: `1px solid ${C.border}` },
+        ].map(({ color, label, border }) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: color, border }}/>
+            <span style={{ fontSize: 10, color: C.muted }}>{label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
