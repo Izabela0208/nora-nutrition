@@ -466,25 +466,32 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes dotPulse{0%,80%,100%{opacity:0.3;transform:scale(0.8)}40%{opacity:1;transform:scale(1)}}@keyframes scanLine{0%,100%{top:0}50%{top:calc(100% - 2px)}}`}</style>
 
       {/* Greeting card */}
-      <div style={{...card,padding:"18px 20px",display:"flex",gap:14,alignItems:"flex-start"}}>
-        <NoraAvatar size={38}/>
-        <div style={{flex:1}}>
-          {greetingLoad
-            ? <span style={{display:"flex",gap:4,alignItems:"center"}}>{[0,1,2].map(j=><span key={j} style={{width:5,height:5,borderRadius:"50%",backgroundColor:C.muted,display:"inline-block",animation:`dotPulse 1.2s ease ${j*0.2}s infinite`}}/>)}</span>
-            : <p style={{fontSize:14,color:C.text,lineHeight:1.65,margin:0}}>{greeting||`Good ${h<12?"morning":h<17?"afternoon":"evening"}, ${profile?.name}.`}</p>
-          }
+      <div style={{position:"relative",borderRadius:18,overflow:"hidden",backgroundColor:"#1B3A2D",boxShadow:"0 4px 20px rgba(27,58,45,0.20)",padding:"20px 20px 22px"}}>
+        <div style={{position:"absolute",right:-12,top:-10,opacity:0.09,pointerEvents:"none"}}><BotanicalBranch width={100} opacity={1} flip={true}/></div>
+        <div style={{position:"relative",display:"flex",gap:14,alignItems:"flex-start"}}>
+          <NoraAvatar size={36}/>
+          <div style={{flex:1}}>
+            <p style={{fontSize:9,fontWeight:700,color:"rgba(201,168,110,0.65)",textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 6px"}}>{h<12?"Morning":h<17?"Afternoon":"Evening"} · {profile?.name}</p>
+            {greetingLoad
+              ? <div style={{display:"flex",gap:5,paddingTop:2}}>{[0,1,2].map(j=><span key={j} style={{width:5,height:5,borderRadius:"50%",backgroundColor:"rgba(245,240,232,0.4)",display:"inline-block",animation:`dotPulse 1.2s ease ${j*0.2}s infinite`}}/>)}</div>
+              : <p style={{fontFamily:serif,fontSize:14,color:"#FAF7F2",lineHeight:1.65,margin:0,fontStyle:"italic"}}>{greeting||`Good ${h<12?"morning":h<17?"afternoon":"evening"}, ${profile?.name}.`}</p>
+            }
+          </div>
         </div>
       </div>
 
       {/* Health summary */}
       {Object.keys(healthData).length>0&&(
-        <div style={{...card,padding:"14px 16px",display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,textAlign:"center"}}>
-          {[{label:"Steps",val:healthData.steps||"—"},{label:"Sleep",val:healthData.sleep?`${healthData.sleep}h`:"—"},{label:"HR",val:healthData.heartRate?`${healthData.heartRate}`:"—"},{label:"Workout",val:healthData.workoutDuration?`${healthData.workoutDuration}m`:"—"}].map(item=>(
-            <div key={item.label}>
-              <div style={{fontSize:14,fontWeight:600,color:C.green}}>{item.val}</div>
-              <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{item.label}</div>
-            </div>
-          ))}
+        <div style={{...card,padding:"14px 16px"}}>
+          <p style={{fontSize:9,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em",margin:"0 0 10px"}}>Today's health</p>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,textAlign:"center"}}>
+            {[{label:"Steps",val:healthData.steps||"—"},{label:"Sleep",val:healthData.sleep?`${healthData.sleep}h`:"—"},{label:"HR",val:healthData.heartRate?`${healthData.heartRate}`:"—"},{label:"Workout",val:healthData.workoutDuration?`${healthData.workoutDuration}m`:"—"}].map(item=>(
+              <div key={item.label}>
+                <div style={{fontFamily:serif,fontSize:16,fontWeight:600,color:C.green}}>{item.val}</div>
+                <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em",marginTop:2}}>{item.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -495,30 +502,30 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
 
       {/* Today's Progress */}
       {targets&&(
-        <div style={{position:"relative",borderRadius:18,overflow:"hidden",backgroundColor:C.card,border:`1px solid ${C.border}`,boxShadow:"0 2px 16px rgba(28,43,38,0.08)"}}>
-          <div style={{position:"absolute",right:-14,top:-12,opacity:0.07,pointerEvents:"none"}}><BotanicalBranch width={130} opacity={1} flip={true}/></div>
-          <div style={{position:"absolute",left:-10,bottom:-8,opacity:0.05,pointerEvents:"none"}}><BotanicalBranch width={100} opacity={1}/></div>
+        <div style={{position:"relative",borderRadius:18,overflow:"hidden",backgroundColor:"#1B3A2D",boxShadow:"0 6px 28px rgba(27,58,45,0.22)"}}>
+          <div style={{position:"absolute",right:-14,top:-12,opacity:0.12,pointerEvents:"none"}}><BotanicalBranch width={130} opacity={1} flip={true}/></div>
+          <div style={{position:"absolute",left:-10,bottom:-8,opacity:0.08,pointerEvents:"none"}}><BotanicalBranch width={100} opacity={1}/></div>
           <div style={{position:"relative",padding:"22px 20px 20px"}}>
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:22}}>
               <div>
-                <p style={{fontSize:10,fontWeight:700,color:C.amber,textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 6px"}}>Today's progress</p>
+                <p style={{fontSize:10,fontWeight:700,color:"rgba(201,168,110,0.7)",textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 6px"}}>Today's progress</p>
                 <div style={{display:"flex",alignItems:"baseline",gap:7}}>
-                  <p style={{fontFamily:serif,fontSize:42,fontWeight:600,color:C.green,margin:0,lineHeight:1}}>{Math.round(netCal)}</p>
-                  <p style={{fontSize:15,color:C.muted,margin:0}}>kcal</p>
+                  <p style={{fontFamily:serif,fontSize:42,fontWeight:600,color:"#FAF7F2",margin:0,lineHeight:1}}>{Math.round(netCal)}</p>
+                  <p style={{fontSize:15,color:"rgba(245,240,232,0.38)",margin:0}}>kcal</p>
                 </div>
-                <p style={{fontSize:11,color:C.muted,margin:"5px 0 0"}}>of {targets.calories} target{burnedCal>0?` · ${burnedCal} burned`:""}</p>
+                <p style={{fontSize:11,color:"rgba(245,240,232,0.33)",margin:"5px 0 0"}}>of {targets.calories} target{burnedCal>0?` · ${burnedCal} burned`:""}</p>
               </div>
-              <div style={{backgroundColor:C.goldLight,border:`1px solid ${C.gold}40`,borderRadius:14,padding:"11px 14px",textAlign:"center",flexShrink:0}}>
-                <p style={{fontFamily:serif,fontSize:26,fontWeight:700,color:C.gold,margin:0,lineHeight:1}}>{Math.min(Math.round((netCal/(targets.calories||2000))*100),999)}%</p>
-                <p style={{fontSize:9,color:C.muted,margin:"3px 0 0",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>of goal</p>
+              <div style={{backgroundColor:"rgba(201,168,110,0.12)",border:"1px solid rgba(201,168,110,0.18)",borderRadius:14,padding:"11px 14px",textAlign:"center",flexShrink:0}}>
+                <p style={{fontFamily:serif,fontSize:26,fontWeight:700,color:"#C9A86E",margin:0,lineHeight:1}}>{Math.min(Math.round((netCal/(targets.calories||2000))*100),999)}%</p>
+                <p style={{fontSize:9,color:"rgba(201,168,110,0.45)",margin:"3px 0 0",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>of goal</p>
               </div>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px 16px"}}>
               {[
-                {label:"Protein",value:totalPro, max:targets.protein_g,color:C.gold,  unit:"g"},
-                {label:"Carbs",  value:totalCarb,max:targets.carbs_g,  color:C.sage,  unit:"g"},
-                {label:"Fat",    value:totalFat, max:targets.fat_g,    color:C.tan,   unit:"g"},
-                {label:"Water",  value:waterMl,  max:targets.water_ml, color:C.slate, unit:"ml"},
+                {label:"Protein",value:totalPro, max:targets.protein_g,color:"#C9A86E",unit:"g"},
+                {label:"Carbs",  value:totalCarb,max:targets.carbs_g,  color:"#A8C4B0",unit:"g"},
+                {label:"Fat",    value:totalFat, max:targets.fat_g,    color:"#8FB3A8",unit:"g"},
+                {label:"Water",  value:waterMl,  max:targets.water_ml, color:"#7A9BAE",unit:"ml"},
               ].map(({label,value,max,color,unit})=>{
                 const pct=Math.min(max>0?(value/max)*100:0,100);
                 const disp=unit==="ml"&&value>=1000?(value/1000).toFixed(1)+"L":Math.round(value)+unit;
@@ -526,10 +533,10 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
                 return(
                   <div key={label}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:5}}>
-                      <span style={{fontSize:9,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em"}}>{label}</span>
-                      <span style={{fontSize:12,fontWeight:700,color:C.text}}>{disp}<span style={{fontSize:9,color:C.muted,fontWeight:400}}>/{maxDisp}</span></span>
+                      <span style={{fontSize:9,fontWeight:700,color:"rgba(245,240,232,0.42)",textTransform:"uppercase",letterSpacing:"0.06em"}}>{label}</span>
+                      <span style={{fontSize:12,fontWeight:700,color:"#FAF7F2"}}>{disp}<span style={{fontSize:9,color:"rgba(245,240,232,0.28)",fontWeight:400}}>/{maxDisp}</span></span>
                     </div>
-                    <div style={{height:3,backgroundColor:C.track,borderRadius:3,overflow:"hidden"}}>
+                    <div style={{height:3,backgroundColor:"rgba(255,255,255,0.1)",borderRadius:3,overflow:"hidden"}}>
                       <div style={{width:`${pct}%`,height:"100%",backgroundColor:color,borderRadius:3,transition:"width 0.7s cubic-bezier(0.4,0,0.2,1)"}}/>
                     </div>
                   </div>
@@ -609,7 +616,7 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
         {/* Water tracker */}
         <div style={{...card,padding:"14px 16px"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-            <div style={{display:"flex",alignItems:"center",gap:6}}><DropIcon size={16} color={C.slate}/><span style={{fontSize:13,fontWeight:600,color:C.text}}>Water · {waterMl>=1000?(waterMl/1000).toFixed(1)+"L":waterMl+"ml"} / {targets?Math.round(targets.water_ml/1000)+"L":"2.5L"}</span></div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}><DropIcon size={16} color={C.slate}/><span style={{fontFamily:serif,fontSize:13,fontWeight:600,color:C.text}}>Water · {waterMl>=1000?(waterMl/1000).toFixed(1)+"L":waterMl+"ml"} / {targets?Math.round(targets.water_ml/1000)+"L":"2.5L"}</span></div>
             <span style={{fontSize:11,color:C.slate,fontWeight:500}}>{targets?Math.round((waterMl/(targets.water_ml||2500))*100):0}%</span>
           </div>
           <div style={{height:4,backgroundColor:C.track,borderRadius:10,marginBottom:10,overflow:"hidden"}}><div style={{width:`${Math.min((waterMl/(targets?.water_ml||2500))*100,100)}%`,height:"100%",backgroundColor:C.slate,borderRadius:10,transition:"width 0.6s ease"}}/></div>
@@ -676,30 +683,6 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
           </div>
         )}
 
-        {/* Nora's daily insight */}
-        {eveningSummaryLoad&&(
-          <div style={{...card,padding:"18px 20px",background:`linear-gradient(160deg,${C.card} 60%,#FBF4E8 100%)`,boxShadow:"0 4px 24px rgba(201,169,110,0.10)",borderLeft:`4px solid ${C.gold}`}}>
-            <div style={{display:"flex",gap:12,alignItems:"center"}}>
-              <NoraAvatar size={28}/>
-              <div style={{display:"flex",gap:5}}>
-                {[0,1,2].map(j=><div key={j} style={{width:6,height:6,borderRadius:"50%",backgroundColor:C.gold,opacity:0.5,animation:`dotPulse 1.2s ease ${j*0.2}s infinite`}}/>)}
-              </div>
-            </div>
-          </div>
-        )}
-        {eveningSummary&&(
-          <div style={{...card,padding:"20px 22px",animation:"fadeIn 0.4s ease",background:`linear-gradient(160deg,${C.card} 60%,#FBF4E8 100%)`,boxShadow:"0 4px 24px rgba(201,169,110,0.10),0 2px 8px rgba(28,43,38,0.05)",borderLeft:`4px solid ${C.gold}`}}>
-            <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
-              <NoraAvatar size={34}/>
-              <div>
-                <p style={{fontFamily:serif,fontSize:13,fontWeight:600,color:C.gold,margin:0,letterSpacing:"0.01em"}}>Nora</p>
-                <p style={{fontSize:10,color:C.muted,margin:0,letterSpacing:"0.03em"}}>{timeOfDay==="morning"?"Morning Insight":timeOfDay==="afternoon"?"Afternoon Check-in":"Evening Reflection"}</p>
-              </div>
-            </div>
-            <p style={{fontFamily:serif,fontSize:14,color:C.text,lineHeight:1.75,margin:0,fontStyle:"italic"}}>{eveningSummary}</p>
-          </div>
-        )}
-
         {/* Cycle & hormonal insights — compact */}
         {isFemale&&cyclePhase&&(
           <div style={{...card,padding:"16px 18px",borderLeft:`3px solid ${cyclePhase.color}`,background:`linear-gradient(135deg,${C.card} 0%,${cyclePhase.color}08 100%)`}}>
@@ -728,6 +711,30 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
           <div style={{...card,padding:"10px 14px",borderLeft:`2px solid ${C.green}55`}}>
             <p style={{fontSize:10,fontWeight:700,color:C.green,textTransform:"uppercase",letterSpacing:"0.05em",margin:"0 0 3px"}}>{maleTip.icon} {maleTip.title}</p>
             <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{maleTip.tip}</p>
+          </div>
+        )}
+
+        {/* Nora's daily insight — always last */}
+        {eveningSummaryLoad&&(
+          <div style={{...card,padding:"18px 20px",background:`linear-gradient(160deg,${C.card} 60%,#FBF4E8 100%)`,boxShadow:"0 4px 24px rgba(201,169,110,0.10)",borderLeft:`4px solid ${C.gold}`}}>
+            <div style={{display:"flex",gap:12,alignItems:"center"}}>
+              <NoraAvatar size={28}/>
+              <div style={{display:"flex",gap:5}}>
+                {[0,1,2].map(j=><div key={j} style={{width:6,height:6,borderRadius:"50%",backgroundColor:C.gold,opacity:0.5,animation:`dotPulse 1.2s ease ${j*0.2}s infinite`}}/>)}
+              </div>
+            </div>
+          </div>
+        )}
+        {eveningSummary&&(
+          <div style={{...card,padding:"20px 22px",animation:"fadeIn 0.4s ease",background:`linear-gradient(160deg,${C.card} 60%,#FBF4E8 100%)`,boxShadow:"0 4px 24px rgba(201,169,110,0.10),0 2px 8px rgba(28,43,38,0.05)",borderLeft:`4px solid ${C.gold}`}}>
+            <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
+              <NoraAvatar size={34}/>
+              <div>
+                <p style={{fontFamily:serif,fontSize:13,fontWeight:600,color:C.gold,margin:0,letterSpacing:"0.01em"}}>Nora</p>
+                <p style={{fontSize:10,color:C.muted,margin:0,letterSpacing:"0.03em"}}>{timeOfDay==="morning"?"Morning Insight":timeOfDay==="afternoon"?"Afternoon Check-in":"Evening Reflection"}</p>
+              </div>
+            </div>
+            <p style={{fontFamily:serif,fontSize:14,color:C.text,lineHeight:1.75,margin:0,fontStyle:"italic"}}>{eveningSummary}</p>
           </div>
         )}
 
