@@ -59,7 +59,7 @@ const MEAL_CARD   = {
   Lunch:     { accent: "#2D5A45" },
   Dinner:    { accent: "#1B3A2D" },
   Snack:     { accent: "#7A9E8A" },
-  Dessert:   { accent: "#C8847A" },
+  Dessert:   { accent: "#2D5A45" },
 };
 const TYPE_LABELS = { day_plan: "Day Plans", meal: "Meals", smoothie: "Smoothies", shot: "Shots", dessert: "Desserts" };
 
@@ -231,7 +231,7 @@ const IngList = ({ ingredients, checked, onToggle, accentColor }) => (
   </>
 );
 
-const DESSERT_CAT_COLORS = { "No-Bake":"#7A9E8A","Frozen":"#5B8DD9","Baked":"#C9A84C","Mousse & Pudding":"#C8847A","Energy Balls":"#2D5A45","Fruit-Based":"#9A7020" };
+const DESSERT_CAT_COLORS = { "No-Bake":"#7A9E8A","Frozen":"#1B3A2D","Baked":"#C9A84C","Mousse & Pudding":"#8C9E97","Energy Balls":"#2D5A45","Fruit-Based":"#9A7020" };
 
 const DessertCard = ({ dessert, isSaved, onToggleSave, ingChecked, onIngToggle }) => {
   const catColor = DESSERT_CAT_COLORS[dessert.category] || G.forest;
@@ -310,10 +310,10 @@ const DessertCard = ({ dessert, isSaved, onToggleSave, ingChecked, onIngToggle }
 const getFoodMeta = (name) => {
   const n = (name || "").toLowerCase();
   if (/chicken|beef|pork|lamb|turkey|meat|steak|sausage|bacon|ham|veal|duck|bison|venison/.test(n)) return { emoji:"🥩", bg:"linear-gradient(145deg,#F5E6E0,#EDD5C8)" };
-  if (/salmon|tuna|cod|fish|shrimp|prawn|seafood|sardine|anchov|tilapia|halibut|crab|lobster/.test(n)) return { emoji:"🐟", bg:"linear-gradient(145deg,#DFF0F5,#C8DDE8)" };
-  if (/apple|banana|orange|berr|grape|mango|peach|pear|cherry|lemon|lime|melon|strawberr|blueberr|raspberr|kiwi|pineapple|fruit/.test(n)) return { emoji:"🍎", bg:"linear-gradient(145deg,#F5E8EC,#EDD5DC)" };
+  if (/salmon|tuna|cod|fish|shrimp|prawn|seafood|sardine|anchov|tilapia|halibut|crab|lobster/.test(n)) return { emoji:"🐟", bg:"linear-gradient(145deg,#EAF0EA,#D4E0D0)" };
+  if (/apple|banana|orange|berr|grape|mango|peach|pear|cherry|lemon|lime|melon|strawberr|blueberr|raspberr|kiwi|pineapple|fruit/.test(n)) return { emoji:"🍎", bg:"linear-gradient(145deg,#F2EDE0,#E8DCC4)" };
   if (/broccoli|spinach|kale|lettuce|carrot|vegetable|veggie|tomato|cucumber|pepper|onion|garlic|celery|asparagus|zucchini|salad|cabbage|cauliflower/.test(n)) return { emoji:"🥦", bg:"linear-gradient(145deg,#E3EFE7,#C8DDD0)" };
-  if (/milk|cheese|yogurt|yoghurt|dairy|cream|butter|whey|ricotta|cottage|mozzarella|cheddar/.test(n)) return { emoji:"🥛", bg:"linear-gradient(145deg,#EEF4F8,#D8E8F0)" };
+  if (/milk|cheese|yogurt|yoghurt|dairy|cream|butter|whey|ricotta|cottage|mozzarella|cheddar/.test(n)) return { emoji:"🥛", bg:"linear-gradient(145deg,#F5F2EA,#EDE6D2)" };
   if (/bread|wheat|oat|rice|pasta|noodle|grain|cereal|flour|barley|rye|quinoa|bagel|tortilla|cracker/.test(n)) return { emoji:"🌾", bg:"linear-gradient(145deg,#F5F0E0,#EDE4C0)" };
   if (/egg/.test(n)) return { emoji:"🥚", bg:"linear-gradient(145deg,#F5F2E0,#EDE8C0)" };
   if (/almond|walnut|cashew|pistachio|peanut|pecan|hazelnut|nut|seed|hemp|flax|chia|sunflower/.test(n)) return { emoji:"🥜", bg:"linear-gradient(145deg,#F0EAE0,#E4D8C0)" };
@@ -351,9 +351,9 @@ const FoodResultCard = ({ food, onClick }) => {
         <p style={{ fontFamily:"'Playfair Display', Georgia, serif", fontSize:14, fontWeight:600, color:G.text, margin:"0 0 8px", lineHeight:1.35, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{food.name}</p>
         <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginTop:"auto" }}>
           {p.kcal != null && <span style={{ fontSize:11, fontWeight:700, color:G.forest, backgroundColor:`${G.forest}10`, borderRadius:6, padding:"3px 7px" }}>{p.kcal} kcal</span>}
-          {p.protein != null && <span style={{ fontSize:11, fontWeight:600, color:"#4A8C5C", backgroundColor:"#4A8C5C12", borderRadius:6, padding:"3px 7px" }}>{p.protein}g P</span>}
+          {p.protein != null && <span style={{ fontSize:11, fontWeight:600, color:G.forestMid, backgroundColor:`${G.forestMid}12`, borderRadius:6, padding:"3px 7px" }}>{p.protein}g P</span>}
           {p.carbs != null && <span style={{ fontSize:11, fontWeight:600, color:G.amber, backgroundColor:`${G.amber}15`, borderRadius:6, padding:"3px 7px" }}>{p.carbs}g C</span>}
-          {p.fat != null && <span style={{ fontSize:11, fontWeight:600, color:"#C8847A", backgroundColor:"#C8847A12", borderRadius:6, padding:"3px 7px" }}>{p.fat}g F</span>}
+          {p.fat != null && <span style={{ fontSize:11, fontWeight:600, color:G.sage, backgroundColor:`${G.sage}18`, borderRadius:6, padding:"3px 7px" }}>{p.fat}g F</span>}
         </div>
         <p style={{ fontSize:9, color:G.muted, margin:"5px 0 0", letterSpacing:"0.02em" }}>{food.perLabel || "per 100g"}</p>
       </div>
@@ -1346,7 +1346,7 @@ export default function Eat({ profile, targets, entries, setEntries, cyclePhase 
                         <div style={{ padding:"13px 16px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                           <span style={{ fontSize:10, fontWeight:700, color, textTransform:"uppercase", letterSpacing:"0.12em" }}>{group}</span>
                           <button onClick={() => toggleMealFavourite(meal)} style={{ border:"none", background:"none", cursor:"pointer", padding:4 }}>
-                            <HeartIcon size={17} color={isFav ? "#C8847A" : G.muted} filled={isFav}/>
+                            <HeartIcon size={17} color={isFav ? G.forest : G.muted} filled={isFav}/>
                           </button>
                         </div>
                         <div style={{ padding:"5px 16px 3px" }}>
@@ -1630,8 +1630,8 @@ export default function Eat({ profile, targets, entries, setEntries, cyclePhase 
                   <button onClick={() => { if (!smoothieLogged) { addToLog({ name:smoothie.name, calories:smoothie.calories, protein_g:smoothie.protein_g, carbs_g:smoothie.carbs_g||0, fat_g:smoothie.fat_g||0, fiber_g:0, notes:"Smoothie" }); setSmoothieLogged(true); } }} style={{ flex:2, padding:"11px", backgroundColor: smoothieLogged ? `${G.forest}15` : G.forest, color: smoothieLogged ? G.forest : G.ivory, border:"none", borderRadius:11, fontSize:13, fontWeight:600, cursor: smoothieLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
                     {smoothieLogged ? <><CheckIcon size={12} color={G.forest}/>Logged</> : "Log this"}
                   </button>
-                  <button onClick={() => { toggleMealFavourite({ ...smoothie, mealGroup:"Smoothie", type:"smoothie" }); setSmoothieSaved(!smoothieSaved); }} style={{ width:44, padding:"11px", backgroundColor: smoothieSaved ? "#F8EEEC" : "transparent", border:`1.5px solid ${smoothieSaved ? "#C8847A40" : G.border}`, borderRadius:11, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                    <HeartIcon size={16} color={smoothieSaved ? "#C8847A" : G.muted} filled={smoothieSaved}/>
+                  <button onClick={() => { toggleMealFavourite({ ...smoothie, mealGroup:"Smoothie", type:"smoothie" }); setSmoothieSaved(!smoothieSaved); }} style={{ width:44, padding:"11px", backgroundColor: smoothieSaved ? G.ivory : "transparent", border:`1.5px solid ${smoothieSaved ? `${G.forest}40` : G.border}`, borderRadius:11, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <HeartIcon size={16} color={smoothieSaved ? G.forest : G.muted} filled={smoothieSaved}/>
                   </button>
                   <button onClick={genSmoothie} style={{ flex:1, padding:"11px", backgroundColor:"transparent", color:G.gold, border:`1.5px solid ${G.gold}`, borderRadius:11, fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
                     <SparkleIcon size={12} color={G.gold}/>New
@@ -1673,8 +1673,8 @@ export default function Eat({ profile, targets, entries, setEntries, cyclePhase 
                   <button onClick={() => { if (!shotLogged) { addToLog({ name:currentShot.name, calories:currentShot.calories||25, protein_g:currentShot.protein_g||0, carbs_g:currentShot.carbs_g||0, fat_g:currentShot.fat_g||0, fiber_g:0, notes:"Morning shot" }); setShotLogged(true); } }} style={{ flex:2, padding:"11px", backgroundColor: shotLogged ? `${G.forest}15` : G.forest, color: shotLogged ? G.forest : G.ivory, border:"none", borderRadius:11, fontSize:13, fontWeight:600, cursor: shotLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
                     {shotLogged ? <><CheckIcon size={12} color={G.forest}/>Logged</> : "Log this"}
                   </button>
-                  <button onClick={() => { toggleMealFavourite({ ...currentShot, mealGroup:"Shot" }); setShotSaved(!shotSaved); }} style={{ width:44, padding:"11px", backgroundColor: shotSaved ? "#F8EEEC" : "transparent", border:`1.5px solid ${shotSaved ? "#C8847A40" : G.border}`, borderRadius:11, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                    <HeartIcon size={16} color={shotSaved ? "#C8847A" : G.muted} filled={shotSaved}/>
+                  <button onClick={() => { toggleMealFavourite({ ...currentShot, mealGroup:"Shot" }); setShotSaved(!shotSaved); }} style={{ width:44, padding:"11px", backgroundColor: shotSaved ? G.ivory : "transparent", border:`1.5px solid ${shotSaved ? `${G.forest}40` : G.border}`, borderRadius:11, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <HeartIcon size={16} color={shotSaved ? G.forest : G.muted} filled={shotSaved}/>
                   </button>
                   <button onClick={genShot} style={{ flex:1, padding:"11px", backgroundColor:"transparent", color:G.gold, border:`1.5px solid ${G.gold}`, borderRadius:11, fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
                     <SparkleIcon size={12} color={G.gold}/>New
