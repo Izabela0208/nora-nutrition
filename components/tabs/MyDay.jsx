@@ -502,30 +502,30 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
 
       {/* Today's Progress */}
       {targets&&(
-        <div style={{position:"relative",borderRadius:18,overflow:"hidden",backgroundColor:"#1B3A2D",boxShadow:"0 6px 28px rgba(27,58,45,0.22)"}}>
-          <div style={{position:"absolute",right:-14,top:-12,opacity:0.12,pointerEvents:"none"}}><BotanicalBranch width={130} opacity={1} flip={true}/></div>
-          <div style={{position:"absolute",left:-10,bottom:-8,opacity:0.08,pointerEvents:"none"}}><BotanicalBranch width={100} opacity={1}/></div>
+        <div style={{position:"relative",borderRadius:18,overflow:"hidden",backgroundColor:"#F5F0E8",boxShadow:"0 4px 20px rgba(27,58,45,0.10)",border:"1px solid rgba(155,123,42,0.18)"}}>
+          <div style={{position:"absolute",right:-14,top:-12,opacity:0.07,pointerEvents:"none"}}><BotanicalBranch width={130} opacity={1} flip={true}/></div>
+          <div style={{position:"absolute",left:-10,bottom:-8,opacity:0.05,pointerEvents:"none"}}><BotanicalBranch width={100} opacity={1}/></div>
           <div style={{position:"relative",padding:"22px 20px 20px"}}>
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:22}}>
               <div>
-                <p style={{fontSize:10,fontWeight:700,color:"rgba(201,168,110,0.7)",textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 6px"}}>Today's progress</p>
+                <p style={{fontSize:10,fontWeight:700,color:"rgba(139,107,30,0.75)",textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 6px"}}>Today's progress</p>
                 <div style={{display:"flex",alignItems:"baseline",gap:7}}>
-                  <p style={{fontFamily:serif,fontSize:42,fontWeight:600,color:"#FAF7F2",margin:0,lineHeight:1}}>{Math.round(netCal)}</p>
-                  <p style={{fontSize:15,color:"rgba(245,240,232,0.38)",margin:0}}>kcal</p>
+                  <p style={{fontFamily:serif,fontSize:42,fontWeight:600,color:"#1C3D2B",margin:0,lineHeight:1}}>{Math.round(netCal)}</p>
+                  <p style={{fontSize:15,color:"rgba(28,61,43,0.42)",margin:0}}>kcal</p>
                 </div>
-                <p style={{fontSize:11,color:"rgba(245,240,232,0.33)",margin:"5px 0 0"}}>of {targets.calories} target{burnedCal>0?` · ${burnedCal} burned`:""}</p>
+                <p style={{fontSize:11,color:"rgba(28,61,43,0.38)",margin:"5px 0 0"}}>of {targets.calories} target{burnedCal>0?` · ${burnedCal} burned`:""}</p>
               </div>
-              <div style={{backgroundColor:"rgba(201,168,110,0.12)",border:"1px solid rgba(201,168,110,0.18)",borderRadius:14,padding:"11px 14px",textAlign:"center",flexShrink:0}}>
-                <p style={{fontFamily:serif,fontSize:26,fontWeight:700,color:"#C9A86E",margin:0,lineHeight:1}}>{Math.min(Math.round((netCal/(targets.calories||2000))*100),999)}%</p>
-                <p style={{fontSize:9,color:"rgba(201,168,110,0.45)",margin:"3px 0 0",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>of goal</p>
+              <div style={{backgroundColor:"rgba(155,123,42,0.10)",border:"1px solid rgba(155,123,42,0.22)",borderRadius:14,padding:"11px 14px",textAlign:"center",flexShrink:0}}>
+                <p style={{fontFamily:serif,fontSize:26,fontWeight:700,color:"#8A6B1E",margin:0,lineHeight:1}}>{Math.min(Math.round((netCal/(targets.calories||2000))*100),999)}%</p>
+                <p style={{fontSize:9,color:"rgba(139,107,30,0.55)",margin:"3px 0 0",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>of goal</p>
               </div>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px 16px"}}>
               {[
-                {label:"Protein",value:totalPro, max:targets.protein_g,color:"#C9A86E",unit:"g"},
-                {label:"Carbs",  value:totalCarb,max:targets.carbs_g,  color:"#A8C4B0",unit:"g"},
-                {label:"Fat",    value:totalFat, max:targets.fat_g,    color:"#8FB3A8",unit:"g"},
-                {label:"Water",  value:waterMl,  max:targets.water_ml, color:"#7A9BAE",unit:"ml"},
+                {label:"Protein",value:totalPro, max:targets.protein_g,color:"#8A6B1E",unit:"g"},
+                {label:"Carbs",  value:totalCarb,max:targets.carbs_g,  color:"#5A8C6E",unit:"g"},
+                {label:"Fat",    value:totalFat, max:targets.fat_g,    color:"#4A7A6A",unit:"g"},
+                {label:"Water",  value:waterMl,  max:targets.water_ml, color:"#4A7090",unit:"ml"},
               ].map(({label,value,max,color,unit})=>{
                 const pct=Math.min(max>0?(value/max)*100:0,100);
                 const disp=unit==="ml"&&value>=1000?(value/1000).toFixed(1)+"L":Math.round(value)+unit;
@@ -533,10 +533,10 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
                 return(
                   <div key={label}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:5}}>
-                      <span style={{fontSize:9,fontWeight:700,color:"rgba(245,240,232,0.42)",textTransform:"uppercase",letterSpacing:"0.06em"}}>{label}</span>
-                      <span style={{fontSize:12,fontWeight:700,color:"#FAF7F2"}}>{disp}<span style={{fontSize:9,color:"rgba(245,240,232,0.28)",fontWeight:400}}>/{maxDisp}</span></span>
+                      <span style={{fontSize:9,fontWeight:700,color:"rgba(28,61,43,0.45)",textTransform:"uppercase",letterSpacing:"0.06em"}}>{label}</span>
+                      <span style={{fontSize:12,fontWeight:700,color:"#1C3D2B"}}>{disp}<span style={{fontSize:9,color:"rgba(28,61,43,0.35)",fontWeight:400}}>/{maxDisp}</span></span>
                     </div>
-                    <div style={{height:3,backgroundColor:"rgba(255,255,255,0.1)",borderRadius:3,overflow:"hidden"}}>
+                    <div style={{height:3,backgroundColor:"rgba(28,61,43,0.10)",borderRadius:3,overflow:"hidden"}}>
                       <div style={{width:`${pct}%`,height:"100%",backgroundColor:color,borderRadius:3,transition:"width 0.7s cubic-bezier(0.4,0,0.2,1)"}}/>
                     </div>
                   </div>
