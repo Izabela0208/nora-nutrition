@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { C, card, serif, sans, inp, localDateStr } from "../noraTokens";
 import { LeafDecor, NoraAvatar, BotanicalBranch, SparkleIcon, CheckIcon, HeartIcon } from "../NoraIcons";
-import { SectionHeader, Collapsible, Btn, GoldTag } from "../NoraUI";
+import { SectionHeader, Collapsible } from "../NoraUI";
 import juicesData from "../../data/juices.json";
 import dessertsData from "../../data/desserts.json";
 

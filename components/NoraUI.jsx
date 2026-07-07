@@ -26,25 +26,8 @@ export const ProgressRing = ({ value, max, color, label, unit, size = 86 }) => {
   );
 };
 
-export const BarProgress = ({ value, max, color, label, unit }) => {
-  const pct = Math.min((value / max) * 100, 100);
-  return (
-    <div className="flex items-center gap-3">
-      <span style={{ fontSize: 11, color: C.muted, width: 36, textAlign: "right", fontWeight: 500 }}>{label}</span>
-      <div style={{ flex: 1, height: 5, backgroundColor: C.track, borderRadius: 10, overflow: "hidden" }}>
-        <div style={{ width: `${pct}%`, backgroundColor: color, height: "100%", borderRadius: 10, transition: "width 0.6s cubic-bezier(0.4,0,0.2,1)" }}/>
-      </div>
-      <span style={{ fontSize: 11, color: C.muted, width: 72 }}>{Math.round(value)}/{max} {unit}</span>
-    </div>
-  );
-};
-
 export const Skeleton = ({ className, style: extraStyle }) => (
   <div className={`animate-pulse rounded-xl ${className||""}`} style={{ backgroundColor: C.track, ...extraStyle }}/>
-);
-
-export const Divider = () => (
-  <div style={{ height: 1, backgroundColor: C.border, margin: "4px 0" }}/>
 );
 
 export const SectionCard = ({ children, style: extraStyle }) => (
@@ -80,16 +63,6 @@ export const Collapsible = ({ open, children }) => (
   </div>
 );
 
-export const PageHeader = ({ title, sub, icon }) => (
-  <div style={{ backgroundColor:C.green, padding:"22px 20px 18px" }}>
-    <div style={{ display:"flex", alignItems:"center", gap:icon?10:0, marginBottom:sub?3:0 }}>
-      {icon}
-      <h2 style={{ fontFamily:serif, fontSize:22, color:C.bg, fontWeight:600, margin:0 }}>{title}</h2>
-    </div>
-    {sub && <p style={{ fontSize:12, color:"rgba(245,240,232,0.6)", margin:0 }}>{sub}</p>}
-  </div>
-);
-
 export const TabSectionHead = ({ title, sub }) => (
   <div style={{ marginBottom:18 }}>
     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
@@ -100,32 +73,3 @@ export const TabSectionHead = ({ title, sub }) => (
   </div>
 );
 
-export const GoldTag = ({ children }) => (
-  <span style={{ fontSize:11, color:C.gold, fontWeight:600, backgroundColor:C.goldLight, padding:"4px 10px", borderRadius:20, border:`1px solid ${C.gold}40` }}>
-    {children}
-  </span>
-);
-
-export const GreenTag = ({ children }) => (
-  <span style={{ fontSize:11, color:C.sage, fontWeight:600, backgroundColor:C.greenLight, padding:"4px 10px", borderRadius:20, border:`1px solid ${C.sage}40` }}>
-    {children}
-  </span>
-);
-
-export const Btn = ({ onClick, disabled, children, variant="green", fullWidth, style:extra }) => {
-  const bg = disabled ? "#C8D5D1" : variant==="green" ? C.green : variant==="gold" ? "transparent" : variant==="outline" ? "transparent" : C.green;
-  const col = disabled ? C.bg : variant==="gold" ? C.gold : variant==="outline" ? C.gold : C.bg;
-  const bdr = variant==="outline" ? `1px solid ${C.gold}` : variant==="gold" ? `1px solid ${C.gold}` : "none";
-  return (
-    <button onClick={onClick} disabled={disabled} style={{
-      width: fullWidth ? "100%" : "auto",
-      padding:"12px 18px", backgroundColor:bg, color:col, border:bdr,
-      borderRadius:10, fontSize:13, fontWeight:500, cursor:disabled?"not-allowed":"pointer",
-      letterSpacing:"0.02em", transition:"background-color 0.15s",
-      display:"flex", alignItems:"center", justifyContent:"center", gap:7,
-      minHeight:44, fontFamily:sans, ...extra
-    }}>
-      {children}
-    </button>
-  );
-};

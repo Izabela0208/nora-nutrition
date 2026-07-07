@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { C, card, serif, sans, inp, localDateStr } from "../noraTokens";
 import { NoraAvatar, BotanicalBranch, LeafDecor, DropIcon, CheckIcon, SparkleIcon, CameraIcon, EditIcon } from "../NoraIcons";
-import { ProgressRing, Skeleton } from "../NoraUI";
 
 const callClaude = async (sys, user, maxTokens=800) => {
   const res = await fetch("/api/chat", {
