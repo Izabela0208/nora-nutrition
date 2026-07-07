@@ -2,7 +2,7 @@ export default async function handler(req, res) {
   const apiKey = process.env.SPOONACULAR_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "SPOONACULAR_API_KEY not configured" });
 
-  const { id, detail, query, type, diet, number, offset, mealplan, timeFrame, targetCalories, exclude, bulk, ids } = req.query;
+  const { id, detail, query, type, diet, number, offset, mealplan, timeFrame, targetCalories, exclude, bulk, ids, cuisine } = req.query;
 
   let url;
 
@@ -12,6 +12,7 @@ export default async function handler(req, res) {
     if (targetCalories) params.append("targetCalories", targetCalories);
     if (diet)           params.append("diet", diet);
     if (exclude)        params.append("exclude", exclude);
+    if (cuisine)        params.append("cuisine", cuisine);
     url = `https://api.spoonacular.com/mealplanner/generate?${params}`;
   } else if (bulk === "true" && ids) {
     // /recipes/informationBulk — fetches full details for multiple IDs at once
@@ -29,10 +30,11 @@ export default async function handler(req, res) {
       instructionsRequired: "true",
       fillIngredients: "true",
     });
-    if (query)  params.append("query", query);
-    if (type)   params.append("type", type);
-    if (diet)   params.append("diet", diet);
-    if (offset) params.append("offset", offset);
+    if (query)   params.append("query", query);
+    if (type)    params.append("type", type);
+    if (diet)    params.append("diet", diet);
+    if (offset)  params.append("offset", offset);
+    if (cuisine) params.append("cuisine", cuisine);
     url = `https://api.spoonacular.com/recipes/complexSearch?${params}`;
   }
 

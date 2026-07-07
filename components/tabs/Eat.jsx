@@ -199,12 +199,12 @@ const Spinner = () => (
 const MacroStrip = ({ kcal, pro, carbs, fat }) => (
   <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginTop:4 }}>
     {[
-      { v: kcal,         l: "kcal", c: G.forest    },
-      { v: `${pro}g`,    l: "prot", c: G.forestMid },
-      { v: `${carbs}g`,  l: "carb", c: G.gold      },
-      { v: `${fat}g`,    l: "fat",  c: G.amber      },
-    ].map(({ v, l, c }) => (
-      <span key={l} style={{ fontSize:10, color:c, background:`${c}18`, borderRadius:4, padding:"2px 6px", fontWeight:700, whiteSpace:"nowrap" }}>
+      { v: kcal,         l: "kcal" },
+      { v: `${pro}g`,    l: "prot" },
+      { v: `${carbs}g`,  l: "carb" },
+      { v: `${fat}g`,    l: "fat"  },
+    ].map(({ v, l }) => (
+      <span key={l} style={{ fontSize:10, color:G.forest, background:G.border, borderRadius:4, padding:"2px 6px", fontWeight:700, whiteSpace:"nowrap" }}>
         {v} <span style={{ fontWeight:400, opacity:0.7 }}>{l}</span>
       </span>
     ))}
@@ -350,10 +350,10 @@ const FoodResultCard = ({ food, onClick }) => {
         {food.brand && <p style={{ fontSize:10, color:G.muted, margin:"0 0 2px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{food.brand}</p>}
         <p style={{ fontFamily:"'Playfair Display', Georgia, serif", fontSize:14, fontWeight:600, color:G.text, margin:"0 0 8px", lineHeight:1.35, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{food.name}</p>
         <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginTop:"auto" }}>
-          {p.kcal != null && <span style={{ fontSize:11, fontWeight:700, color:G.forest, backgroundColor:`${G.forest}10`, borderRadius:6, padding:"3px 7px" }}>{p.kcal} kcal</span>}
-          {p.protein != null && <span style={{ fontSize:11, fontWeight:600, color:G.forestMid, backgroundColor:`${G.forestMid}12`, borderRadius:6, padding:"3px 7px" }}>{p.protein}g P</span>}
-          {p.carbs != null && <span style={{ fontSize:11, fontWeight:600, color:G.amber, backgroundColor:`${G.amber}15`, borderRadius:6, padding:"3px 7px" }}>{p.carbs}g C</span>}
-          {p.fat != null && <span style={{ fontSize:11, fontWeight:600, color:G.sage, backgroundColor:`${G.sage}18`, borderRadius:6, padding:"3px 7px" }}>{p.fat}g F</span>}
+          {p.kcal != null && <span style={{ fontSize:11, fontWeight:700, color:G.forest, backgroundColor:G.border, borderRadius:6, padding:"3px 7px" }}>{p.kcal} kcal</span>}
+          {p.protein != null && <span style={{ fontSize:11, fontWeight:600, color:G.forest, backgroundColor:G.border, borderRadius:6, padding:"3px 7px" }}>{p.protein}g P</span>}
+          {p.carbs != null && <span style={{ fontSize:11, fontWeight:600, color:G.forest, backgroundColor:G.border, borderRadius:6, padding:"3px 7px" }}>{p.carbs}g C</span>}
+          {p.fat != null && <span style={{ fontSize:11, fontWeight:600, color:G.forest, backgroundColor:G.border, borderRadius:6, padding:"3px 7px" }}>{p.fat}g F</span>}
         </div>
         <p style={{ fontSize:9, color:G.muted, margin:"5px 0 0", letterSpacing:"0.02em" }}>{food.perLabel || "per 100g"}</p>
       </div>
@@ -641,7 +641,7 @@ export default function Eat({ profile, targets, entries, setEntries, cyclePhase 
       return n ? Math.round(n.amount * 10) / 10 : null;
     };
     try {
-      const res  = await fetch(`/api/recipes?query=${encodeURIComponent(query)}&number=12&_t=${Date.now()}`);
+      const res  = await fetch(`/api/recipes?query=${encodeURIComponent(query)}&number=12&cuisine=mediterranean,french,italian,greek,spanish,american,british,german,nordic&_t=${Date.now()}`);
       const data = await res.json();
       const recipes = (data.results || []).filter(r => r.id).map(r => ({
         id:                `recipe_${r.id}`,
@@ -706,6 +706,7 @@ export default function Eat({ profile, targets, entries, setEntries, cyclePhase 
     try {
       const planParams = new URLSearchParams({ mealplan: "true", timeFrame: "day", targetCalories: String(adjCal), _t: String(Date.now()) });
       if (diet) planParams.set("diet", diet);
+      planParams.set("cuisine", "mediterranean,french,italian,greek,spanish,american,british,german,nordic");
       const planRes = await fetch(`/api/recipes?${planParams}`);
       if (planRes.status === 402) throw new Error(QUOTA_ERR);
       if (!planRes.ok) throw new Error(`HTTP ${planRes.status}`);
@@ -753,6 +754,7 @@ export default function Eat({ profile, targets, entries, setEntries, cyclePhase 
     try {
       const planParams = new URLSearchParams({ mealplan: "true", timeFrame: "week", targetCalories: String(adjCal), _t: String(Date.now()) });
       if (diet) planParams.set("diet", diet);
+      planParams.set("cuisine", "mediterranean,french,italian,greek,spanish,american,british,german,nordic");
       const planRes = await fetch(`/api/recipes?${planParams}`);
       if (planRes.status === 402) throw new Error(QUOTA_ERR);
       if (!planRes.ok) throw new Error(`HTTP ${planRes.status}`);
@@ -799,8 +801,9 @@ export default function Eat({ profile, targets, entries, setEntries, cyclePhase 
     const diet      = parseDiet(profile?.preferences || "");
     const offset    = Math.floor(Math.random() * 60);
     try {
-      const params = new URLSearchParams({ type: spoonType, number: "5", offset: String(offset), _t: String(Date.now()) });
+      const params = new URLSearchParams({ type: spoonType, number: "10", offset: String(offset), _t: String(Date.now()) });
       if (diet) params.append("diet", diet);
+      params.append("cuisine", "mediterranean,french,italian,greek,spanish,american,british,german,nordic");
       const r = await fetch(`/api/recipes?${params}`);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = await r.json();
@@ -828,8 +831,9 @@ export default function Eat({ profile, targets, entries, setEntries, cyclePhase 
     const diet      = parseDiet(profile?.preferences || "");
     const offset    = Math.floor(Math.random() * 60);
     try {
-      const params = new URLSearchParams({ type: spoonType, number: "5", offset: String(offset), _t: String(Date.now()) });
+      const params = new URLSearchParams({ type: spoonType, number: "10", offset: String(offset), _t: String(Date.now()) });
       if (diet) params.append("diet", diet);
+      params.append("cuisine", "mediterranean,french,italian,greek,spanish,american,british,german,nordic");
       const r = await fetch(`/api/recipes?${params}`);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = await r.json();
@@ -1365,8 +1369,8 @@ export default function Eat({ profile, targets, entries, setEntries, cyclePhase 
                           <button onClick={() => setExpandedMeal(isOpen ? null : group)} style={{ flex:1, padding:"11px", backgroundColor: isOpen ? color : "transparent", color: isOpen ? G.ivory : color, border:`1.5px solid ${color}`, borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:sans, transition:"all 0.15s" }}>
                             {isOpen ? "Close" : "View Recipe"}
                           </button>
-                          <button onClick={() => { if (!isLogged) { addToLog({ ...meal, notes:"From Nora's plan" }); setLoggedMeals(p => ({ ...p, [group]:true })); }}} style={{ flex:1, padding:"11px", backgroundColor: isLogged ? `${color}18` : color, color: isLogged ? color : G.ivory, border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor: isLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6, transition:"all 0.2s" }}>
-                            {isLogged ? <><CheckIcon size={12} color={color}/>Logged</> : "Log meal"}
+                          <button onClick={() => { if (!isLogged) { addToLog({ ...meal, notes:"From Nora's plan" }); setLoggedMeals(p => ({ ...p, [group]:true })); }}} style={{ flex:1, padding:"11px", backgroundColor: isLogged ? `${G.forest}18` : G.forest, color: isLogged ? G.forest : G.ivory, border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor: isLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6, transition:"all 0.2s" }}>
+                            {isLogged ? <><CheckIcon size={12} color={G.forest}/>Logged</> : "Log meal"}
                           </button>
                           <button onClick={() => genMealAlt(group)} disabled={!!altLoading[group]} title="Generate alternative" style={{ width:44, padding:"11px", borderRadius:10, border:`1.5px solid ${G.border}`, background:"none", cursor: altLoading[group] ? "not-allowed" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:17, color:G.muted, opacity: altLoading[group] ? 0.5 : 1 }}>
                             {altLoading[group] ? <Spinner/> : "↻"}
