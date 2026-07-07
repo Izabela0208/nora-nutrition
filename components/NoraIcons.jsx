@@ -12,10 +12,10 @@ export const NoraAvatar = ({ size = 36 }) => (
 
 export const LeafDecor = ({ size = 20 }) => (
   <svg width={size} height={size} viewBox="0 0 20 20" fill="none">
-    <path d="M10 18C10 18 4 13 4 8a6 6 0 0 1 12 0c0 5-6 10-6 10Z" fill={C.gold} opacity="0.35"/>
-    <line x1="10" y1="18" x2="10" y2="6" stroke={C.gold} strokeWidth="0.8" strokeLinecap="round" opacity="0.3"/>
-    <path d="M7.5 12 Q10 10.5 12.5 12" stroke={C.gold} strokeWidth="0.7" strokeLinecap="round" fill="none" opacity="0.35"/>
-    <path d="M8 9 Q10 7.5 12 9" stroke={C.gold} strokeWidth="0.7" strokeLinecap="round" fill="none" opacity="0.28"/>
+    <path d="M10 18C10 18 4 13 4 8a6 6 0 0 1 12 0c0 5-6 10-6 10Z" fill={C.green} opacity="0.35"/>
+    <line x1="10" y1="18" x2="10" y2="6" stroke={C.green} strokeWidth="0.8" strokeLinecap="round" opacity="0.3"/>
+    <path d="M7.5 12 Q10 10.5 12.5 12" stroke={C.green} strokeWidth="0.7" strokeLinecap="round" fill="none" opacity="0.35"/>
+    <path d="M8 9 Q10 7.5 12 9" stroke={C.green} strokeWidth="0.7" strokeLinecap="round" fill="none" opacity="0.28"/>
   </svg>
 );
 

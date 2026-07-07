@@ -151,7 +151,7 @@ export default function OnboardingFlow({ onComplete }) {
               </div>
 
               <div style={{ display:"flex", gap:10 }}>
-                <button onClick={()=>setStep(0)} style={{ ...btnBase, flex:1, backgroundColor:"transparent", color:C.gold, border:`1px solid ${C.gold}`, cursor:"pointer" }}>← Back</button>
+                <button onClick={()=>setStep(0)} style={{ ...btnBase, flex:1, backgroundColor:"transparent", color:C.green, border:`1px solid ${C.green}`, cursor:"pointer" }}>← Back</button>
                 <button disabled={!isStep1Valid} onClick={()=>setStep(2)} style={{ ...btnBase, flex:2, backgroundColor:isStep1Valid?C.green:"#C8D5D1", color:C.bg, cursor:isStep1Valid?"pointer":"not-allowed" }}>Continue</button>
               </div>
             </div>
@@ -244,7 +244,7 @@ export default function OnboardingFlow({ onComplete }) {
 
               {error && <div style={{ padding:"10px 14px", backgroundColor:C.errorBg, border:`1px solid ${C.error}20`, borderRadius:10, fontSize:13, color:C.error }}>{error}</div>}
               <div style={{ display:"flex", gap:10 }}>
-                <button onClick={()=>setStep(1)} style={{ ...btnBase, flex:1, backgroundColor:"transparent", color:C.gold, border:`1px solid ${C.gold}`, cursor:"pointer" }}>← Back</button>
+                <button onClick={()=>setStep(1)} style={{ ...btnBase, flex:1, backgroundColor:"transparent", color:C.green, border:`1px solid ${C.green}`, cursor:"pointer" }}>← Back</button>
                 <button disabled={!isStep2Valid||loading} onClick={handleSubmit} style={{ ...btnBase, flex:2, backgroundColor:isStep2Valid&&!loading?C.green:"#C8D5D1", color:C.bg, cursor:isStep2Valid&&!loading?"pointer":"not-allowed" }}>
                   {loading
                     ? <span style={{ display:"flex", alignItems:"center", gap:8 }}>

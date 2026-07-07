@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from "react";
 import { C, card, serif, sans, localDateStr, getCyclePhase, getWeekKey } from "../noraTokens";
-import { SectionHeader, Collapsible, TabSectionHead } from "../NoraUI";
-import { BotanicalBranch } from "../NoraIcons";
+import { SectionHeader, Collapsible } from "../NoraUI";
+import { BotanicalBranch, NoraAvatar } from "../NoraIcons";
 
 // ─── JOURNEY DATA ────────────────────────────────────────────────────────────
 const MOTIVATIONAL = [
@@ -676,7 +676,7 @@ function LibraryModal({ onClose }) {
             <div>
               <SBar value={bookSearch} onChange={setBookSearch} placeholder="Search title, author?"/>
               <div style={{marginBottom:6}}><Pills options={LEVELS} value={bookLevel} onChange={setBookLevel}/></div>
-              <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",paddingBottom:4}}>{bookCats.map(cat=>(<button key={cat} onClick={()=>setBookCat(cat)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${bookCat===cat?C.gold:C.border}`,backgroundColor:bookCat===cat?C.goldLight:"transparent",color:bookCat===cat?C.gold:C.muted,fontSize:10,fontWeight:bookCat===cat?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{cat}</button>))}</div>
+              <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",paddingBottom:4}}>{bookCats.map(cat=>(<button key={cat} onClick={()=>setBookCat(cat)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${bookCat===cat?C.green:C.border}`,backgroundColor:bookCat===cat?C.green:"transparent",color:bookCat===cat?"#FDFAF5":C.muted,fontSize:10,fontWeight:bookCat===cat?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{cat}</button>))}</div>
               {busy.books?<Skel/>:(
                 <>{/* books list */}
                   <p style={{fontSize:11,color:C.muted,margin:"0 0 14px",fontFamily:sans}}>{fBooks.length} {fBooks.length===1?"book":"books"}</p>
@@ -731,7 +731,7 @@ function LibraryModal({ onClose }) {
             <div>
               <SBar value={conSearch} onChange={setConSearch} placeholder="Search concepts, tags?"/>
               <div style={{marginBottom:8}}><Pills options={LEVELS} value={conLevel} onChange={setConLevel}/></div>
-              <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",paddingBottom:4}}>{conCats.map(cat=>(<button key={cat} onClick={()=>setConCat(cat)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${conCat===cat?C.gold:C.border}`,backgroundColor:conCat===cat?C.goldLight:"transparent",color:conCat===cat?C.gold:C.muted,fontSize:10,fontWeight:conCat===cat?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{cat}</button>))}</div>
+              <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",paddingBottom:4}}>{conCats.map(cat=>(<button key={cat} onClick={()=>setConCat(cat)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${conCat===cat?C.green:C.border}`,backgroundColor:conCat===cat?C.green:"transparent",color:conCat===cat?"#FDFAF5":C.muted,fontSize:10,fontWeight:conCat===cat?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{cat}</button>))}</div>
               {busy.concepts?<Skel/>:(
                 <>{/* concepts list */}
                   <p style={{fontSize:11,color:C.muted,margin:"0 0 14px",fontFamily:sans}}>{fCons.length} {fCons.length===1?"concept":"concepts"}</p>
@@ -767,7 +767,7 @@ function LibraryModal({ onClose }) {
           {tab==="podcasts"&&(
             <div>
               <SBar value={podSearch} onChange={setPodSearch} placeholder="Search podcasts?"/>
-              <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",paddingBottom:4}}>{podCats.map(cat=>(<button key={cat} onClick={()=>setPodCat(cat)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${podCat===cat?C.gold:C.border}`,backgroundColor:podCat===cat?C.goldLight:"transparent",color:podCat===cat?C.gold:C.muted,fontSize:10,fontWeight:podCat===cat?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{cat}</button>))}</div>
+              <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",paddingBottom:4}}>{podCats.map(cat=>(<button key={cat} onClick={()=>setPodCat(cat)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${podCat===cat?C.green:C.border}`,backgroundColor:podCat===cat?C.green:"transparent",color:podCat===cat?"#FDFAF5":C.muted,fontSize:10,fontWeight:podCat===cat?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{cat}</button>))}</div>
               {busy.podcasts?<Skel/>:(
                 <>{/* podcasts list */}
                   <p style={{fontSize:11,color:C.muted,margin:"0 0 14px",fontFamily:sans}}>{fPods.length} podcasts</p>
@@ -842,7 +842,7 @@ function LibraryModal({ onClose }) {
                 <div style={{display:"flex",gap:6,marginBottom:16,overflowX:"auto",paddingBottom:4}}>
                   {Object.entries(LIBRARY_ARTICLE_QUERIES).map(([key,val])=>(
                     <button key={key} onClick={()=>setArtCat(key)}
-                      style={{padding:"6px 14px",borderRadius:20,border:`1px solid ${artCat===key?C.gold:C.border}`,backgroundColor:artCat===key?C.goldLight:"transparent",color:artCat===key?C.gold:C.muted,fontSize:11,fontWeight:artCat===key?600:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0,transition:"background 0.15s"}}>
+                      style={{padding:"6px 14px",borderRadius:20,border:`1px solid ${artCat===key?C.green:C.border}`,backgroundColor:artCat===key?C.green:"transparent",color:artCat===key?"#FDFAF5":C.muted,fontSize:11,fontWeight:artCat===key?600:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0,transition:"background 0.15s"}}>
                       {val.label}
                     </button>
                   ))}
@@ -907,7 +907,7 @@ function SavedModal({ saved, onClose, onRemove, onStart }) {
             </div>
           ) : saved.map((c, i) => (
             <div key={c.id} style={{ paddingTop:18, paddingBottom:18, borderBottom: i < saved.length-1 ? `1px solid #E2DAD0` : "none" }}>
-              {c.label && <p style={{ fontSize:9, fontWeight:600, color: c.label.includes("Her") ? "#A0507A" : "#4A6FA5", margin:"0 0 4px", fontFamily:sans, letterSpacing:"0.06em" }}>{c.label}</p>}
+              {c.label && <p style={{ fontSize:9, fontWeight:600, color:C.muted, margin:"0 0 4px", fontFamily:sans, letterSpacing:"0.06em" }}>{c.label}</p>}
               <p style={{ fontFamily:serif, fontSize:16, fontWeight:700, color:C.green, margin:"0 0 6px", lineHeight:1.3 }}>
                 {(c.title || "").replace(/^✦ For Her - |^✦ For Him - /, "")}
               </p>
@@ -956,11 +956,11 @@ function StartModal({ challenge, onStart, onClose }) {
             return (
               <button key={d} onClick={() => onStart(challenge, d)}
                 style={{ padding:"14px 0", borderRadius:14, fontFamily:serif, fontSize:15, fontWeight:700, cursor:"pointer",
-                  border:`2px solid ${isRec ? C.gold : "#E2DAD0"}`,
-                  backgroundColor: isRec ? C.goldLight : "transparent",
-                  color: isRec ? C.gold : C.muted }}>
+                  border:`2px solid ${isRec ? C.green : "#E2DAD0"}`,
+                  backgroundColor: isRec ? C.greenLight : "transparent",
+                  color: isRec ? C.green : C.muted }}>
                 {d} days
-                {isRec && <span style={{ display:"block", fontSize:9, fontWeight:600, color:C.gold, fontFamily:sans, letterSpacing:"0.05em", textTransform:"uppercase", marginTop:2 }}>Recommended</span>}
+                {isRec && <span style={{ display:"block", fontSize:9, fontWeight:600, color:C.green, fontFamily:sans, letterSpacing:"0.05em", textTransform:"uppercase", marginTop:2 }}>Recommended</span>}
               </button>
             );
           })}
@@ -1478,13 +1478,24 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase 
       {/* Library modal */}
       {libraryOpen && <LibraryModal onClose={() => setLibraryOpen(false)} />}
 
-      <TabSectionHead title="Ritual" sub={"Biohacking \u00B7 Circadian \u00B7 Protocols"}/>
+      <div style={{ background:`linear-gradient(160deg,${C.greenDark} 0%,${C.green} 100%)`, padding:"20px 20px 18px", margin:"-24px -20px 18px", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", top:-8, right:-8, opacity:0.12, pointerEvents:"none" }}>
+          <BotanicalBranch width={110}/>
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:12, flex:1 }}>
+          <NoraAvatar size={36}/>
+          <div style={{ flex:1 }}>
+            <h2 style={{ fontFamily:serif, fontSize:21, color:"#FDFAF5", fontWeight:700, margin:0, lineHeight:1.2, letterSpacing:"-0.01em" }}>Ritual</h2>
+            <p style={{ fontSize:11, color:"rgba(253,250,245,0.55)", margin:0, fontFamily:sans }}>Biohacking {"\u00B7"} Circadian {"\u00B7"} Protocols</p>
+          </div>
+        </div>
+      </div>
 
       <div style={{ display:"flex", justifyContent:"flex-end", marginTop:-8, marginBottom:8 }}>
         <button onClick={() => setLibraryOpen(true)}
           style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 14px",
-            backgroundColor:"transparent", border:`1px solid ${C.gold}40`, borderRadius:20,
-            cursor:"pointer", fontFamily:serif, fontSize:12, fontWeight:600, color:C.gold }}>
+            backgroundColor:"transparent", border:`1px solid ${C.green}40`, borderRadius:20,
+            cursor:"pointer", fontFamily:serif, fontSize:12, fontWeight:600, color:C.green }}>
           {"\u2726"} Library
         </button>
       </div>
@@ -1493,11 +1504,11 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase 
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <p style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.1em", margin:0, fontFamily:sans }}>Daily Challenge</p>
         <button onClick={() => setSavedOpen(true)}
-          style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 12px", backgroundColor: savedChallenges.length > 0 ? C.goldLight : "transparent", border:`1px solid ${savedChallenges.length > 0 ? C.gold : C.border}`, borderRadius:20, cursor:"pointer", transition:"background 0.15s" }}>
-          <svg width="11" height="11" viewBox="0 0 16 16" fill={savedChallenges.length > 0 ? C.gold : "none"}>
-            <path d="M3 2h10a1 1 0 0 1 1 1v11l-6-3-6 3V3a1 1 0 0 1 1-1z" stroke={savedChallenges.length > 0 ? C.gold : C.muted} strokeWidth="1.4" strokeLinejoin="round"/>
+          style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 12px", backgroundColor: savedChallenges.length > 0 ? C.greenLight : "transparent", border:`1px solid ${savedChallenges.length > 0 ? C.green : C.border}`, borderRadius:20, cursor:"pointer", transition:"background 0.15s" }}>
+          <svg width="11" height="11" viewBox="0 0 16 16" fill={savedChallenges.length > 0 ? C.green : "none"}>
+            <path d="M3 2h10a1 1 0 0 1 1 1v11l-6-3-6 3V3a1 1 0 0 1 1-1z" stroke={savedChallenges.length > 0 ? C.green : C.muted} strokeWidth="1.4" strokeLinejoin="round"/>
           </svg>
-          <span style={{ fontSize:11, fontWeight:600, color: savedChallenges.length > 0 ? C.gold : C.muted, fontFamily:sans }}>
+          <span style={{ fontSize:11, fontWeight:600, color: savedChallenges.length > 0 ? C.green : C.muted, fontFamily:sans }}>
             Saved{savedChallenges.length > 0 ? ` (${savedChallenges.length})` : ""}
           </span>
         </button>
@@ -1554,7 +1565,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase 
       </div>
 
       {/* Biohack Challenge Card */}
-      <div style={{ backgroundColor:"#FDFAF5", borderRadius:16, border:`1px solid ${C.border}`, borderTop:`3px solid ${C.gold}`, boxShadow:"0 2px 20px rgba(45,74,62,0.08)", overflow:"hidden", position:"relative" }}>
+      <div style={{ backgroundColor:"#FDFAF5", borderRadius:16, border:`1px solid ${C.border}`, borderTop:`1px solid ${C.muted}`, boxShadow:"0 2px 20px rgba(45,74,62,0.08)", overflow:"hidden", position:"relative" }}>
         <div style={{ position:"absolute", top:0, right:0, opacity:0.13, pointerEvents:"none" }}><BotanicalBranch width={100} flip/></div>
         <div style={{ padding:"14px 20px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:`1px solid ${C.border}` }}>
           <span style={{ fontSize:9, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:"0.12em", fontFamily:sans }}>Daily Challenge {"\u00B7"} AI-Generated</span>
@@ -1644,7 +1655,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase 
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               <div style={{ display:"flex", gap:8 }}>
                 <button onClick={() => setStartModal(biohack)}
-                  style={{ flex:1, padding:"13px 0", backgroundColor:C.goldLight, color:C.gold, border:`1px solid ${C.gold}`, borderRadius:12, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:serif }}>
+                  style={{ flex:1, padding:"13px 0", backgroundColor:C.green, color:"#FDFAF5", border:"none", borderRadius:12, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:serif }}>
                   Start Challenge {"\u2192"}
                 </button>
                 <button onClick={notForMe}
@@ -1652,9 +1663,9 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase 
                   Not for me
                 </button>
                 <button onClick={toggleSave} title={isSaved ? "Unsave" : "Save challenge"}
-                  style={{ width:46, height:46, display:"flex", alignItems:"center", justifyContent:"center", backgroundColor: isSaved ? C.goldLight : "transparent", border:`1px solid ${isSaved ? C.gold : C.border}`, borderRadius:12, cursor:"pointer", flexShrink:0, transition:"background 0.15s,border-color 0.15s" }}>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill={isSaved ? C.gold : "none"}>
-                    <path d="M3 2h10a1 1 0 0 1 1 1v11l-6-3-6 3V3a1 1 0 0 1 1-1z" stroke={isSaved ? C.gold : C.muted} strokeWidth="1.3" strokeLinejoin="round"/>
+                  style={{ width:46, height:46, display:"flex", alignItems:"center", justifyContent:"center", backgroundColor: isSaved ? C.greenLight : "transparent", border:`1px solid ${isSaved ? C.green : C.border}`, borderRadius:12, cursor:"pointer", flexShrink:0, transition:"background 0.15s,border-color 0.15s" }}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill={isSaved ? C.green : "none"}>
+                    <path d="M3 2h10a1 1 0 0 1 1 1v11l-6-3-6 3V3a1 1 0 0 1 1-1z" stroke={isSaved ? C.green : C.muted} strokeWidth="1.3" strokeLinejoin="round"/>
                   </svg>
                 </button>
               </div>
@@ -1682,7 +1693,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase 
               : acStreak === 1 ? "1-day start - check in tomorrow to build your streak"
               : "Check in each day to build your streak";
             return (
-              <div key={ac.instanceId} style={{ ...card, padding:"16px 18px", borderTop: completed ? `3px solid ${C.gold}` : `2px solid ${C.green}` }}>
+              <div key={ac.instanceId} style={{ ...card, padding:"16px 18px", borderTop: `1px solid ${C.muted}` }}>
                 {completed ? (
                   <div style={{ textAlign:"center", padding:"10px 0 6px" }}>
                     <div style={{ fontSize:30, marginBottom:8 }}>{"\uD83C\uDFC6"}</div>
@@ -1699,7 +1710,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase 
                   <>
                     <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:10 }}>
                       <div style={{ flex:1 }}>
-                        {ac.label && <p style={{ fontSize:9, fontWeight:600, color: ac.label.includes("Her") ? "#A0507A" : "#4A6FA5", margin:"0 0 3px", fontFamily:sans, letterSpacing:"0.06em" }}>{ac.label}</p>}
+                        {ac.label && <p style={{ fontSize:9, fontWeight:600, color:C.muted, margin:"0 0 3px", fontFamily:sans, letterSpacing:"0.06em" }}>{ac.label}</p>}
                         <p style={{ fontFamily:serif, fontSize:15, fontWeight:700, color:C.green, margin:"0 0 2px", lineHeight:1.3 }}>
                           {ac.title.replace(/^✦ For Her - |^✦ For Him - /, "")}
                         </p>

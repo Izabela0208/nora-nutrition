@@ -215,7 +215,7 @@ RESPONSE STYLE:
           {/* Welcome + suggestions */}
           {showSuggestions && (
             <div style={{ animation: "fadeUp 0.4s ease" }}>
-              <div style={{ backgroundColor: "#FDFAF5", borderRadius: 16, border: `1px solid ${C.border}`, borderTop: `3px solid ${C.gold}`, padding: "22px 20px 20px", textAlign: "center", marginBottom: 14, position: "relative", overflow: "hidden" }}>
+              <div style={{ backgroundColor: "#FDFAF5", borderRadius: 16, border: `1px solid ${C.border}`, borderTop: `1px solid ${C.muted}`, padding: "22px 20px 20px", textAlign: "center", marginBottom: 14, position: "relative", overflow: "hidden" }}>
                 <div style={{ position: "absolute", top: 0, right: 0, opacity: 0.1, pointerEvents: "none" }}>
                   <BotanicalBranch width={90} flip/>
                 </div>
@@ -258,7 +258,7 @@ RESPONSE STYLE:
                 borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
                 backgroundColor: msg.role === "user" ? C.green : "#FDFAF5",
                 border: msg.role === "assistant" ? `1px solid ${C.border}` : "none",
-                borderLeft: msg.role === "assistant" ? `3px solid ${C.gold}` : undefined,
+                borderLeft: msg.role === "assistant" ? `2px solid ${C.muted}` : undefined,
                 fontSize: 13,
                 color: msg.role === "user" ? "#FDFAF5" : C.text,
                 lineHeight: 1.75,
@@ -276,7 +276,7 @@ RESPONSE STYLE:
           {loading && (
             <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
               <NoraAvatar size={26}/>
-              <div style={{ padding: "14px 18px", backgroundColor: "#FDFAF5", border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.gold}`, borderRadius: "18px 18px 18px 4px" }}>
+              <div style={{ padding: "14px 18px", backgroundColor: "#FDFAF5", border: `1px solid ${C.border}`, borderLeft: `2px solid ${C.muted}`, borderRadius: "18px 18px 18px 4px" }}>
                 <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                   {[0, 1, 2].map(j => (
                     <div key={j} style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: C.muted, animation: `bounce 1.3s ease-in-out ${j * 0.22}s infinite` }}/>

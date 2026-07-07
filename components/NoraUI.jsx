@@ -61,7 +61,7 @@ export const SectionHeader = ({ title, sub, open, onToggle, noBorder, accent }) 
     }}
   >
     <div>
-      {accent && <div style={{ width:20, height:2, backgroundColor:C.gold, borderRadius:2, marginBottom:6 }}/>}
+      {accent && <div style={{ width:20, height:2, backgroundColor:C.muted, borderRadius:2, marginBottom:6 }}/>}
       <p style={{ fontFamily:serif, fontSize:16, fontWeight:600, color:C.text, margin:0, lineHeight:1.2 }}>{title}</p>
       {sub && <p style={{ fontSize:11, color:C.muted, margin:"3px 0 0", fontFamily:sans }}>{sub}</p>}
     </div>

@@ -556,7 +556,7 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
           <div style={{display:"flex",gap:8,marginBottom:photoMode&&imageFile?10:0}}>
             <input style={{...inp,flex:1}} placeholder={logLoading?"Analysing…":"Log food, drink, or exercise…"} value={logInput} disabled={logLoading||photoMode} onChange={e=>setLogInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!logLoading)handleLogText();}}/>
             <div style={{position:"relative",flexShrink:0}}>
-              <button onClick={()=>setShowCameraMenu(v=>!v)} style={{width:44,height:44,borderRadius:10,border:`1px solid ${showCameraMenu?C.gold:C.border}`,backgroundColor:showCameraMenu?C.goldLight:C.card,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <button onClick={()=>setShowCameraMenu(v=>!v)} style={{width:44,height:44,borderRadius:10,border:`1px solid ${showCameraMenu?C.green:C.border}`,backgroundColor:showCameraMenu?C.greenLight:C.card,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
                 <CameraIcon size={16} color={showCameraMenu?C.amber:C.muted}/>
               </button>
               {showCameraMenu&&(
@@ -621,8 +621,8 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
           </div>
           <div style={{height:4,backgroundColor:C.track,borderRadius:10,marginBottom:10,overflow:"hidden"}}><div style={{width:`${Math.min((waterMl/(targets?.water_ml||2500))*100,100)}%`,height:"100%",backgroundColor:C.slate,borderRadius:10,transition:"width 0.6s ease"}}/></div>
           <div style={{display:"flex",gap:6}}>
-            {[150,250,500].map(ml=><button key={ml} onClick={()=>addWater(ml)} style={{flex:1,padding:"9px 0",borderRadius:9,border:`1px solid ${C.gold}`,backgroundColor:"transparent",color:C.gold,fontSize:12,fontWeight:500,cursor:"pointer"}}>+{ml}ml</button>)}
-            <button onClick={()=>setShowOtherWater(v=>!v)} style={{flex:1,padding:"9px 0",borderRadius:9,border:`1px solid ${C.gold}`,backgroundColor:"transparent",color:C.gold,fontSize:12,cursor:"pointer"}}>Other</button>
+            {[150,250,500].map(ml=><button key={ml} onClick={()=>addWater(ml)} style={{flex:1,padding:"9px 0",borderRadius:9,border:`1px solid ${C.green}`,backgroundColor:"transparent",color:C.green,fontSize:12,fontWeight:500,cursor:"pointer"}}>+{ml}ml</button>)}
+            <button onClick={()=>setShowOtherWater(v=>!v)} style={{flex:1,padding:"9px 0",borderRadius:9,border:`1px solid ${C.green}`,backgroundColor:"transparent",color:C.green,fontSize:12,cursor:"pointer"}}>Other</button>
           </div>
           {showOtherWater&&(
             <div style={{display:"flex",gap:6,marginTop:8,animation:"fadeIn 0.2s ease"}}>
@@ -660,7 +660,7 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
                           <input style={inp} value={editFields.notes} onChange={e=>setEditFields(f=>({...f,notes:e.target.value}))} placeholder="Portion notes"/>
                           <div style={{display:"flex",gap:8}}>
                             <button onClick={()=>saveEdit(entry.id)} style={{flex:2,padding:"10px",backgroundColor:C.green,color:C.bg,border:"none",borderRadius:9,fontSize:13,fontWeight:500,cursor:"pointer"}}>Save</button>
-                            <button onClick={()=>setEditingId(null)} style={{flex:1,padding:"10px",backgroundColor:"transparent",color:C.gold,border:`1px solid ${C.gold}`,borderRadius:9,fontSize:13,cursor:"pointer"}}>Cancel</button>
+                            <button onClick={()=>setEditingId(null)} style={{flex:1,padding:"10px",backgroundColor:"transparent",color:C.green,border:`1px solid ${C.green}`,borderRadius:9,fontSize:13,cursor:"pointer"}}>Cancel</button>
                           </div>
                         </div>
                       ):(
@@ -702,13 +702,13 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
           </div>
         )}
         {isFemale&&isPeri&&(
-          <div style={{...card,padding:"10px 14px",borderLeft:`2px solid ${C.gold}55`}}>
+          <div style={{...card,padding:"10px 14px",borderLeft:`2px solid ${C.muted}`}}>
             <p style={{fontSize:10,fontWeight:700,color:C.amber,textTransform:"uppercase",letterSpacing:"0.05em",margin:"0 0 3px"}}>Hormonal balance</p>
             <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{getHormonalTip(18).tip}</p>
           </div>
         )}
         {!isFemale&&maleTip&&(
-          <div style={{...card,padding:"10px 14px",borderLeft:`2px solid ${C.green}55`}}>
+          <div style={{...card,padding:"10px 14px",borderLeft:`2px solid ${C.muted}`}}>
             <p style={{fontSize:10,fontWeight:700,color:C.green,textTransform:"uppercase",letterSpacing:"0.05em",margin:"0 0 3px"}}>{maleTip.icon} {maleTip.title}</p>
             <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{maleTip.tip}</p>
           </div>
@@ -716,7 +716,7 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
 
         {/* Nora's daily insight — always last */}
         {eveningSummaryLoad&&(
-          <div style={{...card,padding:"18px 20px",background:`linear-gradient(160deg,${C.card} 60%,#FBF4E8 100%)`,boxShadow:"0 4px 24px rgba(201,169,110,0.10)",borderLeft:`4px solid ${C.gold}`}}>
+          <div style={{...card,padding:"18px 20px",background:`linear-gradient(160deg,${C.card} 60%,#FBF4E8 100%)`,boxShadow:"0 4px 24px rgba(201,169,110,0.10)",borderLeft:`2px solid ${C.muted}`}}>
             <div style={{display:"flex",gap:12,alignItems:"center"}}>
               <NoraAvatar size={28}/>
               <div style={{display:"flex",gap:5}}>
@@ -726,7 +726,7 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
           </div>
         )}
         {eveningSummary&&(
-          <div style={{...card,padding:"20px 22px",animation:"fadeIn 0.4s ease",background:`linear-gradient(160deg,${C.card} 60%,#FBF4E8 100%)`,boxShadow:"0 4px 24px rgba(201,169,110,0.10),0 2px 8px rgba(28,43,38,0.05)",borderLeft:`4px solid ${C.gold}`}}>
+          <div style={{...card,padding:"20px 22px",animation:"fadeIn 0.4s ease",background:`linear-gradient(160deg,${C.card} 60%,#FBF4E8 100%)`,boxShadow:"0 4px 24px rgba(201,169,110,0.10),0 2px 8px rgba(28,43,38,0.05)",borderLeft:`2px solid ${C.muted}`}}>
             <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
               <NoraAvatar size={34}/>
               <div>

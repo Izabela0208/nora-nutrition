@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { C, card, serif, sans, localDateStr } from "../noraTokens";
-import { TabSectionHead } from "../NoraUI";
-import { PlusIcon, CheckIcon } from "../NoraIcons";
+import { PlusIcon, CheckIcon, BotanicalBranch, NoraAvatar } from "../NoraIcons";
 
 const SUPP_KEY  = "nora_supps_list";
 const TAKEN_KEY = "nora_supps_taken";
@@ -179,13 +178,24 @@ ${foodLog}`;
   return (
     <div style={{ padding: "24px 20px 100px", display: "flex", flexDirection: "column", gap: 16 }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <TabSectionHead title="Boost" sub="Supplements & personalised recommendations"/>
+      <div style={{ background:`linear-gradient(160deg,${C.greenDark} 0%,${C.green} 100%)`, padding:"20px 20px 18px", margin:"-24px -20px 18px", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", top:-8, right:-8, opacity:0.12, pointerEvents:"none" }}>
+          <BotanicalBranch width={110}/>
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:12, flex:1 }}>
+          <NoraAvatar size={36}/>
+          <div style={{ flex:1 }}>
+            <h2 style={{ fontFamily:serif, fontSize:21, color:"#FDFAF5", fontWeight:700, margin:0, lineHeight:1.2, letterSpacing:"-0.01em" }}>Boost</h2>
+            <p style={{ fontSize:11, color:"rgba(253,250,245,0.55)", margin:0, fontFamily:sans }}>Supplements & personalised recommendations</p>
+          </div>
+        </div>
+      </div>
 
       {/* ── MY SUPPLEMENTS ─────────────────────────────────────── */}
       <div style={{ ...card }}>
         <div style={{ padding: "15px 18px 14px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <div style={{ width: 20, height: 2, backgroundColor: C.gold, borderRadius: 2, marginBottom: 6 }}/>
+            <div style={{ width: 20, height: 2, backgroundColor: C.muted, borderRadius: 2, marginBottom: 6 }}/>
             <p style={{ fontFamily: serif, fontSize: 16, fontWeight: 600, color: C.text, margin: 0 }}>My Supplements</p>
             <p style={{ fontSize: 11, color: C.muted, margin: "3px 0 0" }}>
               {supps.length === 0 ? "Add your stack below" : `${takenCount}/${supps.length} taken today`}
@@ -234,12 +244,12 @@ ${foodLog}`;
       <div style={{ ...card }}>
         <div style={{ padding:"15px 18px 14px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div>
-            <div style={{ width:20, height:2, backgroundColor:C.gold, borderRadius:2, marginBottom:6 }}/>
+            <div style={{ width:20, height:2, backgroundColor:C.muted, borderRadius:2, marginBottom:6 }}/>
             <p style={{ fontFamily:serif, fontSize:16, fontWeight:600, color:C.text, margin:0 }}>Nora's Analysis</p>
             <p style={{ fontSize:11, color:C.muted, margin:"3px 0 0" }}>Deficiencies · essential supplements · food alternatives</p>
           </div>
           {recs && !recs._error && !recsLoading && (
-            <button onClick={handleRefresh} style={{ fontSize:11, color:C.gold, background:"none", border:`1px solid ${C.gold}`, borderRadius:20, padding:"5px 10px", cursor:"pointer", whiteSpace:"nowrap" }}>Refresh</button>
+            <button onClick={handleRefresh} style={{ fontSize:11, color:C.green, background:"none", border:`1px solid ${C.green}`, borderRadius:20, padding:"5px 10px", cursor:"pointer", whiteSpace:"nowrap" }}>Refresh</button>
           )}
         </div>
 
@@ -374,7 +384,7 @@ function StudyCitations({ studies }) {
       ))}
       {studies.length > 2 && (
         <button onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
-          style={{ marginTop:5, fontSize:10, color:C.gold, background:"none", border:"none", padding:0, cursor:"pointer", fontFamily:sans, fontWeight:500 }}>
+          style={{ marginTop:5, fontSize:10, color:C.green, background:"none", border:"none", padding:0, cursor:"pointer", fontFamily:sans, fontWeight:500 }}>
           {open ? "▲ Show less" : `▼ ${studies.length-2} more`}
         </button>
       )}
@@ -422,7 +432,7 @@ function DefCard({ def, studies }) {
 
 function FoodAltCard({ alt }) {
   return (
-    <div style={{ backgroundColor:C.bg, borderRadius:12, padding:"13px 14px", marginBottom:8, border:`1px solid ${C.border}`, borderLeft:`3px solid ${C.gold}` }}>
+    <div style={{ backgroundColor:C.bg, borderRadius:12, padding:"13px 14px", marginBottom:8, border:`1px solid ${C.border}`, borderLeft:`3px solid ${C.muted}` }}>
       <p style={{ fontSize:10, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 6px", fontFamily:sans }}>Instead of {alt.for}</p>
       <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
         <span style={{ fontSize:20, flexShrink:0, lineHeight:1.3, marginTop:1 }}>{alt.emoji || "🥗"}</span>

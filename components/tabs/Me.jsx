@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { C, card, serif, sans, inp, localDateStr } from "../noraTokens";
-import { NoraAvatar, LeafDecor, CheckIcon, HeartIcon, MoonIcon } from "../NoraIcons";
+import { NoraAvatar, BotanicalBranch, CheckIcon, HeartIcon, MoonIcon } from "../NoraIcons";
 import { SectionHeader, Collapsible } from "../NoraUI";
 
 const GOAL_OPTIONS = [
@@ -170,10 +170,18 @@ export default function Me({ profile, setProfile, targets, resetProfile }) {
   return (
     <div style={{ padding: "24px 20px 100px", display: "flex", flexDirection: "column", gap: 14 }}>
 
-      {/* ── Profile summary ───────────────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-        <LeafDecor size={18}/>
-        <h2 style={{ fontFamily: serif, fontSize: 22, color: C.green, fontWeight: 600, margin: 0 }}>Me</h2>
+      {/* ── Header ───────────────────────────────────────── */}
+      <div style={{ background:`linear-gradient(160deg,${C.greenDark} 0%,${C.green} 100%)`, padding:"20px 20px 18px", margin:"-24px -20px 18px", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", top:-8, right:-8, opacity:0.12, pointerEvents:"none" }}>
+          <BotanicalBranch width={110}/>
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:12, flex:1 }}>
+          <NoraAvatar size={36}/>
+          <div style={{ flex:1 }}>
+            <h2 style={{ fontFamily:serif, fontSize:21, color:"#FDFAF5", fontWeight:700, margin:0, lineHeight:1.2, letterSpacing:"-0.01em" }}>Me</h2>
+            <p style={{ fontSize:11, color:"rgba(253,250,245,0.55)", margin:0, fontFamily:sans }}>Profile · Goals · Settings</p>
+          </div>
+        </div>
       </div>
 
       {/* Avatar card */}
@@ -513,7 +521,7 @@ export default function Me({ profile, setProfile, targets, resetProfile }) {
                                       <p style={{ fontFamily: serif, fontSize: 14, fontWeight: 600, color: C.text, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</p>
                                       <p style={{ fontSize: 11, color: C.muted, margin: "1px 0 0" }}>~{meal.calories || 0} kcal · ~{meal.protein_g || 0}g protein</p>
                                     </div>
-                                    <button onClick={() => setFavRecipe(isExpanded ? null : item.id)} style={{ fontSize: 11, color: C.gold, background: "none", border: `1px solid ${C.gold}`, borderRadius: 7, padding: "5px 10px", cursor: "pointer", flexShrink: 0, fontFamily: sans }}>
+                                    <button onClick={() => setFavRecipe(isExpanded ? null : item.id)} style={{ fontSize: 11, color: C.green, background: "none", border: `1px solid ${C.green}`, borderRadius: 7, padding: "5px 10px", cursor: "pointer", flexShrink: 0, fontFamily: sans }}>
                                       {isExpanded ? "Close" : "Recipe"}
                                     </button>
                                     <button onClick={() => { const updated = plans.filter(p => p.id !== item.id); setPlans(updated); try { localStorage.setItem("nora_saved_items", JSON.stringify(updated)); } catch {} }} style={{ fontSize: 17, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: "0 2px", opacity: 0.5, lineHeight: 1, flexShrink: 0 }}>×</button>
@@ -608,7 +616,7 @@ export default function Me({ profile, setProfile, targets, resetProfile }) {
       {/* ── Restart onboarding ────────────────────────────────────── */}
       <button
         onClick={resetProfile}
-        style={{ width: "100%", padding: "13px", backgroundColor: "transparent", border: `1px solid ${C.gold}`, borderRadius: 12, fontSize: 13, color: C.gold, cursor: "pointer", fontFamily: sans }}
+        style={{ width: "100%", padding: "13px", backgroundColor: "transparent", border: `1px solid ${C.green}`, borderRadius: 12, fontSize: 13, color: C.green, cursor: "pointer", fontFamily: sans }}
       >
         Restart onboarding
       </button>
