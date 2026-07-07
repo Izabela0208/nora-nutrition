@@ -88,4 +88,5 @@ Reguli stricte — respectă-le la ORICE modificare de UI:
 * Aplicația se adresează egal femeilor și bărbaților — nimic nu presupune genul utilizatorului.
 * Public global, estetică europeană: designul NU se adaptează pe piețe; doar limba se localizează.
 * Personalizarea biologică (ciclu menstrual, ritmuri hormonale) este o funcție centrală — activată DOAR opt-in din profil, cu voce neutră și sobră. A nu se confunda cu adaptarea designului sau tonului pe gen, care este interzisă.
+* Datele sensibile (biologice, de sănătate) se cer o singură dată, opt-in, în Me → Preferințe — niciodată în onboarding, niciodată în conversație nesolicitat, niciodată afișate ca etichetă permanentă pe ecrane. Absența datelor = subiect inexistent în interfață.
 
