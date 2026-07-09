@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import OnboardingFlow from "./OnboardingFlow";
+import AuthScreen from "./auth/AuthScreen";
 import MyDay    from "./tabs/MyDay";
 import Eat      from "./tabs/Eat";
 import Ritual   from "./tabs/Ritual";
@@ -8,6 +9,7 @@ import AskNora  from "./tabs/AskNora";
 import Me       from "./tabs/Me";
 import { C, card, serif, sans, localDateStr, getCyclePhase } from "./noraTokens";
 import { NoraAvatar, TabIcon } from "./NoraIcons";
+import { useAuthSession } from "../lib/useAuthSession";
 
 const TABS = [
   { id:"myday",   label:"My Day"  },
@@ -19,6 +21,7 @@ const TABS = [
 ];
 
 export default function NutritionApp() {
+  const { session, loading: authLoading, signOut } = useAuthSession();
   const [phase,      setPhase]      = useState("onboarding");
   const [profile,    setProfile]    = useState(null);
   const [targets,    setTargets]    = useState(null);
@@ -92,6 +95,10 @@ export default function NutritionApp() {
     ? getCyclePhase(profile?.lastPeriod, profile?.cycleLength || 28)
     : null;
 
+  // ── Auth ────────────────────────────────────────────────────────
+  if(authLoading) return <div style={{minHeight:"100vh",backgroundColor:C.bg}}/>;
+  if(!session) return <AuthScreen/>;
+
   // ── Onboarding ──────────────────────────────────────────────────
   if(phase==="onboarding") return <OnboardingFlow onComplete={handleOnboardingComplete}/>;
 
@@ -134,7 +141,7 @@ export default function NutritionApp() {
     ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase}/>,
     boost:   <Boost   profile={profile} targets={targets} entries={entries} cyclePhase={cyclePhase}/>,
     asknora: <AskNora profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase}/>,
-    me:      <Me      profile={profile} setProfile={setProfile} targets={targets} resetProfile={resetProfile}/>,
+    me:      <Me      profile={profile} setProfile={setProfile} targets={targets} resetProfile={resetProfile} signOut={signOut}/>,
   };
 
   return (

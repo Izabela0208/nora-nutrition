@@ -24,7 +24,7 @@ const PHASE_INFO = {
   Luteal:     { energy: "Steady — prefer gentle movement",    mood: "Grounding, watch for PMS",        nutrition: "Magnesium, dark chocolate, reduce salt"         },
 };
 
-export default function Me({ profile, setProfile, targets, resetProfile }) {
+export default function Me({ profile, setProfile, targets, resetProfile, signOut }) {
   const [form,     setForm]     = useState({ ...profile });
   const [saved,    setSaved]    = useState(false);
   const [plans,    setPlans]    = useState([]);
@@ -623,6 +623,14 @@ export default function Me({ profile, setProfile, targets, resetProfile }) {
       <p style={{ fontSize: 11, color: C.muted, textAlign: "center", margin: "-6px 0 0", lineHeight: 1.5 }}>
         This will clear all your data and targets.
       </p>
+
+      {/* ── Logout ─────────────────────────────────────────────────── */}
+      <button
+        onClick={signOut}
+        style={{ width: "100%", padding: "13px", backgroundColor: "transparent", border: "none", borderRadius: 12, fontSize: 13, color: C.muted, cursor: "pointer", fontFamily: sans }}
+      >
+        Logout
+      </button>
     </div>
   );
 }
