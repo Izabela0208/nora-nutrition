@@ -10,6 +10,7 @@ import Me       from "./tabs/Me";
 import { C, card, serif, sans, localDateStr, getCyclePhase } from "./noraTokens";
 import { NoraAvatar, TabIcon } from "./NoraIcons";
 import { useAuthSession } from "../lib/useAuthSession";
+import { supabase } from "../lib/supabase";
 
 const TABS = [
   { id:"myday",   label:"My Day"  },
@@ -19,6 +20,56 @@ const TABS = [
   { id:"asknora", label:"Ask Nora"},
   { id:"me",      label:"Me"      },
 ];
+
+// profile (JS, camelCase) ⇄ profiles row (Supabase, snake_case)
+const profileToRow = (p, t, userId) => {
+  const heightCm = p.heightUnit === "cm"
+    ? Number(p.heightCm) || null
+    : Math.round((Number(p.heightFt||0)*12 + Number(p.heightIn||0)) * 2.54) || null;
+  const weightKg = p.weightUnit === "kg"
+    ? Number(p.weightKg) || null
+    : Math.round(Number(p.weightLbs||0) * 0.453592) || null;
+  return {
+    user_id: userId,
+    name: p.name || null,
+    age: p.age ? Number(p.age) : null,
+    sex: p.sex || null,
+    height_cm: heightCm,
+    height_unit: p.heightUnit || "cm",
+    weight_kg: weightKg,
+    weight_unit: p.weightUnit || "kg",
+    goals: p.goals || [],
+    activity: p.activity || null,
+    preferences: p.preferences || null,
+    language: p.language || null,
+    targets: t || null,
+    biological_tracking_enabled: !!p.biologicalTrackingEnabled,
+    biological_context: p.biologicalContext || "none",
+    last_period_date: p.lastPeriodDate || null,
+    cycle_length: p.cycleLength || 28,
+    cycle_regularity: p.cycleRegularity || null,
+    updated_at: new Date().toISOString(),
+  };
+};
+
+const rowToProfile = (row) => ({
+  name: row.name || "",
+  age: row.age ?? "",
+  sex: row.sex || "",
+  heightCm: row.height_cm ?? "",
+  heightUnit: row.height_unit || "cm",
+  weightKg: row.weight_kg ?? "",
+  weightUnit: row.weight_unit || "kg",
+  goals: row.goals || [],
+  activity: row.activity || "",
+  preferences: row.preferences || "",
+  language: row.language || "",
+  biologicalTrackingEnabled: !!row.biological_tracking_enabled,
+  biologicalContext: row.biological_context || "none",
+  lastPeriodDate: row.last_period_date || "",
+  cycleLength: row.cycle_length || 28,
+  cycleRegularity: row.cycle_regularity || "",
+});
 
 export default function NutritionApp() {
   const { session, loading: authLoading, signOut } = useAuthSession();
@@ -30,18 +81,12 @@ export default function NutritionApp() {
   const [entries,    setEntries]    = useState([]);
   const [waterMl,    setWaterMl]    = useState(0);
   const [history,    setHistory]    = useState({});
+  const [profileLoading,  setProfileLoading]  = useState(true);
+  const [localImportData, setLocalImportData] = useState(null);
 
-  // Restore session
+  // Restore today's water/entries/history (still localStorage — migrates in a later sub-step)
   useEffect(()=>{
     try {
-      const p=localStorage.getItem("nora_profile");
-      const t=localStorage.getItem("nora_targets");
-      if(p&&t){
-        const parsed=JSON.parse(p);
-        if(parsed.goal&&!parsed.goals){parsed.goals=[parsed.goal];delete parsed.goal;}
-        if(!Array.isArray(parsed.goals)) parsed.goals=[];
-        setProfile(parsed); setTargets(JSON.parse(t)); setPhase("app");
-      }
       const today=localDateStr();
       const wd=localStorage.getItem("nora_today_water");
       if(wd){const pw=JSON.parse(wd);if(pw.date===today)setWaterMl(pw.ml);}
@@ -51,6 +96,41 @@ export default function NutritionApp() {
       if(hd)setHistory(JSON.parse(hd));
     }catch{}
   },[]);
+
+  // Load profile + targets from Supabase for the logged-in user
+  useEffect(()=>{
+    if(authLoading) return;
+    if(!session){ setProfileLoading(false); return; }
+
+    let cancelled = false;
+    (async () => {
+      setProfileLoading(true);
+      const { data: row } = await supabase.from("profiles").select("*").eq("user_id", session.user.id).maybeSingle();
+      if(cancelled) return;
+      if(row){
+        setProfile(rowToProfile(row));
+        setTargets(row.targets || null);
+        setPhase("app");
+      } else {
+        try {
+          const p=localStorage.getItem("nora_profile");
+          const t=localStorage.getItem("nora_targets");
+          if(p&&t){
+            const parsed=JSON.parse(p);
+            if(parsed.goal&&!parsed.goals){parsed.goals=[parsed.goal];delete parsed.goal;}
+            if(!Array.isArray(parsed.goals)) parsed.goals=[];
+            setLocalImportData({ profile:parsed, targets:JSON.parse(t) });
+            setPhase("import");
+          } else {
+            setPhase("onboarding");
+          }
+        } catch { setPhase("onboarding"); }
+      }
+      setProfileLoading(false);
+    })();
+
+    return () => { cancelled = true; };
+  },[session, authLoading]);
 
   // Persist water
   useEffect(()=>{
@@ -78,26 +158,63 @@ export default function NutritionApp() {
     }catch{}
   },[entries,waterMl]);
 
+  const saveProfile = async (newProfile, newTargets) => {
+    const t = newTargets !== undefined ? newTargets : targets;
+    setProfile(newProfile);
+    setTargets(t);
+    if(!session?.user?.id) return;
+    const row = profileToRow(newProfile, t, session.user.id);
+    await supabase.from("profiles").upsert(row);
+  };
+
   const handleOnboardingComplete=(finalProfile,data)=>{
-    setProfile(finalProfile); setTargets(data);
     setWelcomeMsg(data.welcome_message||`Welcome, ${finalProfile.name}. Let's build great habits together.`);
-    try{localStorage.setItem("nora_profile",JSON.stringify(finalProfile));localStorage.setItem("nora_targets",JSON.stringify(data));}catch{}
+    saveProfile(finalProfile, data);
     setPhase("welcome");
   };
 
+  const handleImportLocalData = () => {
+    if(!localImportData) return;
+    const { profile: importedProfile, targets: importedTargets } = localImportData;
+    saveProfile(importedProfile, importedTargets);
+    setLocalImportData(null);
+    setPhase("app");
+  };
+
   const resetProfile=()=>{
-    ["nora_profile","nora_targets","nora_today_water","nora_today_entries","nora_sleep","nora_history","nora_supps_list","nora_supps_taken","nora_boost_recs","nora_smoothie","nora_evening_summary"].forEach(k=>{try{localStorage.removeItem(k);}catch{}});
+    ["nora_today_water","nora_today_entries","nora_sleep","nora_history","nora_supps_list","nora_supps_taken","nora_boost_recs","nora_smoothie","nora_evening_summary"].forEach(k=>{try{localStorage.removeItem(k);}catch{}});
     setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setWaterMl(0);setHistory({});setPhase("onboarding");
   };
 
-  // Cycle phase — skip if cycle is absent (perimenopause/absent mode)
-  const cyclePhase = (profile?.sex === "female" && profile?.cycleRegularity !== "Absent")
-    ? getCyclePhase(profile?.lastPeriod, profile?.cycleLength || 28)
+  // Cycle phase — only when the user opted in and chose "Menstruation" as context
+  const cyclePhase = (profile?.sex === "female" && profile?.biologicalTrackingEnabled && profile?.biologicalContext === "cycle")
+    ? getCyclePhase(profile?.lastPeriodDate, profile?.cycleLength || 28)
     : null;
 
   // ── Auth ────────────────────────────────────────────────────────
   if(authLoading) return <div style={{minHeight:"100vh",backgroundColor:C.bg}}/>;
   if(!session) return <AuthScreen/>;
+  if(profileLoading) return <div style={{minHeight:"100vh",backgroundColor:C.bg}}/>;
+
+  // ── Import local data (found on this device, no account data yet) ─
+  if(phase==="import") return (
+    <div style={{minHeight:"100vh",backgroundColor:C.bg,fontFamily:sans,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+      <div style={{width:"100%",maxWidth:400}}>
+        <div style={{...card,padding:"32px 28px",textAlign:"center"}}>
+          <h2 style={{fontFamily:serif,fontSize:22,color:C.green,margin:"0 0 10px",fontWeight:600}}>Welcome back</h2>
+          <p style={{color:C.muted,fontSize:14,lineHeight:1.7,marginBottom:24}}>
+            We found data from a previous session on this device. Would you like to bring it into your account?
+          </p>
+          <button onClick={handleImportLocalData} style={{width:"100%",backgroundColor:C.green,color:C.bg,border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:500,cursor:"pointer",letterSpacing:"0.03em",marginBottom:10}}>
+            Import my data
+          </button>
+          <button onClick={()=>{setLocalImportData(null);setPhase("onboarding");}} style={{width:"100%",backgroundColor:"transparent",color:C.muted,border:"none",borderRadius:12,padding:"12px",fontSize:13,cursor:"pointer"}}>
+            Start fresh instead
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   // ── Onboarding ──────────────────────────────────────────────────
   if(phase==="onboarding") return <OnboardingFlow onComplete={handleOnboardingComplete}/>;
@@ -141,7 +258,7 @@ export default function NutritionApp() {
     ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase}/>,
     boost:   <Boost   profile={profile} targets={targets} entries={entries} cyclePhase={cyclePhase}/>,
     asknora: <AskNora profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase}/>,
-    me:      <Me      profile={profile} setProfile={setProfile} targets={targets} resetProfile={resetProfile} signOut={signOut}/>,
+    me:      <Me      profile={profile} saveProfile={saveProfile} targets={targets} resetProfile={resetProfile} signOut={signOut}/>,
   };
 
   return (

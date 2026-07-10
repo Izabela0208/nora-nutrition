@@ -17,14 +17,15 @@ const ACTIVITY_OPTIONS = [
   { id: "Extremely active",  desc: "Daily intense training" },
 ];
 
-const PHASE_INFO = {
-  Menstrual:  { energy: "Low — prioritise rest",              mood: "Introspective, possibly tender",  nutrition: "Iron-rich foods, herbal tea, ease off caffeine" },
-  Follicular: { energy: "Rising — good for new starts",       mood: "Optimistic and creative",          nutrition: "Complex carbs, fermented foods, leafy greens"   },
-  Ovulatory:  { energy: "Peak — optimal for performance",     mood: "Sociable and confident",           nutrition: "Zinc-rich seeds, anti-inflammatory foods"       },
-  Luteal:     { energy: "Steady — prefer gentle movement",    mood: "Grounding, watch for PMS",        nutrition: "Magnesium, dark chocolate, reduce salt"         },
-};
+const BIO_CONTEXTS = [
+  { id: "cycle",         label: "Menstruation"  },
+  { id: "pregnancy",     label: "Pregnancy"     },
+  { id: "perimenopause", label: "Perimenopause" },
+  { id: "menopause",     label: "Menopause"     },
+  { id: "none",          label: "Not applicable"},
+];
 
-export default function Me({ profile, setProfile, targets, resetProfile, signOut }) {
+export default function Me({ profile, saveProfile, targets, resetProfile, signOut }) {
   const [form,     setForm]     = useState({ ...profile });
   const [saved,    setSaved]    = useState(false);
   const [plans,    setPlans]    = useState([]);
@@ -36,7 +37,6 @@ export default function Me({ profile, setProfile, targets, resetProfile, signOut
   const [sleepHours,   setSleepHours]   = useState("");
   const [sleepQuality, setSleepQuality] = useState("ok");
   const [sleepSaved,   setSleepSaved]   = useState(false);
-  const [periodLog,    setPeriodLog]    = useState({ periods: [] });
 
   const tog = k => setOpen(p => ({ ...p, [k]: !p[k] }));
 
@@ -63,55 +63,11 @@ export default function Me({ profile, setProfile, targets, resetProfile, signOut
     } catch {}
   }, []);
 
-  useEffect(() => {
-    try {
-      const pl = localStorage.getItem("nora_period_log");
-      if (pl) setPeriodLog(JSON.parse(pl));
-    } catch {}
-  }, []);
-
   const set = (key, val) => setForm(p => ({ ...p, [key]: val }));
 
   const saveSleep = () => {
     setSleepSaved(true);
     try { localStorage.setItem("nora_sleep", JSON.stringify({ date: localDateStr(), hours: sleepHours, quality: sleepQuality })); } catch {}
-  };
-
-  const parseDate = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
-
-  const logPeriodStart = () => {
-    const today = localDateStr();
-    const periods = [...(periodLog.periods || []), { start: today, end: null }];
-    const updated = { periods };
-    setPeriodLog(updated);
-    try { localStorage.setItem("nora_period_log", JSON.stringify(updated)); } catch {}
-    const newProfile = { ...profile, lastPeriod: today, cycleRegularity: "Regular", perimenopause: false };
-    if (periods.length >= 2) {
-      const diff = Math.floor((parseDate(today) - parseDate(periods[periods.length - 2].start)) / 86400000);
-      if (diff >= 21 && diff <= 45) newProfile.cycleLength = diff;
-    }
-    setProfile(newProfile);
-    try { localStorage.setItem("nora_profile", JSON.stringify(newProfile)); } catch {}
-  };
-
-  const removePeriodEntry = () => {
-    const periods = (periodLog.periods || []).slice(0, -1);
-    const updated = { periods };
-    setPeriodLog(updated);
-    try { localStorage.setItem("nora_period_log", JSON.stringify(updated)); } catch {}
-    const newProfile = { ...profile };
-    if (periods.length > 0) { newProfile.lastPeriod = periods[periods.length - 1].start; } else { delete newProfile.lastPeriod; }
-    setProfile(newProfile);
-    try { localStorage.setItem("nora_profile", JSON.stringify(newProfile)); } catch {}
-  };
-
-  const logPeriodEnd = () => {
-    const periods = [...(periodLog.periods || [])];
-    if (periods.length === 0) return;
-    periods[periods.length - 1] = { ...periods[periods.length - 1], end: localDateStr() };
-    const updated = { periods };
-    setPeriodLog(updated);
-    try { localStorage.setItem("nora_period_log", JSON.stringify(updated)); } catch {}
   };
 
   const toggleGoal = g => {
@@ -135,8 +91,7 @@ export default function Me({ profile, setProfile, targets, resetProfile, signOut
       updated.weightLbs = Number(form.weightLbs);
       updated.weightKg  = Math.round(updated.weightLbs / 2.205);
     }
-    setProfile(updated);
-    try { localStorage.setItem("nora_profile", JSON.stringify(updated)); } catch {}
+    saveProfile(updated);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
@@ -278,98 +233,48 @@ export default function Me({ profile, setProfile, targets, resetProfile, signOut
           </div>
         )}
 
-        {/* Menstrual tracking (females only) */}
-        {profile?.sex === "female" && (() => {
-          const periods = periodLog.periods || [];
-          const todayMs = (() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime(); })();
-          let cycleData = { state: "no_data" };
-          if (periods.length > 0) {
-            const lastP = periods[periods.length - 1];
-            const lastStartMs = parseDate(lastP.start).getTime();
-            const daysSinceStart = Math.floor((todayMs - lastStartMs) / 86400000);
-            if (daysSinceStart >= 60) {
-              cycleData = Number(profile?.age) >= 45
-                ? { state: "perimenopause", daysSinceStart }
-                : { state: "gentle_prompt", daysSinceStart };
-            } else {
-              let cycleLength = 28;
-              if (periods.length >= 2) {
-                const diff = Math.floor((lastStartMs - parseDate(periods[periods.length - 2].start).getTime()) / 86400000);
-                if (diff >= 21 && diff <= 45) cycleLength = diff;
-              }
-              const currentDay = daysSinceStart + 1;
-              let phaseName, phaseColor, phaseColorLight;
-              if (currentDay <= 5)       { phaseName = "Menstrual";  phaseColor = "#9E5E52"; phaseColorLight = "#9E5E5215"; }
-              else if (currentDay <= 13) { phaseName = "Follicular"; phaseColor = "#7A9E8A"; phaseColorLight = "#7A9E8A15"; }
-              else if (currentDay <= 16) { phaseName = "Ovulatory";  phaseColor = "#C9A96E"; phaseColorLight = "#C9A96E15"; }
-              else                       { phaseName = "Luteal";     phaseColor = "#B8922A"; phaseColorLight = "#B8922A15"; }
-              const nextMs = lastStartMs + cycleLength * 86400000;
-              const daysUntil = Math.round((nextMs - todayMs) / 86400000);
-              const nextDate = new Date(nextMs);
-              const nextStr = `${nextDate.getDate()} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][nextDate.getMonth()]}`;
-              cycleData = { state: "active", phaseName, phaseColor, phaseColorLight, currentDay, cycleLength, nextStr, daysUntil };
-            }
-          }
-          const lastEntry = periods.length > 0 ? periods[periods.length - 1] : null;
-          const canEnd = lastEntry && !lastEntry.end;
-          return (
-            <>
-              <div style={{ height: 1, backgroundColor: C.border, margin: "14px 0" }}/>
-              <p style={{ fontSize: 12, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 10px" }}>Menstrual cycle</p>
-              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                <button onClick={logPeriodStart} style={{ flex: 1, padding: "10px 0", borderRadius: 9, border: `1.5px solid ${C.green}`, backgroundColor: C.green, color: C.bg, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                  Period started today
-                </button>
-                <button onClick={logPeriodEnd} disabled={!canEnd} style={{ flex: 1, padding: "10px 0", borderRadius: 9, border: `1.5px solid ${canEnd ? C.border : C.border}`, backgroundColor: "transparent", color: canEnd ? C.muted : C.border, fontSize: 12, fontWeight: 500, cursor: canEnd ? "pointer" : "not-allowed" }}>
-                  Period ended today
-                </button>
+        {/* Biological personalisation — opt-in, females only */}
+        {profile?.sex === "female" && (
+          <>
+            <div style={{ height: 1, backgroundColor: C.border, margin: "14px 0" }}/>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: profile?.biologicalTrackingEnabled ? 14 : 0 }}>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", margin: 0 }}>Biological personalisation</p>
+                <p style={{ fontSize: 11, color: C.muted, margin: "3px 0 0", lineHeight: 1.5 }}>Optional. Adapts nutrition guidance to your biological context.</p>
               </div>
-              {lastEntry && (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "0 0 10px" }}>
-                  <p style={{ fontSize: 11, color: C.muted, margin: 0, lineHeight: 1.4 }}>
-                    Last logged: {lastEntry.start}{lastEntry.end ? ` → ${lastEntry.end}` : " (ongoing)"}
-                  </p>
-                  <button onClick={removePeriodEntry} title="Remove last entry" style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: C.muted, padding: "2px 6px", borderRadius: 6, textDecoration: "underline", flexShrink: 0 }}>undo</button>
-                </div>
-              )}
-              {cycleData.state === "active" && (
-                <div style={{ backgroundColor: cycleData.phaseColorLight, borderRadius: 12, padding: "14px 16px", border: `1px solid ${cycleData.phaseColor}35` }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                    <div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: cycleData.phaseColor, textTransform: "uppercase", letterSpacing: "0.06em" }}>{cycleData.phaseName}</span>
-                      <span style={{ fontSize: 11, color: C.muted, marginLeft: 8 }}>Day {cycleData.currentDay} of ~{cycleData.cycleLength}</span>
-                    </div>
-                    {cycleData.daysUntil >= 0 && (
-                      <span style={{ fontSize: 10, color: C.muted, backgroundColor: C.card, borderRadius: 6, padding: "3px 8px", border: `1px solid ${C.border}` }}>
-                        Next ~{cycleData.nextStr}
-                      </span>
-                    )}
-                  </div>
-                  {[["Energy", PHASE_INFO[cycleData.phaseName].energy], ["Mood", PHASE_INFO[cycleData.phaseName].mood], ["Nutrition", PHASE_INFO[cycleData.phaseName].nutrition]].map(([label, val]) => (
-                    <div key={label} style={{ display: "flex", gap: 8, marginBottom: 5 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: cycleData.phaseColor, minWidth: 54, paddingTop: 2, flexShrink: 0 }}>{label}</span>
-                      <span style={{ fontSize: 12, color: C.text, lineHeight: 1.45 }}>{val}</span>
-                    </div>
+              <button onClick={() => saveProfile({ ...profile, biologicalTrackingEnabled: !profile.biologicalTrackingEnabled })} style={{ width: 44, height: 24, borderRadius: 12, backgroundColor: profile?.biologicalTrackingEnabled ? C.green : C.border, border: "none", cursor: "pointer", position: "relative", flexShrink: 0, marginLeft: 12 }}>
+                <div style={{ width: 18, height: 18, borderRadius: "50%", backgroundColor: "white", position: "absolute", top: 3, left: profile?.biologicalTrackingEnabled ? 23 : 3, transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}/>
+              </button>
+            </div>
+
+            {profile?.biologicalTrackingEnabled && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                  {BIO_CONTEXTS.map(({ id, label }) => (
+                    <button key={id} onClick={() => saveProfile({ ...profile, biologicalContext: id })} style={{ padding: "7px 12px", borderRadius: 8, border: `1px solid ${profile?.biologicalContext === id ? C.green : C.border}`, backgroundColor: profile?.biologicalContext === id ? C.green : C.card, color: profile?.biologicalContext === id ? C.bg : C.text, fontSize: 12, fontWeight: profile?.biologicalContext === id ? 500 : 400, cursor: "pointer" }}>
+                      {label}
+                    </button>
                   ))}
                 </div>
-              )}
-              {cycleData.state === "perimenopause" && (
-                <div style={{ backgroundColor: C.goldLight, borderRadius: 12, padding: "13px 16px", border: `1px solid ${C.gold}40` }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: C.amber, margin: "0 0 4px" }}>Hormonal transition detected</p>
-                  <p style={{ fontSize: 12, color: C.text, lineHeight: 1.55, margin: 0 }}>No period logged in {cycleData.daysSinceStart} days. Nora adapts your nutrition to support hormonal balance during this phase.</p>
-                </div>
-              )}
-              {cycleData.state === "gentle_prompt" && (
-                <div style={{ backgroundColor: C.bg, borderRadius: 12, padding: "12px 16px", border: `1px solid ${C.border}` }}>
-                  <p style={{ fontSize: 13, color: C.muted, margin: 0, lineHeight: 1.55 }}>Haven't logged a period in a while — everything okay? Tap "Period started today" when your next cycle begins.</p>
-                </div>
-              )}
-              {cycleData.state === "no_data" && (
-                <p style={{ fontSize: 12, color: C.muted, margin: 0, lineHeight: 1.55 }}>Log your period to track your cycle, see your current phase and get personalised nutrition guidance.</p>
-              )}
-            </>
-          );
-        })()}
+
+                {profile?.biologicalContext === "cycle" && (
+                  <div style={{ padding: "14px", backgroundColor: C.bg, borderRadius: 10, border: `1px solid ${C.border}` }}>
+                    <label style={{ fontSize: 11, color: C.muted, fontWeight: 500, display: "block", marginBottom: 6 }}>First day of last period</label>
+                    <input type="date" style={{ ...inp, colorScheme: "light", marginBottom: 12 }} value={profile?.lastPeriodDate || ""} onChange={e => saveProfile({ ...profile, lastPeriodDate: e.target.value })}/>
+                    <label style={{ fontSize: 11, color: C.muted, fontWeight: 500, display: "block", marginBottom: 6 }}>Average cycle length</label>
+                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                      {[21, 24, 28, 30, 32, 35].map(n => (
+                        <button key={n} onClick={() => saveProfile({ ...profile, cycleLength: n })} style={{ padding: "6px 10px", borderRadius: 7, border: `1px solid ${profile?.cycleLength === n ? C.green : C.border}`, backgroundColor: profile?.cycleLength === n ? C.green : C.card, color: profile?.cycleLength === n ? C.bg : C.text, fontSize: 12, cursor: "pointer", fontWeight: profile?.cycleLength === n ? 600 : 400 }}>
+                          {n}d
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
 
         {/* Wearables placeholder */}
         <div style={{ marginTop: 14, padding: "12px 14px", backgroundColor: C.bg, borderRadius: 10, border: `1px dashed ${C.border}`, opacity: 0.6 }}>

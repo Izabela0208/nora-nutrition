@@ -11,7 +11,6 @@ export default function OnboardingFlow({ onComplete }) {
     name:"", age:"", sex:"", heightCm:"", heightFt:"", heightIn:"",
     weightKg:"", weightLbs:"", heightUnit:"cm", weightUnit:"kg",
     goals:[], activity:"", preferences:"", language:"",
-    perimenopause: false, cycleLength: 28,
   });
   const [selectedGoals, setSelectedGoals] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -52,7 +51,7 @@ export default function OnboardingFlow({ onComplete }) {
         ? ` Respond entirely in ${lang}, including the welcome_message.` : "";
       const text = await callClaude(
         "You are Nora, a warm nutritionist AI. Return ONLY valid JSON, no preamble.",
-        `Calculate daily nutrition targets. User: ${profile.name}, sex: ${profile.sex||"not specified"}, age ${profile.age}, height ${hCm}cm, weight ${wKg}kg, goals: ${selectedGoals.join(", ")}, activity: ${profile.activity}, preferences: ${profile.preferences||"none"}${profile.perimenopause?" (perimenopausal)":""}.${langNote} Use Mifflin-St Jeor. Return JSON: { "calories":number, "protein_g":number, "carbs_g":number, "fat_g":number, "fiber_g":number, "water_ml":number, "key_micronutrients":["string"], "welcome_message":"2-3 warm sentences" }`
+        `Calculate daily nutrition targets. User: ${profile.name}, sex: ${profile.sex||"not specified"}, age ${profile.age}, height ${hCm}cm, weight ${wKg}kg, goals: ${selectedGoals.join(", ")}, activity: ${profile.activity}, preferences: ${profile.preferences||"none"}.${langNote} Use Mifflin-St Jeor. Return JSON: { "calories":number, "protein_g":number, "carbs_g":number, "fat_g":number, "fiber_g":number, "water_ml":number, "key_micronutrients":["string"], "welcome_message":"2-3 warm sentences" }`
       );
       const data = parseJSON(text);
       const finalProfile = { ...profile, goals: selectedGoals };
@@ -170,21 +169,8 @@ export default function OnboardingFlow({ onComplete }) {
                     <button key={v} type="button" onClick={()=>setProfile(p=>({...p,sex:v}))} style={{ flex:1, padding:"12px", borderRadius:10, border:`1px solid ${profile.sex===v?C.green:C.border}`, backgroundColor:profile.sex===v?C.green:C.card, color:profile.sex===v?C.bg:C.text, fontSize:14, fontWeight:profile.sex===v?500:400, cursor:"pointer", transition:"all 0.15s" }}>{l}</button>
                   ))}
                 </div>
-                <p style={{ fontSize:11, color:C.muted, margin:"6px 0 0" }}>Used for accurate targets and cycle tracking</p>
+                <p style={{ fontSize:11, color:C.muted, margin:"6px 0 0" }}>Used for accurate targets</p>
               </div>
-
-              {/* Perimenopause — females only */}
-              {profile.sex === "female" && (
-                <div style={{ padding:"12px 14px", backgroundColor:C.greenLight, borderRadius:10, display:"flex", alignItems:"center", gap:12 }}>
-                  <div style={{ flex:1 }}>
-                    <p style={{ fontSize:13, color:C.text, fontWeight:500, margin:0 }}>Perimenopausal</p>
-                    <p style={{ fontSize:11, color:C.muted, margin:"2px 0 0" }}>Adjusts nutrition targets and recommendations</p>
-                  </div>
-                  <button type="button" onClick={()=>setProfile(p=>({...p,perimenopause:!p.perimenopause}))} style={{ width:44, height:24, borderRadius:12, backgroundColor:profile.perimenopause?C.green:C.border, border:"none", cursor:"pointer", position:"relative", transition:"background-color 0.2s", flexShrink:0 }}>
-                    <div style={{ width:18, height:18, borderRadius:"50%", backgroundColor:"white", position:"absolute", top:3, left:profile.perimenopause?23:3, transition:"left 0.2s", boxShadow:"0 1px 3px rgba(0,0,0,0.2)" }}/>
-                  </button>
-                </div>
-              )}
 
               {/* Goals */}
               <div>
@@ -226,21 +212,6 @@ export default function OnboardingFlow({ onComplete }) {
                 <input className="focus-gold" style={inp} placeholder="English, Română, Español, 中文…" value={profile.language} onChange={e=>setProfile(p=>({...p,language:e.target.value}))}/>
                 <p style={{ fontSize:11, color:C.muted, margin:"5px 0 0" }}>Nora will respond in any language you type here</p>
               </div>
-
-              {/* Cycle tracking — females only */}
-              {profile.sex === "female" && (
-                <div style={{ padding:"14px", backgroundColor:C.goldLight, borderRadius:10, border:`1px solid ${C.gold}30` }}>
-                  <p style={{ fontSize:12, fontWeight:600, color:C.amber, margin:"0 0 10px", letterSpacing:"0.04em", textTransform:"uppercase" }}>Cycle tracking</p>
-                  <label style={{ fontSize:12, color:C.muted, fontWeight:500, display:"block", marginBottom:6 }}>First day of last period</label>
-                  <input type="date" className="focus-gold" style={{...inp, colorScheme:"light", marginBottom:10}} value={profile.lastPeriod||""} onChange={e=>setProfile(p=>({...p,lastPeriod:e.target.value}))}/>
-                  <label style={{ fontSize:12, color:C.muted, fontWeight:500, display:"block", marginBottom:6 }}>Average cycle length</label>
-                  <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
-                    {[21,24,28,30,32,35].map(n=>(
-                      <button key={n} type="button" onClick={()=>setProfile(p=>({...p,cycleLength:n}))} style={{ padding:"6px 10px", borderRadius:7, border:`1px solid ${profile.cycleLength===n?C.green:C.border}`, backgroundColor:profile.cycleLength===n?C.green:C.card, color:profile.cycleLength===n?C.bg:C.text, fontSize:12, cursor:"pointer", fontWeight:profile.cycleLength===n?600:400, transition:"all 0.15s" }}>{n}d</button>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {error && <div style={{ padding:"10px 14px", backgroundColor:C.errorBg, border:`1px solid ${C.error}20`, borderRadius:10, fontSize:13, color:C.error }}>{error}</div>}
               <div style={{ display:"flex", gap:10 }}>

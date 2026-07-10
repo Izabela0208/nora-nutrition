@@ -19,7 +19,7 @@ create table if not exists profiles (
   language                     text,
   targets                      jsonb,
   biological_tracking_enabled  boolean default false,
-  biological_context           text check (biological_context in ('cycle','pregnancy','perimenopause','none')) default 'none',
+  biological_context           text check (biological_context in ('cycle','pregnancy','perimenopause','menopause','none')) default 'none',
   last_period_date             date,
   cycle_length                 int default 28,
   cycle_regularity             text,
