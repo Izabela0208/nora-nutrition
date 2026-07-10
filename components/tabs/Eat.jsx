@@ -430,7 +430,7 @@ const JuiceCard = ({ juice, isSaved, onToggleSave, ingChecked, onIngToggle }) =>
   </details>
 );
 
-export default function Eat({ profile, targets, entries, setEntries, cyclePhase }) {
+export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) {
   const toastTimer = useRef(null);
 
   const [activeSection, setActiveSection] = useState(null);
@@ -578,13 +578,12 @@ export default function Eat({ profile, targets, entries, setEntries, cyclePhase 
   const addToLog = (item) => {
     const h = new Date().getHours();
     const mg = h < 11 ? "Morning" : h < 15 ? "Midday" : h < 18 ? "Snacks" : "Evening";
-    setEntries(prev => [...prev, {
-      id: Date.now(), type: "food", name: item.name,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    logMeal({
+      type: "food", name: item.name, source: "search",
       mealGroup: mg, calories: item.calories || 0, protein_g: item.protein_g || 0,
       carbs_g: item.carbs_g || 0, fat_g: item.fat_g || 0, fiber_g: item.fiber_g || 0,
       notes: item.notes || "From Nora", estimated: true,
-    }]);
+    });
     showToast(item.calories || 0);
   };
 

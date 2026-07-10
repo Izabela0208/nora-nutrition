@@ -71,6 +71,45 @@ const rowToProfile = (row) => ({
   cycleRegularity: row.cycle_regularity || "",
 });
 
+// today's local-midnight → tomorrow's local-midnight, as ISO strings (for logged_at range queries)
+const todayRangeISO = () => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const end = new Date(start.getTime() + 86400000);
+  return { start: start.toISOString(), end: end.toISOString() };
+};
+
+// entry (JS, camelCase, used by Eat/MyDay) ⇄ meals row (Supabase, snake_case)
+const entryToRow = (e, userId) => ({
+  user_id: userId,
+  name: e.name,
+  type: e.type || "food",
+  meal_group: e.mealGroup || null,
+  calories: e.calories ?? 0,
+  protein_g: e.protein_g ?? 0,
+  carbs_g: e.carbs_g ?? 0,
+  fat_g: e.fat_g ?? 0,
+  fiber_g: e.fiber_g ?? 0,
+  source: e.source || "manual",
+  notes: e.notes || null,
+  estimated: e.estimated !== false,
+});
+
+const rowToEntry = (row) => ({
+  id: row.id,
+  type: row.type || "food",
+  name: row.name,
+  time: new Date(row.logged_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  mealGroup: row.meal_group,
+  calories: row.calories || 0,
+  protein_g: row.protein_g || 0,
+  carbs_g: row.carbs_g || 0,
+  fat_g: row.fat_g || 0,
+  fiber_g: row.fiber_g || 0,
+  notes: row.notes || "",
+  estimated: row.estimated,
+});
+
 export default function NutritionApp() {
   const { session, loading: authLoading, signOut } = useAuthSession();
   const [phase,      setPhase]      = useState("onboarding");
@@ -84,14 +123,12 @@ export default function NutritionApp() {
   const [profileLoading,  setProfileLoading]  = useState(true);
   const [localImportData, setLocalImportData] = useState(null);
 
-  // Restore today's water/entries/history (still localStorage — migrates in a later sub-step)
+  // Restore today's water + history (still localStorage — migrates in a later sub-step)
   useEffect(()=>{
     try {
       const today=localDateStr();
       const wd=localStorage.getItem("nora_today_water");
       if(wd){const pw=JSON.parse(wd);if(pw.date===today)setWaterMl(pw.ml);}
-      const ed=localStorage.getItem("nora_today_entries");
-      if(ed){const pe=JSON.parse(ed);if(pe.date===today)setEntries(pe.entries);}
       const hd=localStorage.getItem("nora_history");
       if(hd)setHistory(JSON.parse(hd));
     }catch{}
@@ -110,6 +147,9 @@ export default function NutritionApp() {
       if(row){
         setProfile(rowToProfile(row));
         setTargets(row.targets || null);
+        const { start, end } = todayRangeISO();
+        const { data: mealRows } = await supabase.from("meals").select("*").eq("user_id", session.user.id).gte("logged_at", start).lt("logged_at", end).order("logged_at", { ascending: true });
+        if(!cancelled) setEntries((mealRows || []).map(rowToEntry));
         setPhase("app");
       } else {
         try {
@@ -138,12 +178,6 @@ export default function NutritionApp() {
     try{localStorage.setItem("nora_today_water",JSON.stringify({date:localDateStr(),ml:waterMl}));}catch{}
   },[waterMl]);
 
-  // Persist entries
-  useEffect(()=>{
-    if(phase!=="app") return;
-    try{localStorage.setItem("nora_today_entries",JSON.stringify({date:localDateStr(),entries}));}catch{}
-  },[entries]);
-
   // Save today's summary to history whenever entries or water changes
   useEffect(()=>{
     if(phase!=="app") return;
@@ -157,6 +191,43 @@ export default function NutritionApp() {
       localStorage.setItem("nora_history",JSON.stringify(updated));
     }catch{}
   },[entries,waterMl]);
+
+  const logMeal = async (entry) => {
+    const tempId = entry.id ?? `temp-${Date.now()}`;
+    const optimistic = { ...entry, id: tempId, type: entry.type || "food", time: entry.time || new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) };
+    setEntries(prev => [...prev, optimistic]);
+    if(!session?.user?.id) return;
+    const row = entryToRow(entry, session.user.id);
+    const { data } = await supabase.from("meals").insert(row).select().single();
+    if(data) setEntries(prev => prev.map(e => e.id === tempId ? rowToEntry(data) : e));
+  };
+
+  const updateMeal = async (id, patch) => {
+    setEntries(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+    if(!session?.user?.id) return;
+    const row = {};
+    if(patch.name !== undefined) row.name = patch.name;
+    if(patch.calories !== undefined) row.calories = patch.calories;
+    if(patch.protein_g !== undefined) row.protein_g = patch.protein_g;
+    if(patch.carbs_g !== undefined) row.carbs_g = patch.carbs_g;
+    if(patch.fat_g !== undefined) row.fat_g = patch.fat_g;
+    if(patch.notes !== undefined) row.notes = patch.notes;
+    if(patch.estimated !== undefined) row.estimated = patch.estimated;
+    await supabase.from("meals").update(row).eq("id", id);
+  };
+
+  const deleteMeal = async (id) => {
+    setEntries(prev => prev.filter(e => e.id !== id));
+    if(!session?.user?.id) return;
+    await supabase.from("meals").delete().eq("id", id);
+  };
+
+  const clearTodayMeals = async () => {
+    setEntries([]);
+    if(!session?.user?.id) return;
+    const { start, end } = todayRangeISO();
+    await supabase.from("meals").delete().eq("user_id", session.user.id).gte("logged_at", start).lt("logged_at", end);
+  };
 
   const saveProfile = async (newProfile, newTargets) => {
     const t = newTargets !== undefined ? newTargets : targets;
@@ -177,6 +248,15 @@ export default function NutritionApp() {
     if(!localImportData) return;
     const { profile: importedProfile, targets: importedTargets } = localImportData;
     saveProfile(importedProfile, importedTargets);
+    try {
+      const ed = localStorage.getItem("nora_today_entries");
+      if(ed){
+        const parsed = JSON.parse(ed);
+        if(parsed.date === localDateStr() && Array.isArray(parsed.entries)){
+          parsed.entries.forEach(e => logMeal({ ...e, source: e.source || "manual" }));
+        }
+      }
+    } catch {}
     setLocalImportData(null);
     setPhase("app");
   };
@@ -250,11 +330,11 @@ export default function NutritionApp() {
   );
 
   // ── Main app ────────────────────────────────────────────────────
-  const sharedProps = { profile, targets, entries, setEntries, waterMl, setWaterMl, cyclePhase };
+  const sharedProps = { profile, targets, entries, logMeal, updateMeal, deleteMeal, clearTodayMeals, waterMl, setWaterMl, cyclePhase };
 
   const tabContent = {
     myday:   <MyDay {...sharedProps}/>,
-    eat:     <Eat     profile={profile} targets={targets} entries={entries} setEntries={setEntries} cyclePhase={cyclePhase}/>,
+    eat:     <Eat     profile={profile} targets={targets} entries={entries} logMeal={logMeal} cyclePhase={cyclePhase}/>,
     ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase}/>,
     boost:   <Boost   profile={profile} targets={targets} entries={entries} cyclePhase={cyclePhase}/>,
     asknora: <AskNora profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase}/>,

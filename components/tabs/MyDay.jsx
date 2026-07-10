@@ -92,7 +92,7 @@ const detectWater = (input) => {
   return "prompt";
 };
 
-export default function MyDay({ profile, targets, entries, setEntries, waterMl, setWaterMl, cyclePhase }) {
+export default function MyDay({ profile, targets, entries, logMeal, updateMeal, deleteMeal, clearTodayMeals, waterMl, setWaterMl, cyclePhase }) {
   const [greeting,          setGreeting]          = useState("");
   const [greetingLoad,      setGreetingLoad]      = useState(false);
   const [greetingDone,      setGreetingDone]      = useState(false);
@@ -132,7 +132,7 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
   const plateFileRef    = useRef(null);
 
   const isFemale     = profile?.sex === "female";
-  const isPeri       = profile?.perimenopause;
+  const isPeri       = profile?.biologicalTrackingEnabled && profile?.biologicalContext === "perimenopause";
   const foodE        = entries.filter(e=>e.type==="food");
   const exerE        = entries.filter(e=>e.type==="exercise");
   const totalCal     = foodE.reduce((s,e)=>s+(e.calories||0),0);
@@ -236,14 +236,14 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
     const hh = new Date().getHours();
     const mg = hh < 11 ? "Morning" : hh < 15 ? "Midday" : hh < 18 ? "Snacks" : "Evening";
     const entry = {
-      id: Date.now(), type: "food",
+      id: Date.now(), type: "food", source: "photo",
       name: `Plate: ${name.length > 55 ? name.slice(0, 52) + "…" : name}`,
       time: new Date().toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" }),
       mealGroup: mg, calories: totalKcal,
       protein_g: totalPro, carbs_g: totalCarb, fat_g: totalFat,
       fiber_g: 0, notes: `Photo analysis · ${adjusted.length} item${adjusted.length !== 1 ? "s" : ""}`,
     };
-    setEntries(prev => [...prev, entry]);
+    logMeal(entry);
     setLogToast({ entry, msg: `Plate logged · ${totalKcal} kcal · tap to adjust` });
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setLogToast(null), 6000);
@@ -353,14 +353,14 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
     const hh = new Date().getHours();
     const mg = hh < 11 ? "Morning" : hh < 15 ? "Midday" : hh < 18 ? "Snacks" : "Evening";
     const entry = {
-      id: Date.now(), type: "food",
+      id: Date.now(), type: "food", source: "barcode",
       name: barcodeResult.name + (barcodeResult.brand ? ` (${barcodeResult.brand})` : ""),
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       mealGroup: mg, calories: barcodeResult.kcal,
       protein_g: barcodeResult.protein, carbs_g: barcodeResult.carbs, fat_g: barcodeResult.fat,
       fiber_g: 0, notes: "100g · barcode scan", estimated: false,
     };
-    setEntries(prev => [...prev, entry]);
+    logMeal(entry);
     setLogToast({ entry, msg: `${barcodeResult.name} (~${barcodeResult.kcal} kcal) · tap to adjust` });
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setLogToast(null), 6000);
@@ -421,8 +421,8 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
         `Parse: "${input}". Assume a standard single serving if no quantity. Return JSON: {"type":"food"|"exercise","name":"string","time":"${now2}","mealGroup":"${mg}","calories":number,"protein_g":number,"carbs_g":number,"fat_g":number,"fiber_g":number,"notes":"brief portion e.g. 1 cup, 100g"}`
       );
       const parsed=parseJSON(t);
-      const entry={...parsed,id:Date.now(),estimated:true};
-      setEntries(prev=>[...prev,entry]);
+      const entry={...parsed,id:Date.now(),source:"manual",estimated:true};
+      logMeal(entry);
       setLogInput("");
       if(parsed.type==="food"){
         const portion=parsed.notes?`${parsed.notes} · `:"";
@@ -445,8 +445,8 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
         {type:"text",text:`Identify food. Return JSON: {"type":"food","name":"string","time":"${new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}","mealGroup":"${mg}","calories":number,"protein_g":number,"carbs_g":number,"fat_g":number,"fiber_g":number,"notes":"string"}`},
       ],600);
       const parsed=parseJSON(t);
-      const entry={...parsed,id:Date.now(),estimated:true};
-      setEntries(prev=>[...prev,entry]);
+      const entry={...parsed,id:Date.now(),source:"photo",estimated:true};
+      logMeal(entry);
       setImageFile(null);setPhotoMode(false);
       setLogToast({entry,msg:`${parsed.name} (~${parsed.calories} kcal) · tap to adjust`});
       if(toastTimer.current) clearTimeout(toastTimer.current);
@@ -456,7 +456,7 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
   };
 
   const startEdit=(e)=>{setEditingId(e.id);setEditFields({name:e.name,calories:String(e.calories),protein_g:String(e.protein_g||0),carbs_g:String(e.carbs_g||0),fat_g:String(e.fat_g||0),notes:e.notes||""});};
-  const saveEdit=(id)=>{setEntries(prev=>prev.map(e=>e.id===id?{...e,...editFields,calories:Number(editFields.calories),protein_g:Number(editFields.protein_g),carbs_g:Number(editFields.carbs_g),fat_g:Number(editFields.fat_g),estimated:false}:e));setEditingId(null);};
+  const saveEdit=(id)=>{updateMeal(id,{...editFields,calories:Number(editFields.calories),protein_g:Number(editFields.protein_g),carbs_g:Number(editFields.carbs_g),fat_g:Number(editFields.fat_g),estimated:false});setEditingId(null);};
   const mealGroups=["Morning","Midday","Snacks","Evening"];
   const grouped=mealGroups.reduce((a,g)=>({...a,[g]:entries.filter(e=>e.mealGroup===g)}),{});
 
@@ -637,7 +637,7 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <LeafDecor size={16}/>
               <h3 style={{fontFamily:serif,fontSize:18,color:C.green,fontWeight:600,margin:0}}>Today's log</h3>
-              <button onClick={()=>{setEntries([]);try{localStorage.removeItem("nora_today_entries");}catch{}}} style={{marginLeft:"auto",fontSize:11,color:C.error,background:"none",border:"none",cursor:"pointer"}}>Clear all</button>
+              <button onClick={clearTodayMeals} style={{marginLeft:"auto",fontSize:11,color:C.error,background:"none",border:"none",cursor:"pointer"}}>Clear all</button>
             </div>
             {mealGroups.map(group=>{
               const items=grouped[group]||[];
@@ -671,7 +671,7 @@ export default function MyDay({ profile, targets, entries, setEntries, waterMl, 
                           </div>
                           <span style={{fontSize:13,fontWeight:600,color:entry.type==="exercise"?C.sage:C.text,flexShrink:0}}>{entry.type==="exercise"?"-":""}{Math.abs(Math.round(entry.calories))}<span style={{fontSize:11,color:C.muted,fontWeight:400}}> kcal{entry.estimated?" ~":""}</span></span>
                           <button onClick={()=>startEdit(entry)} style={{background:"none",border:"none",cursor:"pointer",padding:4,flexShrink:0}}><EditIcon size={13} color={C.muted}/></button>
-                          <button onClick={()=>setEntries(prev=>prev.filter(e=>e.id!==entry.id))} style={{background:"none",border:"none",cursor:"pointer",padding:4,color:C.muted,fontSize:16,lineHeight:1,flexShrink:0}}>×</button>
+                          <button onClick={()=>deleteMeal(entry.id)} style={{background:"none",border:"none",cursor:"pointer",padding:4,color:C.muted,fontSize:16,lineHeight:1,flexShrink:0}}>×</button>
                         </div>
                       )}
                     </div>

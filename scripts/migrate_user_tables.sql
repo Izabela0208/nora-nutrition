@@ -45,6 +45,7 @@ create table if not exists meals (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references auth.users(id) on delete cascade,
   name        text not null,
+  type        text default 'food' check (type in ('food','exercise')),
   meal_group  text,
   calories    numeric,
   protein_g   numeric,
