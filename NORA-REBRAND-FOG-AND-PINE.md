@@ -85,6 +85,14 @@ Regulă hard: raportul vizual pe orice ecran ≈ 70% ivory, 25% verde, 5% auriu 
 
 **Pas 5 — Trecere prin taburi.** Tab cu tab (My Day → Eat → Move → Ritual → Boost → Ask Nora → Me): aliniază la noile tokens, mărește spațierea, verifică contrastul. Un commit per tab sau per 2 taburi. → commit-uri `rebrand: <tab> aligned to Fog & Pine`
 
+- Verifică și ordinea taburilor din bara de navigare: **My Day, Eat, Move, Ritual, Boost, Ask Nora, Me** (Journey rămâne ascuns/înghețat, nu apare în bară).
+- Decizii de ordine internă neluate încă (vezi `IDEI-TABURI.md`) — principiu: **acțiunea zilnică sus, biblioteca/arhiva jos**:
+  - **Ritual**: unde intră "Active Challenges" față de challenge-ul zilei și Circadian Rhythm? (candidat: rămâne imediat sub challenge-ul zilei, e tot acțiune zilnică)
+  - **Ritual**: conținutul de tip Journey (streak săptămânal, grafic) trăiește încă în `Ritual.jsx` — rămâne acolo sau se mută complet în tabul Journey când se dezgheață (C1)?
+  - **Ritual**: "Cycle Phase Insights" / "Performance Windows" (personalizare biologică opt-in) — sus lângă challenge, sau jos ca secțiune extra?
+  - **Ritual**: butoanele "Library" (catalog complet) și "Saved" (bookmark-uri) sunt utilitare de sus — rămân acolo (bibliotecă = jos ca principiu, dar ca buton de acces sus e ok) sau se mută la finalul tabului?
+  - **Move**: tabul nu există încă (Capitolul D) — ordinea din `PLAYBOOK.md` e doar target, de confirmat la construire.
+
 **Pas 6 — Actualizare CLAUDE.md.** Rescrie secțiunea de design rules din CLAUDE.md cu tot ce e în acest brief (tokens, tipografie, regula 70/25/5, regula fotografiilor, „fără simboluri desenate", „auriu = max un element pe ecran"), ca sesiunile viitoare să respecte automat direcția. → commit `docs: CLAUDE.md design rules → Fog & Pine`
 
 **Reguli de proces:** niciun pas nou fără confirmare vizuală de la Izabela; nu modifica logică/funcționalitate în timpul rebrand-ului — doar stil; dacă un pas cere schimbări structurale de componente, întreabă înainte.
