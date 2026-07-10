@@ -1547,7 +1547,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
       <div style={{ backgroundColor:"#FDFAF5", borderRadius:16, border:`1px solid ${C.border}`, borderTop:`1px solid ${C.muted}`, boxShadow:"0 2px 20px rgba(45,74,62,0.08)", overflow:"hidden", position:"relative" }}>
         <div style={{ position:"absolute", top:0, right:0, opacity:0.13, pointerEvents:"none" }}><BotanicalBranch width={100} flip/></div>
         <div style={{ padding:"14px 20px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:`1px solid ${C.border}` }}>
-          <span style={{ fontSize:9, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:"0.12em", fontFamily:sans }}>Daily Challenge {"\u00B7"} AI-Generated</span>
+          <span style={{ fontSize:9, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:"0.12em", fontFamily:sans }}>Daily Challenge</span>
           {streak > 0 && <span style={{ fontSize:11, color:C.muted, fontFamily:sans }}>{streak}-day streak {streak>=7?"\uD83D\uDD25":"\u26A1"}</span>}
         </div>
         {loading ? (
@@ -1558,13 +1558,6 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
           </div>
         ) : biohack ? (
           <div style={{ padding:"18px 20px 20px", animation:"fadeIn 0.35s ease" }}>
-
-            {/* Gender label chip */}
-            {biohack.label && (
-              <div style={{ display:"inline-flex", alignItems:"center", marginBottom:10, backgroundColor: biohack.label.includes("Her") ? "#FDF0F8" : "#F0F5FD", borderRadius:20, padding:"3px 10px" }}>
-                <span style={{ fontSize:10, fontWeight:600, color: biohack.label.includes("Her") ? "#A0507A" : "#4A6FA5", fontFamily:sans }}>{biohack.label}</span>
-              </div>
-            )}
 
             {/* Title */}
             <p style={{ fontFamily:serif, fontSize:20, fontWeight:700, color:C.green, margin:"0 0 8px", lineHeight:1.25, letterSpacing:"-0.01em" }}>
