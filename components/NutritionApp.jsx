@@ -145,6 +145,7 @@ export default function NutritionApp() {
   const [entries,    setEntries]    = useState([]);
   const [activeChallenges, setActiveChallenges] = useState([]);
   const [completionDates, setCompletionDates] = useState([]);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [waterMl,    setWaterMl]    = useState(0);
   const [history,    setHistory]    = useState({});
   const [profileLoading,  setProfileLoading]  = useState(true);
@@ -188,6 +189,10 @@ export default function NutritionApp() {
           ));
           setCompletionDates([...new Set((ccRows || []).map(r => r.completed_date))]);
         }
+
+        const { data: settingsRow } = await supabase.from("user_settings").select("notifications_enabled").eq("user_id", session.user.id).maybeSingle();
+        if(!cancelled) setNotificationsEnabled(settingsRow ? settingsRow.notifications_enabled : true);
+
         setPhase("app");
       } else {
         try {
@@ -315,6 +320,12 @@ export default function NutritionApp() {
     await supabase.from("active_challenges").delete().eq("id", instanceId);
   };
 
+  const saveNotifications = async (enabled) => {
+    setNotificationsEnabled(enabled);
+    if(!session?.user?.id) return;
+    await supabase.from("user_settings").upsert({ user_id: session.user.id, notifications_enabled: enabled, updated_at: new Date().toISOString() });
+  };
+
   const saveProfile = async (newProfile, newTargets) => {
     const t = newTargets !== undefined ? newTargets : targets;
     setProfile(newProfile);
@@ -349,7 +360,7 @@ export default function NutritionApp() {
 
   const resetProfile=()=>{
     ["nora_today_water","nora_today_entries","nora_sleep","nora_history","nora_supps_list","nora_supps_taken","nora_boost_recs","nora_smoothie","nora_evening_summary"].forEach(k=>{try{localStorage.removeItem(k);}catch{}});
-    setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setActiveChallenges([]);setCompletionDates([]);setWaterMl(0);setHistory({});setPhase("onboarding");
+    setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setActiveChallenges([]);setCompletionDates([]);setNotificationsEnabled(true);setWaterMl(0);setHistory({});setPhase("onboarding");
   };
 
   // Cycle phase — only when the user opted in and chose "Menstruation" as context
@@ -426,7 +437,7 @@ export default function NutritionApp() {
     ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} activeChallenges={activeChallenges} startChallenge={startChallenge} checkInChallenge={checkInChallenge} abandonChallenge={abandonChallenge} ritualStreak={ritualStreak} markChallengeDone={markChallengeDone}/>,
     boost:   <Boost   profile={profile} targets={targets} entries={entries} cyclePhase={cyclePhase}/>,
     asknora: <AskNora profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase}/>,
-    me:      <Me      profile={profile} saveProfile={saveProfile} targets={targets} resetProfile={resetProfile} signOut={signOut}/>,
+    me:      <Me      profile={profile} saveProfile={saveProfile} targets={targets} resetProfile={resetProfile} signOut={signOut} notificationsEnabled={notificationsEnabled} saveNotifications={saveNotifications}/>,
   };
 
   return (

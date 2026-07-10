@@ -25,7 +25,7 @@ const BIO_CONTEXTS = [
   { id: "none",          label: "Not applicable"},
 ];
 
-export default function Me({ profile, saveProfile, targets, resetProfile, signOut }) {
+export default function Me({ profile, saveProfile, targets, resetProfile, signOut, notificationsEnabled, saveNotifications }) {
   const [form,     setForm]     = useState({ ...profile });
   const [saved,    setSaved]    = useState(false);
   const [plans,    setPlans]    = useState([]);
@@ -281,6 +281,17 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
           <p style={{ fontSize: 12, fontWeight: 600, color: C.muted, margin: "0 0 3px" }}>Wearables coming soon</p>
           <p style={{ fontSize: 11, color: C.muted, margin: 0, lineHeight: 1.5 }}>Oura · WHOOP · Apple Watch · Heart rate · HRV</p>
         </div>
+      </div>
+
+      {/* ── Notifications ───────────────────────────────────────── */}
+      <div style={{ ...card, padding: "16px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", margin: 0 }}>Notifications</p>
+          <p style={{ fontSize: 11, color: C.muted, margin: "3px 0 0", lineHeight: 1.5 }}>Preference saved for when reminders launch.</p>
+        </div>
+        <button onClick={() => saveNotifications(!notificationsEnabled)} style={{ width: 44, height: 24, borderRadius: 12, backgroundColor: notificationsEnabled ? C.green : C.border, border: "none", cursor: "pointer", position: "relative", flexShrink: 0, marginLeft: 12 }}>
+          <div style={{ width: 18, height: 18, borderRadius: "50%", backgroundColor: "white", position: "absolute", top: 3, left: notificationsEnabled ? 23 : 3, transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}/>
+        </button>
       </div>
 
       {/* ── Edit profile ──────────────────────────────────────────── */}
