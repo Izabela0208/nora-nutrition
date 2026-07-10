@@ -249,7 +249,6 @@ const FOCUS_META = {
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
-const yesterday = () => { const d = new Date(); d.setDate(d.getDate()-1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const getSeason = () => { const m = new Date().getMonth(); if(m>=2&&m<=4)return"spring"; if(m>=5&&m<=7)return"summer"; if(m>=8&&m<=10)return"autumn"; return"winter"; };
 const getWeekIndex = () => { const key = getWeekKey(); const n = parseInt(key.split("W")[1])||1; return (n-1) % WEEKLY_THEMES.length; };
 
@@ -1243,13 +1242,12 @@ function CircadianTimeline({ sun, geoError, entries }) {
 }
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
-export default function Ritual({ profile, targets, entries, waterMl, cyclePhase, activeChallenges, startChallenge, checkInChallenge, abandonChallenge }) {
+export default function Ritual({ profile, targets, entries, waterMl, cyclePhase, activeChallenges, startChallenge, checkInChallenge, abandonChallenge, ritualStreak, markChallengeDone }) {
   const [biohack,        setBiohack]        = useState(null);
   const [loading,        setLoading]        = useState(false);
   const [loadingStatus,  setLoadingStatus]  = useState("");
   const [citOpen,        setCitOpen]        = useState(false);
   const [done,           setDone]           = useState(false);
-  const [streak,         setStreak]         = useState(0);
   const [savedChallenges,setSavedChallenges]= useState([]);
   const [savedOpen,      setSavedOpen]      = useState(false);
   const [startModal,     setStartModal]     = useState(null);
@@ -1295,10 +1293,6 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
   useEffect(() => {
     try { const s = localStorage.getItem(SAVED_CHALLENGES_KEY);   if (s) setSavedChallenges(JSON.parse(s));   } catch {}
     const today = todayStr();
-    try {
-      const sd = localStorage.getItem("nora_biohack_streak");
-      if (sd) { const { count, lastDate } = JSON.parse(sd); if (lastDate === today || lastDate === yesterday()) setStreak(count); }
-    } catch {}
     try {
       const td = localStorage.getItem("nora_daily_biohack");
       if (td) {
@@ -1369,10 +1363,8 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
 
   const markDone = () => {
     setDone(true);
-    const today = todayStr(), yest = yesterday(); let newCount = 1;
-    try { const sd = localStorage.getItem("nora_biohack_streak"); if (sd) { const { count, lastDate } = JSON.parse(sd); if (lastDate === yest) newCount = count + 1; else if (lastDate === today) newCount = count; } } catch {}
-    setStreak(newCount);
-    try { localStorage.setItem("nora_biohack_streak", JSON.stringify({ count: newCount, lastDate: today })); const td = localStorage.getItem("nora_daily_biohack"); if (td) localStorage.setItem("nora_daily_biohack", JSON.stringify({ ...JSON.parse(td), done: true })); } catch {}
+    markChallengeDone(biohack);
+    try { const td = localStorage.getItem("nora_daily_biohack"); if (td) localStorage.setItem("nora_daily_biohack", JSON.stringify({ ...JSON.parse(td), done: true })); } catch {}
   };
 
   const notForMe = async () => {
@@ -1548,7 +1540,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
         <div style={{ position:"absolute", top:0, right:0, opacity:0.13, pointerEvents:"none" }}><BotanicalBranch width={100} flip/></div>
         <div style={{ padding:"14px 20px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:`1px solid ${C.border}` }}>
           <span style={{ fontSize:9, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:"0.12em", fontFamily:sans }}>Daily Challenge</span>
-          {streak > 0 && <span style={{ fontSize:11, color:C.muted, fontFamily:sans }}>{streak}-day streak {streak>=7?"\uD83D\uDD25":"\u26A1"}</span>}
+          {ritualStreak > 0 && <span style={{ fontSize:11, color:C.muted, fontFamily:sans }}>{ritualStreak}-day streak {ritualStreak>=7?"\uD83D\uDD25":"\u26A1"}</span>}
         </div>
         {loading ? (
           <div style={{ padding:"20px 20px 22px" }}>

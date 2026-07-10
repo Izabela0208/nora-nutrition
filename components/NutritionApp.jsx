@@ -71,6 +71,16 @@ const rowToProfile = (row) => ({
   cycleRegularity: row.cycle_regularity || "",
 });
 
+// consecutive days ending today (or yesterday, if today has no completion yet)
+const calcRitualStreak = (dates) => {
+  const set = new Set(dates);
+  const d = new Date();
+  if (!set.has(localDateStr(d))) d.setDate(d.getDate() - 1);
+  let streak = 0;
+  while (set.has(localDateStr(d))) { streak++; d.setDate(d.getDate() - 1); }
+  return streak;
+};
+
 // today's local-midnight → tomorrow's local-midnight, as ISO strings (for logged_at range queries)
 const todayRangeISO = () => {
   const now = new Date();
@@ -134,6 +144,7 @@ export default function NutritionApp() {
   const [activeTab,  setActiveTab]  = useState("myday");
   const [entries,    setEntries]    = useState([]);
   const [activeChallenges, setActiveChallenges] = useState([]);
+  const [completionDates, setCompletionDates] = useState([]);
   const [waterMl,    setWaterMl]    = useState(0);
   const [history,    setHistory]    = useState({});
   const [profileLoading,  setProfileLoading]  = useState(true);
@@ -175,6 +186,7 @@ export default function NutritionApp() {
           setActiveChallenges((acRows || []).map(row =>
             rowToActiveChallenge(row, (checkInsByChallenge[row.challenge_id] || []).filter(d => d >= row.start_date))
           ));
+          setCompletionDates([...new Set((ccRows || []).map(r => r.completed_date))]);
         }
         setPhase("app");
       } else {
@@ -280,8 +292,19 @@ export default function NutritionApp() {
     const today = localDateStr();
     if(ac.checkIns.includes(today)) return;
     setActiveChallenges(prev => prev.map(a => a.instanceId === instanceId ? { ...a, checkIns: [...a.checkIns, today] } : a));
+    setCompletionDates(prev => prev.includes(today) ? prev : [...prev, today]);
     await supabase.from("challenge_completions").upsert(
       { user_id: session.user.id, challenge_id: ac.id, completed_date: today },
+      { onConflict: "user_id,challenge_id,completed_date", ignoreDuplicates: true }
+    );
+  };
+
+  const markChallengeDone = async (challenge) => {
+    if(!session?.user?.id || !challenge) return;
+    const today = localDateStr();
+    setCompletionDates(prev => prev.includes(today) ? prev : [...prev, today]);
+    await supabase.from("challenge_completions").upsert(
+      { user_id: session.user.id, challenge_id: challenge.id, completed_date: today },
       { onConflict: "user_id,challenge_id,completed_date", ignoreDuplicates: true }
     );
   };
@@ -326,7 +349,7 @@ export default function NutritionApp() {
 
   const resetProfile=()=>{
     ["nora_today_water","nora_today_entries","nora_sleep","nora_history","nora_supps_list","nora_supps_taken","nora_boost_recs","nora_smoothie","nora_evening_summary"].forEach(k=>{try{localStorage.removeItem(k);}catch{}});
-    setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setActiveChallenges([]);setWaterMl(0);setHistory({});setPhase("onboarding");
+    setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setActiveChallenges([]);setCompletionDates([]);setWaterMl(0);setHistory({});setPhase("onboarding");
   };
 
   // Cycle phase — only when the user opted in and chose "Menstruation" as context
@@ -395,10 +418,12 @@ export default function NutritionApp() {
   // ── Main app ────────────────────────────────────────────────────
   const sharedProps = { profile, targets, entries, logMeal, updateMeal, deleteMeal, clearTodayMeals, waterMl, setWaterMl, cyclePhase };
 
+  const ritualStreak = calcRitualStreak(completionDates);
+
   const tabContent = {
     myday:   <MyDay {...sharedProps}/>,
     eat:     <Eat     profile={profile} targets={targets} entries={entries} logMeal={logMeal} cyclePhase={cyclePhase}/>,
-    ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} activeChallenges={activeChallenges} startChallenge={startChallenge} checkInChallenge={checkInChallenge} abandonChallenge={abandonChallenge}/>,
+    ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} activeChallenges={activeChallenges} startChallenge={startChallenge} checkInChallenge={checkInChallenge} abandonChallenge={abandonChallenge} ritualStreak={ritualStreak} markChallengeDone={markChallengeDone}/>,
     boost:   <Boost   profile={profile} targets={targets} entries={entries} cyclePhase={cyclePhase}/>,
     asknora: <AskNora profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase}/>,
     me:      <Me      profile={profile} saveProfile={saveProfile} targets={targets} resetProfile={resetProfile} signOut={signOut}/>,
