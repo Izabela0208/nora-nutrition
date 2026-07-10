@@ -96,7 +96,11 @@ export default function AuthScreen() {
                   style={{ marginTop: 3, width: 16, height: 16, accentColor: C.green, cursor: "pointer", flexShrink: 0 }}
                 />
                 <span style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>
-                  I agree to the processing of my data as described in the Privacy Policy, so Nora can personalise my experience.
+                  I agree to the processing of my data as described in the{" "}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: C.green, textDecoration: "underline" }}>
+                    Privacy Policy
+                  </a>
+                  , so Nora can personalise my experience.
                 </span>
               </label>
             )}

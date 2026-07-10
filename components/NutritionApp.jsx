@@ -326,6 +326,22 @@ export default function NutritionApp() {
     await supabase.from("user_settings").upsert({ user_id: session.user.id, notifications_enabled: enabled, updated_at: new Date().toISOString() });
   };
 
+  const deleteAccount = async () => {
+    if(!session?.access_token) return { ok: false, error: "No active session." };
+    try {
+      const res = await fetch("/api/delete-account", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await res.json();
+      if(!res.ok) return { ok: false, error: data.error || "Something went wrong." };
+      await signOut();
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "Something went wrong." };
+    }
+  };
+
   const saveProfile = async (newProfile, newTargets) => {
     const t = newTargets !== undefined ? newTargets : targets;
     setProfile(newProfile);
@@ -437,7 +453,7 @@ export default function NutritionApp() {
     ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} activeChallenges={activeChallenges} startChallenge={startChallenge} checkInChallenge={checkInChallenge} abandonChallenge={abandonChallenge} ritualStreak={ritualStreak} markChallengeDone={markChallengeDone}/>,
     boost:   <Boost   profile={profile} targets={targets} entries={entries} cyclePhase={cyclePhase}/>,
     asknora: <AskNora profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase}/>,
-    me:      <Me      profile={profile} saveProfile={saveProfile} targets={targets} resetProfile={resetProfile} signOut={signOut} notificationsEnabled={notificationsEnabled} saveNotifications={saveNotifications}/>,
+    me:      <Me      profile={profile} saveProfile={saveProfile} targets={targets} resetProfile={resetProfile} signOut={signOut} notificationsEnabled={notificationsEnabled} saveNotifications={saveNotifications} deleteAccount={deleteAccount}/>,
   };
 
   return (

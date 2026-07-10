@@ -25,7 +25,7 @@ const BIO_CONTEXTS = [
   { id: "none",          label: "Not applicable"},
 ];
 
-export default function Me({ profile, saveProfile, targets, resetProfile, signOut, notificationsEnabled, saveNotifications }) {
+export default function Me({ profile, saveProfile, targets, resetProfile, signOut, notificationsEnabled, saveNotifications, deleteAccount }) {
   const [form,     setForm]     = useState({ ...profile });
   const [saved,    setSaved]    = useState(false);
   const [plans,    setPlans]    = useState([]);
@@ -37,6 +37,9 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
   const [sleepHours,   setSleepHours]   = useState("");
   const [sleepQuality, setSleepQuality] = useState("ok");
   const [sleepSaved,   setSleepSaved]   = useState(false);
+  const [deleteOpen,    setDeleteOpen]    = useState(false);
+  const [deleting,      setDeleting]      = useState(false);
+  const [deleteError,   setDeleteError]   = useState("");
 
   const tog = k => setOpen(p => ({ ...p, [k]: !p[k] }));
 
@@ -100,6 +103,17 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
     const updated = plans.filter(p => p.id !== id);
     setPlans(updated);
     try { localStorage.setItem("nora_saved_items", JSON.stringify(updated)); } catch {}
+  };
+
+  const confirmDelete = async () => {
+    setDeleting(true);
+    setDeleteError("");
+    const result = await deleteAccount();
+    if(!result.ok){
+      setDeleting(false);
+      setDeleteError(result.error || "Something went wrong. Please try again.");
+    }
+    // on success, the session ends and the app returns to the auth screen
   };
 
   const takenCount  = (() => {
@@ -547,6 +561,42 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
       >
         Logout
       </button>
+
+      {/* ── Delete account ────────────────────────────────────────── */}
+      {!deleteOpen ? (
+        <button
+          onClick={() => { setDeleteOpen(true); setDeleteError(""); }}
+          style={{ width: "100%", padding: "13px", backgroundColor: "transparent", border: "none", borderRadius: 12, fontSize: 12, color: C.error, cursor: "pointer", fontFamily: sans }}
+        >
+          Delete account
+        </button>
+      ) : (
+        <div style={{ backgroundColor: C.errorBg, border: `1px solid ${C.error}30`, borderRadius: 12, padding: "16px 18px" }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: C.error, margin: "0 0 6px" }}>Delete your account permanently?</p>
+          <p style={{ fontSize: 12, color: C.text, lineHeight: 1.6, margin: "0 0 14px" }}>
+            This removes your account and everything tied to it — profile, meals, challenges, settings. This cannot be undone.
+          </p>
+          {deleteError && (
+            <p style={{ fontSize: 12, color: C.error, margin: "0 0 12px" }}>{deleteError}</p>
+          )}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => setDeleteOpen(false)}
+              disabled={deleting}
+              style={{ flex: 1, padding: "11px", backgroundColor: "transparent", border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 12, color: C.muted, cursor: deleting ? "not-allowed" : "pointer", fontFamily: sans }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              disabled={deleting}
+              style={{ flex: 1, padding: "11px", backgroundColor: C.error, border: "none", borderRadius: 10, fontSize: 12, fontWeight: 600, color: "#FDFAF5", cursor: deleting ? "not-allowed" : "pointer", fontFamily: sans }}
+            >
+              {deleting ? "Deleting…" : "Yes, delete permanently"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
