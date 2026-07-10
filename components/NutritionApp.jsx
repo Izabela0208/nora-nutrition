@@ -95,6 +95,21 @@ const entryToRow = (e, userId) => ({
   estimated: e.estimated !== false,
 });
 
+// active challenge (JS, camelCase, used by Ritual) ⇄ active_challenges + challenge_completions rows (Supabase)
+const rowToActiveChallenge = (row, checkIns) => ({
+  instanceId: row.id,
+  id: row.challenge_id,
+  title: row.title,
+  instruction: row.instruction || "",
+  difficulty: row.difficulty || "",
+  duration: row.duration || "",
+  label: row.label || null,
+  category: row.category || "",
+  startDate: row.start_date,
+  targetDays: row.target_days,
+  checkIns,
+});
+
 const rowToEntry = (row) => ({
   id: row.id,
   type: row.type || "food",
@@ -118,6 +133,7 @@ export default function NutritionApp() {
   const [welcomeMsg, setWelcomeMsg] = useState("");
   const [activeTab,  setActiveTab]  = useState("myday");
   const [entries,    setEntries]    = useState([]);
+  const [activeChallenges, setActiveChallenges] = useState([]);
   const [waterMl,    setWaterMl]    = useState(0);
   const [history,    setHistory]    = useState({});
   const [profileLoading,  setProfileLoading]  = useState(true);
@@ -150,6 +166,16 @@ export default function NutritionApp() {
         const { start, end } = todayRangeISO();
         const { data: mealRows } = await supabase.from("meals").select("*").eq("user_id", session.user.id).gte("logged_at", start).lt("logged_at", end).order("logged_at", { ascending: true });
         if(!cancelled) setEntries((mealRows || []).map(rowToEntry));
+
+        const { data: acRows } = await supabase.from("active_challenges").select("*").eq("user_id", session.user.id);
+        const { data: ccRows } = await supabase.from("challenge_completions").select("challenge_id, completed_date").eq("user_id", session.user.id);
+        if(!cancelled){
+          const checkInsByChallenge = {};
+          (ccRows || []).forEach(r => { (checkInsByChallenge[r.challenge_id] ||= []).push(r.completed_date); });
+          setActiveChallenges((acRows || []).map(row =>
+            rowToActiveChallenge(row, (checkInsByChallenge[row.challenge_id] || []).filter(d => d >= row.start_date))
+          ));
+        }
         setPhase("app");
       } else {
         try {
@@ -229,6 +255,43 @@ export default function NutritionApp() {
     await supabase.from("meals").delete().eq("user_id", session.user.id).gte("logged_at", start).lt("logged_at", end);
   };
 
+  const startChallenge = async (challenge, targetDays) => {
+    if(!session?.user?.id) return;
+    if(activeChallenges.some(ac => ac.id === challenge.id)) return;
+    const row = {
+      user_id: session.user.id,
+      challenge_id: challenge.id,
+      title: challenge.title || challenge.name || "",
+      instruction: challenge.instruction || challenge.action || "",
+      difficulty: challenge.difficulty || "",
+      duration: challenge.duration || "",
+      category: challenge.category || "",
+      label: challenge.label || null,
+      target_days: targetDays,
+      start_date: localDateStr(),
+    };
+    const { data } = await supabase.from("active_challenges").insert(row).select().single();
+    if(data) setActiveChallenges(prev => [...prev, rowToActiveChallenge(data, [])]);
+  };
+
+  const checkInChallenge = async (instanceId) => {
+    const ac = activeChallenges.find(a => a.instanceId === instanceId);
+    if(!ac || !session?.user?.id) return;
+    const today = localDateStr();
+    if(ac.checkIns.includes(today)) return;
+    setActiveChallenges(prev => prev.map(a => a.instanceId === instanceId ? { ...a, checkIns: [...a.checkIns, today] } : a));
+    await supabase.from("challenge_completions").upsert(
+      { user_id: session.user.id, challenge_id: ac.id, completed_date: today },
+      { onConflict: "user_id,challenge_id,completed_date", ignoreDuplicates: true }
+    );
+  };
+
+  const abandonChallenge = async (instanceId) => {
+    setActiveChallenges(prev => prev.filter(a => a.instanceId !== instanceId));
+    if(!session?.user?.id) return;
+    await supabase.from("active_challenges").delete().eq("id", instanceId);
+  };
+
   const saveProfile = async (newProfile, newTargets) => {
     const t = newTargets !== undefined ? newTargets : targets;
     setProfile(newProfile);
@@ -263,7 +326,7 @@ export default function NutritionApp() {
 
   const resetProfile=()=>{
     ["nora_today_water","nora_today_entries","nora_sleep","nora_history","nora_supps_list","nora_supps_taken","nora_boost_recs","nora_smoothie","nora_evening_summary"].forEach(k=>{try{localStorage.removeItem(k);}catch{}});
-    setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setWaterMl(0);setHistory({});setPhase("onboarding");
+    setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setActiveChallenges([]);setWaterMl(0);setHistory({});setPhase("onboarding");
   };
 
   // Cycle phase — only when the user opted in and chose "Menstruation" as context
@@ -335,7 +398,7 @@ export default function NutritionApp() {
   const tabContent = {
     myday:   <MyDay {...sharedProps}/>,
     eat:     <Eat     profile={profile} targets={targets} entries={entries} logMeal={logMeal} cyclePhase={cyclePhase}/>,
-    ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase}/>,
+    ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} activeChallenges={activeChallenges} startChallenge={startChallenge} checkInChallenge={checkInChallenge} abandonChallenge={abandonChallenge}/>,
     boost:   <Boost   profile={profile} targets={targets} entries={entries} cyclePhase={cyclePhase}/>,
     asknora: <AskNora profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase}/>,
     me:      <Me      profile={profile} saveProfile={saveProfile} targets={targets} resetProfile={resetProfile} signOut={signOut}/>,

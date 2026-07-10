@@ -59,7 +59,6 @@ const CATEGORY_PUBMED = {
 // ─── CHALLENGE POOLS ─────────────────────────────────────────────────────────
 const CHALLENGE_HISTORY_KEY  = "nora_challenge_history";
 const SAVED_CHALLENGES_KEY   = "nora_saved_challenges";
-const ACTIVE_CHALLENGES_KEY  = "nora_active_challenges";
 
 const CHALLENGE_TARGET_DAYS = {
   supplements: 30, sleep: 30, light: 30, nutrition: 21,
@@ -886,7 +885,7 @@ function LibraryModal({ onClose }) {
 }
 
 // ─── SAVED CHALLENGES MODAL ──────────────────────────────────────────────────
-function SavedModal({ saved, onClose, onRemove, onStart }) {
+function SavedModal({ saved, activeIds, onClose, onRemove, onStart }) {
   return (
     <div style={{ position:"fixed", inset:0, backgroundColor:"rgba(45,74,62,0.55)", zIndex:300, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
       <div style={{ width:"100%", maxHeight:"88vh", backgroundColor:"#FDFAF5", borderRadius:"20px 20px 0 0", display:"flex", flexDirection:"column", animation:"slideUp 0.28s ease" }} onClick={e => e.stopPropagation()}>
@@ -924,9 +923,15 @@ function SavedModal({ saved, onClose, onRemove, onStart }) {
               </div>
               <p style={{ fontSize:12, color:C.text, lineHeight:1.65, margin:"0 0 14px", fontFamily:sans }}>{c.instruction || c.action}</p>
               <div style={{ display:"flex", gap:8 }}>
-                <button onClick={() => onStart(c)} style={{ flex:1, padding:"11px 0", backgroundColor:C.green, color:"#FDFAF5", border:"none", borderRadius:11, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:serif }}>
-                  Start Challenge {"\u2192"}
-                </button>
+                {activeIds?.has(c.id) ? (
+                  <div style={{ flex:1, padding:"11px 0", textAlign:"center", backgroundColor:C.bg, border:`1px solid #E2DAD0`, borderRadius:11, fontSize:12, fontWeight:600, color:C.muted, fontFamily:serif }}>
+                    Already active
+                  </div>
+                ) : (
+                  <button onClick={() => onStart(c)} style={{ flex:1, padding:"11px 0", backgroundColor:C.green, color:"#FDFAF5", border:"none", borderRadius:11, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:serif }}>
+                    Start Challenge {"\u2192"}
+                  </button>
+                )}
                 <button onClick={() => onRemove(c.id)} style={{ padding:"11px 16px", backgroundColor:"transparent", color:C.muted, border:`1px solid #E2DAD0`, borderRadius:11, fontSize:11, cursor:"pointer", fontFamily:sans }}>
                   Remove
                 </button>
@@ -1238,7 +1243,7 @@ function CircadianTimeline({ sun, geoError, entries }) {
 }
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
-export default function Ritual({ profile, targets, entries, waterMl, cyclePhase }) {
+export default function Ritual({ profile, targets, entries, waterMl, cyclePhase, activeChallenges, startChallenge, checkInChallenge, abandonChallenge }) {
   const [biohack,        setBiohack]        = useState(null);
   const [loading,        setLoading]        = useState(false);
   const [loadingStatus,  setLoadingStatus]  = useState("");
@@ -1246,7 +1251,6 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase 
   const [done,           setDone]           = useState(false);
   const [streak,         setStreak]         = useState(0);
   const [savedChallenges,setSavedChallenges]= useState([]);
-  const [activeChallenges,setActiveChallenges]= useState([]);
   const [savedOpen,      setSavedOpen]      = useState(false);
   const [startModal,     setStartModal]     = useState(null);
   const [libraryOpen,    setLibraryOpen]    = useState(false);
@@ -1290,7 +1294,6 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase 
   // Biohack challenge init
   useEffect(() => {
     try { const s = localStorage.getItem(SAVED_CHALLENGES_KEY);   if (s) setSavedChallenges(JSON.parse(s));   } catch {}
-    try { const a = localStorage.getItem(ACTIVE_CHALLENGES_KEY);  if (a) setActiveChallenges(JSON.parse(a));  } catch {}
     const today = todayStr();
     try {
       const sd = localStorage.getItem("nora_biohack_streak");
@@ -1380,6 +1383,8 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase 
   };
 
   const isSaved = biohack ? savedChallenges.some(c => c.id === biohack.id) : false;
+  const activeIds = new Set(activeChallenges.map(ac => ac.id));
+  const biohackActive = biohack ? activeIds.has(biohack.id) : false;
 
   const toggleSave = () => {
     if (!biohack) return;
@@ -1396,36 +1401,9 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase 
     try { localStorage.setItem(SAVED_CHALLENGES_KEY, JSON.stringify(next)); } catch {}
   };
 
-  const startChallenge = (challenge, targetDays) => {
+  const handleStartChallenge = (challenge, targetDays) => {
     setStartModal(null); setSavedOpen(false);
-    const ac = {
-      instanceId: `ac-${Date.now()}`,
-      id: challenge.id, title: challenge.title || challenge.name || "",
-      instruction: challenge.instruction || challenge.action || "",
-      difficulty: challenge.difficulty || "", duration: challenge.duration || "",
-      label: challenge.label || null, category: challenge.category || "",
-      startDate: todayStr(), targetDays, checkIns: [],
-    };
-    const next = [...activeChallenges, ac];
-    setActiveChallenges(next);
-    try { localStorage.setItem(ACTIVE_CHALLENGES_KEY, JSON.stringify(next)); } catch {}
-  };
-
-  const checkInChallenge = instanceId => {
-    const today = todayStr();
-    const next = activeChallenges.map(ac =>
-      ac.instanceId === instanceId && !ac.checkIns.includes(today)
-        ? { ...ac, checkIns: [...ac.checkIns, today] }
-        : ac
-    );
-    setActiveChallenges(next);
-    try { localStorage.setItem(ACTIVE_CHALLENGES_KEY, JSON.stringify(next)); } catch {}
-  };
-
-  const abandonChallenge = instanceId => {
-    const next = activeChallenges.filter(ac => ac.instanceId !== instanceId);
-    setActiveChallenges(next);
-    try { localStorage.setItem(ACTIVE_CHALLENGES_KEY, JSON.stringify(next)); } catch {}
+    startChallenge(challenge, targetDays);
   };
 
   const getAcStreak = ac => {
@@ -1460,6 +1438,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase 
       {savedOpen && (
         <SavedModal
           saved={savedChallenges}
+          activeIds={activeIds}
           onClose={() => setSavedOpen(false)}
           onRemove={removeSaved}
           onStart={c => setStartModal(c)}
@@ -1470,7 +1449,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase 
       {startModal && (
         <StartModal
           challenge={startModal}
-          onStart={startChallenge}
+          onStart={handleStartChallenge}
           onClose={() => setStartModal(null)}
         />
       )}
@@ -1654,10 +1633,16 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase 
             {/* Action buttons */}
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               <div style={{ display:"flex", gap:8 }}>
-                <button onClick={() => setStartModal(biohack)}
-                  style={{ flex:1, padding:"13px 0", backgroundColor:C.green, color:"#FDFAF5", border:"none", borderRadius:12, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:serif }}>
-                  Start Challenge {"\u2192"}
-                </button>
+                {biohackActive ? (
+                  <div style={{ flex:1, padding:"13px 0", textAlign:"center", backgroundColor:C.bg, border:`1px solid ${C.border}`, borderRadius:12, fontSize:12, fontWeight:600, color:C.muted, fontFamily:serif }}>
+                    Already active
+                  </div>
+                ) : (
+                  <button onClick={() => setStartModal(biohack)}
+                    style={{ flex:1, padding:"13px 0", backgroundColor:C.green, color:"#FDFAF5", border:"none", borderRadius:12, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:serif }}>
+                    Start Challenge {"\u2192"}
+                  </button>
+                )}
                 <button onClick={notForMe}
                   style={{ flex:1, padding:"13px 0", backgroundColor:"transparent", color:C.muted, border:`1px solid ${C.border}`, borderRadius:12, fontSize:11, cursor:"pointer", fontFamily:sans }}>
                   Not for me
