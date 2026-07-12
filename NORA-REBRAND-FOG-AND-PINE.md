@@ -81,7 +81,7 @@ Regulă hard: raportul vizual pe orice ecran ≈ 70% ivory, 25% verde, 5% auriu 
 
 **Pas 3 — Wordmark + favicon.** Wordmark „nora" în header și pe login; generează favicon/app icon „n". → commit `rebrand: wordmark + favicon`
 
-- **Favicon final: simbol de decis de Izabela — deocamdată placeholder pătrat pine.** (`public/favicon.svg`, `#1F2E26`, fără literă.)
+- **Identitate finală:** wordmark „nora" (întreg, niciodată doar inițiala) · pe app icon-ul de telefon — semnătură caligrafică „nora" (Petit Formal Script, ivory pe pine, codița lui „a" scurtată, centrare optică — ajustări stabilite, nu încă generate ca fișier vectorial real) · favicon — triunghi echilateral plin, fog (`#A8B2A9`), centrat optic pe pătratul pine (`#1F2E26`) cu colțuri rotunjite, fără contur/blur/efecte. Implementat: `public/favicon.svg`. Rămâne: PNG-urile app icon (192/512/apple-touch) — necesită o unealtă de randare (font→path), de decis cum se generează.
 
 **Pas 4 — Login atmosferic.** Ecranul de login/register cu fotografia de pădure (sau placeholder gradient) + overlay + wordmark. → commit `rebrand: atmospheric login`
 
