@@ -296,7 +296,7 @@ const getFallbackChallenge = (sex, usedIds) => {
 };
 
 // ─── CATEGORY ICONS ──────────────────────────────────────────────────────────
-function CategoryIcon({ id, size=22, color="#2D4A3E" }) {
+function CategoryIcon({ id, size=22, color="#1F2E26" }) {
   const p = { stroke:color, strokeWidth:"1.4", strokeLinecap:"round", strokeLinejoin:"round", fill:"none" };
   const s = { width:size, height:size, viewBox:"0 0 24 24", fill:"none" };
   switch(id) {
@@ -404,12 +404,12 @@ function ExploreGrid() {
           if (isWide) {
             return (
               <div key={cat.id} onClick={() => setExpanded(isActive ? null : cat.id)}
-                style={{ gridColumn:"span 2", ...card, padding:"14px 16px", cursor:"pointer", display:"flex", alignItems:"center", gap:13, borderTop: isActive ? `2px solid ${C.gold}` : `1px solid ${C.border}`, transition:"border-color 0.15s" }}>
-                <div style={{ width:40, height:40, borderRadius:11, backgroundColor: isActive ? C.goldLight : C.greenLight, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"background 0.15s" }}>
-                  <CategoryIcon id={cat.id} size={21} color={isActive ? C.gold : C.green}/>
+                style={{ gridColumn:"span 2", ...card, padding:"14px 16px", cursor:"pointer", display:"flex", alignItems:"center", gap:13, borderTop: isActive ? `2px solid ${C.green}` : `1px solid ${C.border}`, transition:"border-color 0.15s" }}>
+                <div style={{ width:40, height:40, borderRadius:11, backgroundColor: isActive ? C.greenLight : C.card, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"background 0.15s" }}>
+                  <CategoryIcon id={cat.id} size={21} color={isActive ? C.green : C.muted}/>
                 </div>
                 <div style={{ flex:1, minWidth:0 }}>
-                  <p style={{ fontFamily:serif, fontSize:14, fontWeight:700, color: isActive ? C.gold : C.green, margin:"0 0 2px", lineHeight:1.2 }}>{cat.title}</p>
+                  <p style={{ fontFamily:serif, fontSize:14, fontWeight:700, color: isActive ? C.green : C.muted, margin:"0 0 2px", lineHeight:1.2 }}>{cat.title}</p>
                   <p style={{ fontSize:11, color:C.muted, margin:0, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", fontFamily:sans }}>{cat.subtitle}</p>
                 </div>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink:0, transform:isActive?"rotate(180deg)":"none", transition:"transform 0.2s" }}>
@@ -421,11 +421,11 @@ function ExploreGrid() {
 
           return (
             <div key={cat.id} onClick={() => setExpanded(isActive ? null : cat.id)}
-              style={{ gridColumn:"span 1", ...card, padding:"14px 12px", cursor:"pointer", display:"flex", flexDirection:"column", gap:7, minHeight:108, borderTop: isActive ? `2px solid ${C.gold}` : `1px solid ${C.border}`, transition:"border-color 0.15s" }}>
-              <div style={{ width:34, height:34, borderRadius:9, backgroundColor: isActive ? C.goldLight : C.greenLight, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                <CategoryIcon id={cat.id} size={18} color={isActive ? C.gold : C.green}/>
+              style={{ gridColumn:"span 1", ...card, padding:"14px 12px", cursor:"pointer", display:"flex", flexDirection:"column", gap:7, minHeight:108, borderTop: isActive ? `2px solid ${C.green}` : `1px solid ${C.border}`, transition:"border-color 0.15s" }}>
+              <div style={{ width:34, height:34, borderRadius:9, backgroundColor: isActive ? C.greenLight : C.card, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                <CategoryIcon id={cat.id} size={18} color={isActive ? C.green : C.muted}/>
               </div>
-              <p style={{ fontFamily:serif, fontSize:13, fontWeight:700, color: isActive ? C.gold : C.green, margin:0, lineHeight:1.2 }}>{cat.title}</p>
+              <p style={{ fontFamily:serif, fontSize:13, fontWeight:700, color: isActive ? C.green : C.muted, margin:0, lineHeight:1.2 }}>{cat.title}</p>
               <p style={{ fontSize:10, color:C.muted, margin:0, lineHeight:1.45, fontFamily:sans }}>{cat.subtitle}</p>
             </div>
           );
@@ -433,17 +433,17 @@ function ExploreGrid() {
       </div>
 
       {exp && (
-        <div style={{ marginTop:10, backgroundColor:"#F5F0E8", borderRadius:14, border:`1px solid ${C.border}`, borderTop:`2px solid ${C.gold}`, padding:"18px 18px 16px", animation:"fadeIn 0.2s ease" }}>
+        <div style={{ marginTop:10, backgroundColor:C.bg, borderRadius:14, border:`1px solid ${C.border}`, borderTop:`2px solid ${C.green}`, padding:"18px 18px 16px", animation:"fadeIn 0.2s ease" }}>
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
-            <div style={{ width:32, height:32, borderRadius:8, backgroundColor:C.goldLight, display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <CategoryIcon id={exp.id} size={17} color={C.gold}/>
+            <div style={{ width:32, height:32, borderRadius:8, backgroundColor:C.greenLight, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <CategoryIcon id={exp.id} size={17} color={C.green}/>
             </div>
             <p style={{ fontFamily:serif, fontSize:16, fontWeight:700, color:C.green, margin:0 }}>{exp.title}</p>
             <button onClick={() => setExpanded(null)} style={{ marginLeft:"auto", background:"none", border:"none", color:C.muted, fontSize:18, cursor:"pointer", lineHeight:1, padding:"0 2px" }}>{"\u00D7"}</button>
           </div>
           <p style={{ fontSize:13, color:C.text, lineHeight:1.82, margin:"0 0 14px", fontFamily:sans }}>{exp.guide}</p>
-          <div style={{ padding:"11px 14px", backgroundColor:C.card, borderRadius:10, borderLeft:`2px solid ${C.gold}` }}>
-            <p style={{ fontSize:9, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:"0.1em", margin:"0 0 4px", fontFamily:sans }}>Protocol</p>
+          <div style={{ padding:"11px 14px", backgroundColor:C.card, borderRadius:10, borderLeft:`2px solid ${C.green}` }}>
+            <p style={{ fontSize:9, fontWeight:700, color:C.green, textTransform:"uppercase", letterSpacing:"0.1em", margin:"0 0 4px", fontFamily:sans }}>Protocol</p>
             <p style={{ fontSize:12, color:C.text, lineHeight:1.72, margin:0, fontFamily:sans }}>{exp.protocol}</p>
           </div>
 
@@ -455,7 +455,7 @@ function ExploreGrid() {
           )}
           {!studyMap[exp.id]?.loading && studyMap[exp.id]?.studies?.length > 0 && (
             <div style={{ marginTop:10, padding:"13px 14px", backgroundColor:C.card, borderRadius:10, border:`1px solid ${C.border}` }}>
-              <p style={{ fontSize:9, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:"0.1em", margin:"0 0 10px", fontFamily:sans }}>
+              <p style={{ fontSize:9, fontWeight:700, color:C.green, textTransform:"uppercase", letterSpacing:"0.1em", margin:"0 0 10px", fontFamily:sans }}>
                 {"\uD83D\uDD2C"} Research {"\u00B7"} {studyMap[exp.id].studies.length} studies
               </p>
               {studyMap[exp.id].studies.map((s, i) => {
@@ -468,7 +468,7 @@ function ExploreGrid() {
                       <p style={{ fontSize:10, color:C.muted, margin:0, flex:1, lineHeight:1.4, fontFamily:sans }}>
                         {[s.authors,s.journal,s.year].filter(Boolean).join(" \u00B7 ")}
                       </p>
-                      <span style={{ fontSize:10, color:C.gold, fontWeight:600, flexShrink:0, fontFamily:sans }}>{"\u2197"} PubMed</span>
+                      <span style={{ fontSize:10, color:C.green, fontWeight:600, flexShrink:0, fontFamily:sans }}>{"\u2197"} PubMed</span>
                     </div>
                   </a>
                 );
@@ -493,7 +493,7 @@ function ReadingList() {
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
             {group.books.map(book => (
-              <div key={book.id} style={{ gridColumn:book.colSpan===2?"span 2":"span 1", ...card, border:`1px solid ${book.colSpan===2 ? C.gold+"50" : C.border}`, padding:book.colSpan===2?"15px 17px":"13px 13px", display:"flex", flexDirection:"column", gap:5 }}>
+              <div key={book.id} style={{ gridColumn:book.colSpan===2?"span 2":"span 1", ...card, border:`1px solid ${book.colSpan===2 ? C.green+"40" : C.border}`, padding:book.colSpan===2?"15px 17px":"13px 13px", display:"flex", flexDirection:"column", gap:5 }}>
                 <span style={{ display:"inline-block", fontSize:9, fontWeight:700, color:C.green, textTransform:"uppercase", letterSpacing:"0.08em", backgroundColor:C.greenLight, borderRadius:4, padding:"2px 6px", alignSelf:"flex-start", fontFamily:sans }}>{group.category}</span>
                 <p style={{ fontFamily:serif, fontSize:book.colSpan===2?15:13, fontWeight:700, color:C.text, margin:0, lineHeight:1.25 }}>{book.title}</p>
                 <p style={{ fontSize:11, color:C.muted, margin:0, fontStyle:"italic", fontFamily:serif }}>{book.author}</p>
@@ -520,7 +520,7 @@ const CAT_COLOR = {
   "Biohacking":{"bg":"#142A1E","fg":"#70AA80"}, "Exercise":{"bg":"#2A1E0E","fg":"#A87848"},
   "Mental Health":{"bg":"#281A36","fg":"#A898C8"}, "Gut Health":{"bg":"#281A0E","fg":"#A87040"},
   "Mindfulness":{"bg":"#2E1A36","fg":"#B898D0"}, "Behavior Change":{"bg":"#1A2E3A","fg":"#78A8C0"},
-  "default":{"bg":"#2D4A3E","fg":"#C9A96E"},
+  "default":{"bg":"#1F2E26","fg":"#B99A5B"},
 };
 
 function StarRating({ rating }) {
@@ -644,7 +644,7 @@ function LibraryModal({ onClose }) {
   const colFor=b=>CAT_COLOR[b.category]||CAT_COLOR.default;
   const initials=t=>t.split(" ").slice(0,2).map(w=>w[0]?.toUpperCase()||"").join("");
   const Skel=()=>(<div style={{padding:"20px 0"}}>{[90,70,80,60,75].map((w,i)=><div key={i} style={{height:11,width:`${w}%`,backgroundColor:C.border,borderRadius:4,marginBottom:12,opacity:0.4}}/>)}<p style={{fontSize:11,color:C.muted,fontFamily:sans,textAlign:"center",fontStyle:"italic"}}>Loading from database{"\u2026"}</p></div>);
-  const Pills=({options,value,onChange})=>(<div style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:4,flexShrink:0}}>{options.map(opt=>{const active=value===opt;const badge=LEVEL_BADGE[opt];return(<button key={opt} onClick={()=>onChange(opt)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${active?(badge?.c||C.gold):C.border}`,backgroundColor:active?(badge?.bg||C.goldLight):"transparent",color:active?(badge?.c||C.gold):C.muted,fontSize:10,fontWeight:active?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{opt==="All"?"All":opt.charAt(0).toUpperCase()+opt.slice(1)}</button>);})}</div>);
+  const Pills=({options,value,onChange})=>(<div style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:4,flexShrink:0}}>{options.map(opt=>{const active=value===opt;const badge=LEVEL_BADGE[opt];return(<button key={opt} onClick={()=>onChange(opt)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${active?(badge?.c||C.green):C.border}`,backgroundColor:active?(badge?.bg||C.greenLight):"transparent",color:active?(badge?.c||C.green):C.muted,fontSize:10,fontWeight:active?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{opt==="All"?"All":opt.charAt(0).toUpperCase()+opt.slice(1)}</button>);})}</div>);
   const SBar=({value,onChange,placeholder})=>(<div style={{position:"relative",marginBottom:10}}><input type="text" placeholder={placeholder} value={value} onChange={e=>onChange(e.target.value)} style={{width:"100%",padding:"9px 32px 9px 34px",borderRadius:10,border:`1px solid ${C.border}`,backgroundColor:C.card,fontSize:12,fontFamily:sans,color:C.text,outline:"none",boxSizing:"border-box"}}/><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}><circle cx="5.5" cy="5.5" r="4" stroke={C.muted} strokeWidth="1.3"/><path d="M9 9l2 2" stroke={C.muted} strokeWidth="1.3" strokeLinecap="round"/></svg>{value&&<button onClick={()=>onChange("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:C.muted,fontSize:15,cursor:"pointer",lineHeight:1,padding:0}}>x</button>}</div>);
   const TABS=[{id:"books",icon:"\uD83D\uDCDA",label:"Books"},{id:"concepts",icon:"\uD83E\uDDE0",label:"Concepts"},{id:"podcasts",icon:"\uD83C\uDF99\uFE0F",label:"Podcasts"},{id:"articles",icon:"\uD83D\uDCF0",label:"Articles"}];
 
@@ -662,7 +662,7 @@ function LibraryModal({ onClose }) {
           <div style={{display:"flex",borderBottom:`2px solid ${C.border}`,gap:0}}>
             {TABS.map(t=>(
               <button key={t.id} onClick={()=>{setTab(t.id);setExpanded(null);}}
-                style={{flex:1,padding:"10px 4px",border:"none",borderBottom:tab===t.id?`2px solid ${C.gold}`:"2px solid transparent",marginBottom:-2,backgroundColor:"transparent",color:tab===t.id?C.green:C.muted,fontSize:11,fontWeight:tab===t.id?700:400,cursor:"pointer",fontFamily:sans,transition:"color 0.15s"}}>
+                style={{flex:1,padding:"10px 4px",border:"none",borderBottom:tab===t.id?`2px solid ${C.green}`:"2px solid transparent",marginBottom:-2,backgroundColor:"transparent",color:tab===t.id?C.green:C.muted,fontSize:11,fontWeight:tab===t.id?700:400,cursor:"pointer",fontFamily:sans,transition:"color 0.15s"}}>
                 <span style={{display:"block",fontSize:15,lineHeight:1,marginBottom:3}}>{t.icon}</span>{t.label}
               </button>
             ))}
@@ -689,7 +689,7 @@ function LibraryModal({ onClose }) {
                           {b.year&&<span style={{fontSize:9,color:C.muted,fontFamily:sans}}>{b.year}</span>}
                         </div>
                         <p style={{fontFamily:serif,fontSize:14,fontWeight:700,color:C.green,margin:"0 0 2px",lineHeight:1.3}}>{b.title}</p>
-                        <p style={{fontSize:12,color:C.gold,margin:"0 0 4px",fontFamily:serif,fontStyle:"italic"}}>{b.author}</p>
+                        <p style={{fontSize:12,color:C.muted,margin:"0 0 4px",fontFamily:serif,fontStyle:"italic"}}>{b.author}</p>
                         {b.rating&&<StarRating rating={b.rating}/>}
                         <p style={{fontSize:12,color:C.text,lineHeight:1.7,margin:"6px 0 8px",fontFamily:sans}}>{b.description}</p>
                         {b.key_takeaway&&<p style={{fontSize:11,color:C.green,fontFamily:sans,fontStyle:"italic",margin:"0 0 10px",padding:"8px 12px",backgroundColor:C.greenLight,borderRadius:8,lineHeight:1.6}}>{"\uD83D\uDCA1"} {b.key_takeaway}</p>}
@@ -715,7 +715,7 @@ function LibraryModal({ onClose }) {
                           {b.year&&<span style={{fontSize:9,color:C.muted,fontFamily:sans}}>{b.year}</span>}
                         </div>
                         <p style={{fontFamily:serif,fontSize:14,fontWeight:700,color:C.green,margin:"0 0 2px",lineHeight:1.3}}>{b.title}</p>
-                        <p style={{fontSize:12,color:C.gold,margin:"0 0 4px",fontFamily:serif,fontStyle:"italic"}}>{b.author}</p>
+                        <p style={{fontSize:12,color:C.muted,margin:"0 0 4px",fontFamily:serif,fontStyle:"italic"}}>{b.author}</p>
                         {b.description&&<p style={{fontSize:12,color:C.text,lineHeight:1.7,margin:0,fontFamily:sans}}>{b.description}</p>}
                       </div>
                     </div>
@@ -738,7 +738,7 @@ function LibraryModal({ onClose }) {
                       <div onClick={()=>setExpanded(isOpen?null:c.id)} style={{cursor:"pointer"}}>
                         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5,flexWrap:"wrap"}}>
                           <span style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:8,fontFamily:sans,backgroundColor:badge.bg,color:badge.c}}>{c.level?.charAt(0).toUpperCase()+(c.level?.slice(1)||"")}</span>
-                          <span style={{fontSize:9,color:C.gold,backgroundColor:C.goldLight,padding:"2px 8px",borderRadius:8,fontFamily:sans}}>{c.category}</span>
+                          <span style={{fontSize:9,color:C.green,backgroundColor:C.greenLight,padding:"2px 8px",borderRadius:8,fontFamily:sans}}>{c.category}</span>
                           <span style={{marginLeft:"auto",fontSize:16,color:C.muted,transform:isOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s"}}>{"\u25BE"}</span>
                         </div>
                         <p style={{fontFamily:serif,fontSize:14,fontWeight:700,color:C.green,margin:"0 0 4px"}}>{c.title}</p>
@@ -750,7 +750,7 @@ function LibraryModal({ onClose }) {
                           {c.key_points?.length>0&&(
                             <div style={{backgroundColor:C.greenLight,borderRadius:10,padding:"10px 14px"}}>
                               <p style={{fontSize:10,fontWeight:700,color:C.green,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 8px",fontFamily:sans}}>Key Points</p>
-                              {c.key_points.map((pt,j)=><p key={j} style={{fontSize:12,color:C.text,margin:"0 0 5px",fontFamily:sans,lineHeight:1.6,paddingLeft:12,position:"relative"}}><span style={{position:"absolute",left:0,color:C.gold}}>{"\u25B8"}</span>{pt}</p>)}
+                              {c.key_points.map((pt,j)=><p key={j} style={{fontSize:12,color:C.text,margin:"0 0 5px",fontFamily:sans,lineHeight:1.6,paddingLeft:12,position:"relative"}}><span style={{position:"absolute",left:0,color:C.green}}>{"\u25B8"}</span>{pt}</p>)}
                             </div>
                           )}
                         </div>
@@ -775,7 +775,7 @@ function LibraryModal({ onClose }) {
                         <div style={{width:46,height:46,borderRadius:13,backgroundColor:C.greenLight,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:22}}>{"\uD83C\uDF99\uFE0F"}</div>
                         <div style={{flex:1,minWidth:0}}>
                           <p style={{fontFamily:serif,fontSize:15,fontWeight:700,color:C.green,margin:"0 0 2px",lineHeight:1.2}}>{pod.title}</p>
-                          <p style={{fontSize:11,color:C.gold,margin:"0 0 4px",fontFamily:serif,fontStyle:"italic"}}>{pod.host}</p>
+                          <p style={{fontSize:11,color:C.muted,margin:"0 0 4px",fontFamily:serif,fontStyle:"italic"}}>{pod.host}</p>
                           <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                             <span style={{fontSize:9,color:C.muted,fontFamily:sans,backgroundColor:C.bg,border:`1px solid ${C.border}`,padding:"1px 7px",borderRadius:10}}>{pod.category}</span>
                             {pod.frequency&&<span style={{fontSize:9,color:C.muted,fontFamily:sans,backgroundColor:C.bg,border:`1px solid ${C.border}`,padding:"1px 7px",borderRadius:10}}>{pod.frequency}</span>}
@@ -812,7 +812,7 @@ function LibraryModal({ onClose }) {
                         {pod.genre&&<span style={{fontSize:9,color:C.muted,fontFamily:sans,backgroundColor:C.bg,border:`1px solid ${C.border}`,padding:"1px 7px",borderRadius:10}}>{pod.genre}</span>}
                       </div>
                       <p style={{fontFamily:serif,fontSize:14,fontWeight:700,color:C.green,margin:"0 0 2px",lineHeight:1.2}}>{pod.title}</p>
-                      <p style={{fontSize:11,color:C.gold,margin:"0 0 4px",fontFamily:serif,fontStyle:"italic"}}>{pod.host}</p>
+                      <p style={{fontSize:11,color:C.muted,margin:"0 0 4px",fontFamily:serif,fontStyle:"italic"}}>{pod.host}</p>
                       {pod.description&&<p style={{fontSize:12,color:C.text,lineHeight:1.7,margin:"0 0 6px",fontFamily:sans}}>{pod.description.slice(0,200)}{pod.description.length>200?"…":""}</p>}
                       {pod.apple_url&&<a href={pod.apple_url} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:4,padding:"6px 12px",backgroundColor:"#7A3BB9",color:"#fff",borderRadius:8,textDecoration:"none",fontSize:11,fontWeight:600,fontFamily:sans}}>{"🎧"} Apple Podcasts</a>}
                     </div>
@@ -1121,7 +1121,7 @@ function CircadianTimeline({ sun, geoError, entries }) {
   return (
     <div onClick={dismiss} style={{ padding:"0 18px 18px" }}>
       {/* Phase status card */}
-      <div style={{ backgroundColor:C.goldLight, borderLeft:`3px solid ${C.gold}`, borderRadius:"0 12px 12px 0", border:`1px solid ${C.gold}40`, padding:"12px 16px 11px", marginBottom:20 }}>
+      <div style={{ backgroundColor:C.bg, borderLeft:`3px solid ${C.green}`, borderRadius:"0 12px 12px 0", border:`1px solid ${C.border}`, padding:"12px 16px 11px", marginBottom:20 }}>
         <p style={{ fontFamily:serif, fontSize:14, fontWeight:600, color:C.green, margin:"0 0 3px", letterSpacing:"-0.01em" }}>{phase.label}</p>
         <p style={{ fontSize:12, color:C.amber, margin:0, lineHeight:1.6, fontFamily:sans }}>{phase.sub}</p>
         {sun && (
@@ -1139,7 +1139,7 @@ function CircadianTimeline({ sun, geoError, entries }) {
         {/* (i) button — top-right corner */}
         <button
           onClick={handleInfo}
-          style={{ position:"absolute", top:0, right:0, width:17, height:17, borderRadius:"50%", border:`1px solid ${C.border}`, backgroundColor:C.goldLight, color:C.muted, fontSize:9, fontFamily:sans, fontStyle:"italic", fontWeight:600, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", zIndex:20, lineHeight:1, padding:0 }}
+          style={{ position:"absolute", top:0, right:0, width:17, height:17, borderRadius:"50%", border:`1px solid ${C.border}`, backgroundColor:C.card, color:C.muted, fontSize:9, fontFamily:sans, fontStyle:"italic", fontWeight:600, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", zIndex:20, lineHeight:1, padding:0 }}
         >
           i
         </button>
@@ -1539,7 +1539,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
       <div style={{ backgroundColor:"#FDFAF5", borderRadius:16, border:`1px solid ${C.border}`, borderTop:`1px solid ${C.muted}`, boxShadow:"0 2px 20px rgba(45,74,62,0.08)", overflow:"hidden", position:"relative" }}>
         <div style={{ position:"absolute", top:0, right:0, opacity:0.13, pointerEvents:"none" }}><BotanicalBranch width={100} flip/></div>
         <div style={{ padding:"14px 20px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:`1px solid ${C.border}` }}>
-          <span style={{ fontSize:9, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:"0.12em", fontFamily:sans }}>Daily Challenge</span>
+          <span style={{ fontSize:9, fontWeight:700, color:C.green, textTransform:"uppercase", letterSpacing:"0.12em", fontFamily:sans }}>Daily Challenge</span>
           {ritualStreak > 0 && <span style={{ fontSize:11, color:C.muted, fontFamily:sans }}>{ritualStreak}-day streak {ritualStreak>=7?"\uD83D\uDD25":"\u26A1"}</span>}
         </div>
         {loading ? (
@@ -1578,7 +1578,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
             </p>
 
             {/* Science explanation */}
-            <div style={{ borderLeft:`2px solid ${C.gold}`, paddingLeft:13, margin:"0 0 14px" }}>
+            <div style={{ borderLeft:`2px solid ${C.green}`, paddingLeft:13, margin:"0 0 14px" }}>
               <p style={{ fontSize:12, color:C.muted, lineHeight:1.75, margin:0, fontStyle:"italic", fontFamily:serif }}>
                 {biohack.science || biohack.why}
               </p>
@@ -1602,7 +1602,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
                             <p style={{ fontSize:11, color:C.text, margin:"0 0 2px", lineHeight:1.45, fontFamily:sans }}>{i+1}. {s.title}</p>
                             <p style={{ fontSize:10, color:C.muted, margin:0, fontFamily:sans }}>
                               {[s.authors,s.journal,s.year].filter(Boolean).join(" \u00B7 ")}
-                              <span style={{ color:C.gold, marginLeft:5, fontWeight:500 }}>{"\u2197"} PubMed</span>
+                              <span style={{ color:C.green, marginLeft:5, fontWeight:500 }}>{"\u2197"} PubMed</span>
                             </p>
                           </a>
                         ))}
@@ -1610,7 +1610,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
                     )}
                   </>
                 ) : (
-                  <p style={{ fontSize:11, color:C.gold, margin:0, fontStyle:"italic", fontFamily:serif, letterSpacing:"0.02em" }}>{"\u2726"} Based on established clinical research {"\u00B7"} Always consult your healthcare provider</p>
+                  <p style={{ fontSize:11, color:C.green, margin:0, fontStyle:"italic", fontFamily:serif, letterSpacing:"0.02em" }}>{"\u2726"} Based on established clinical research {"\u00B7"} Always consult your healthcare provider</p>
                 )}
               </div>
             )}
@@ -1751,7 +1751,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
             {journeyStreak>=14?"\uD83C\uDFC6":journeyStreak>=7?"\uD83C\uDF1F":journeyStreak>=3?"\u2728":"\uD83C\uDF31"}
           </div>
         </div>
-        <p style={{ fontSize:13, color:C.muted, lineHeight:1.65, margin:0, fontStyle:"italic", borderLeft:`3px solid ${C.gold}`, paddingLeft:12 }}>"{motivMsg}"</p>
+        <p style={{ fontSize:13, color:C.muted, lineHeight:1.65, margin:0, fontStyle:"italic", borderLeft:`3px solid ${C.green}`, paddingLeft:12 }}>"{motivMsg}"</p>
       </div>
 
       {/* Weekly chart */}
