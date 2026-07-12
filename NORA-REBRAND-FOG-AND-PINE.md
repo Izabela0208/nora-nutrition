@@ -81,6 +81,8 @@ Regulă hard: raportul vizual pe orice ecran ≈ 70% ivory, 25% verde, 5% auriu 
 
 **Pas 3 — Wordmark + favicon.** Wordmark „nora" în header și pe login; generează favicon/app icon „n". → commit `rebrand: wordmark + favicon`
 
+- **Favicon final: simbol de decis de Izabela — deocamdată placeholder pătrat pine.** (`public/favicon.svg`, `#1F2E26`, fără literă.)
+
 **Pas 4 — Login atmosferic.** Ecranul de login/register cu fotografia de pădure (sau placeholder gradient) + overlay + wordmark. → commit `rebrand: atmospheric login`
 
 - **Tratament "frosted glass":** fotografia de pădure ocupă tot ecranul de login; formularul stă pe o suprafață de sticlă mată semi-transparentă (`backdrop-filter: blur(...)` + fundal alb/ivory la opacitate mică), efect gen lock screen de iPhone — nu card opac clasic peste imagine.

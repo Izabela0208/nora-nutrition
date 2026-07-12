@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import Head from "next/head";
 import "../styles/globals.css";
 import { serif as SERIF, sans as SANS } from "../components/noraTokens";
 
@@ -127,19 +128,24 @@ export default function App({ Component, pageProps }) {
     setAuthed(ok === "1");
   }, []);
 
+  const favicon = <Head><link rel="icon" href="/favicon.svg" type="image/svg+xml"/></Head>;
+
   if (authed === null) {
     // Avoid flash — show ivory blank while checking storage
-    return <div style={{ minHeight: "100vh", backgroundColor: "#F5F0E8" }}/>;
+    return <>{favicon}<div style={{ minHeight: "100vh", backgroundColor: "#F5F0E8" }}/></>;
   }
 
   if (!authed) {
     return (
-      <PasswordGate onAuth={() => {
-        localStorage.setItem(AUTH_KEY, "1");
-        setAuthed(true);
-      }}/>
+      <>
+        {favicon}
+        <PasswordGate onAuth={() => {
+          localStorage.setItem(AUTH_KEY, "1");
+          setAuthed(true);
+        }}/>
+      </>
     );
   }
 
-  return <Component {...pageProps}/>;
+  return <>{favicon}<Component {...pageProps}/></>;
 }
