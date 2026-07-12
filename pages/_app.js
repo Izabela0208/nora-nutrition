@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import "../styles/globals.css";
+import { serif as SERIF, sans as SANS } from "../components/noraTokens";
 
 const AUTH_KEY = "nora_auth_ok";
 const GREEN  = "#2D4A3E";
@@ -7,8 +8,6 @@ const GOLD   = "#C9A96E";
 const IVORY  = "#F5F0E8";
 const MUTED  = "#7A8C86";
 const BORDER = "#E2DAD0";
-const SERIF  = "Georgia, 'Times New Roman', serif";
-const SANS   = "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 
 function PasswordGate({ onAuth }) {
   const [value,   setValue]   = useState("");

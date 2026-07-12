@@ -242,10 +242,10 @@ const DessertCard = ({ dessert, isSaved, onToggleSave, ingChecked, onIngToggle }
           <div style={{ flex:1, padding:"13px 0 13px 14px", display:"flex", alignItems:"flex-start", gap:10 }}>
             <span style={{ fontSize:22, flexShrink:0, lineHeight:1.3 }}>{dessert.emoji}</span>
             <div style={{ flex:1, minWidth:0 }}>
-              <p style={{ fontFamily:"'Playfair Display', Georgia, serif", fontSize:15, fontWeight:600, color:G.text, margin:"0 0 2px", lineHeight:1.3 }}>{dessert.name}</p>
+              <p style={{ fontFamily:serif, fontSize:15, fontWeight:600, color:G.text, margin:"0 0 2px", lineHeight:1.3 }}>{dessert.name}</p>
               <p style={{ fontSize:11, color:G.muted, margin:"0 0 5px" }}>{dessert.category} · {dessert.prep_time} min · {dessert.servings} servings</p>
               <MacroStrip kcal={dessert.kcal} pro={dessert.macros.protein_g} carbs={dessert.macros.carbs_g} fat={dessert.macros.fat_g}/>
-              <p style={{ fontSize:9, color:G.muted, margin:"3px 0 0", fontFamily:"'Inter', 'Helvetica Neue', Arial, sans-serif" }}>per serving</p>
+              <p style={{ fontSize:9, color:G.muted, margin:"3px 0 0", fontFamily:sans }}>per serving</p>
             </div>
           </div>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"0 14px", gap:10, flexShrink:0 }}>
@@ -347,7 +347,7 @@ const FoodResultCard = ({ food, onClick }) => {
       {/* Text */}
       <div style={{ padding:"10px 12px 12px", flex:1, display:"flex", flexDirection:"column" }}>
         {food.brand && <p style={{ fontSize:10, color:G.muted, margin:"0 0 2px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{food.brand}</p>}
-        <p style={{ fontFamily:"'Playfair Display', Georgia, serif", fontSize:14, fontWeight:600, color:G.text, margin:"0 0 8px", lineHeight:1.35, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{food.name}</p>
+        <p style={{ fontFamily:serif, fontSize:14, fontWeight:600, color:G.text, margin:"0 0 8px", lineHeight:1.35, display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden" }}>{food.name}</p>
         <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginTop:"auto" }}>
           {p.kcal != null && <span style={{ fontSize:11, fontWeight:700, color:G.forest, backgroundColor:G.border, borderRadius:6, padding:"3px 7px" }}>{p.kcal} kcal</span>}
           {p.protein != null && <span style={{ fontSize:11, fontWeight:600, color:G.forest, backgroundColor:G.border, borderRadius:6, padding:"3px 7px" }}>{p.protein}g P</span>}
@@ -367,7 +367,7 @@ const JuiceCard = ({ juice, isSaved, onToggleSave, ingChecked, onIngToggle }) =>
       <div style={{ flex:1, padding:"14px 0 14px 16px", display:"flex", alignItems:"flex-start", gap:12 }}>
         <span style={{ fontSize:24, flexShrink:0, lineHeight:1.2 }}>{juice.emoji}</span>
         <div style={{ flex:1, minWidth:0 }}>
-          <p style={{ fontFamily:"'Playfair Display', Georgia, serif", fontSize:16, fontWeight:600, color:G.text, margin:"0 0 3px", lineHeight:1.3 }}>{juice.name}</p>
+          <p style={{ fontFamily:serif, fontSize:16, fontWeight:600, color:G.text, margin:"0 0 3px", lineHeight:1.3 }}>{juice.name}</p>
           <p style={{ fontSize:11, color:G.muted, margin:"0 0 5px" }}>{juice.category} · {juice.prep_time} min</p>
           <MacroStrip kcal={juice.kcal} pro={(juice.macros||{}).protein_g||0} carbs={(juice.macros||{}).carbs_g||0} fat={(juice.macros||{}).fat_g||0}/>
         </div>
@@ -1056,7 +1056,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                   <div style={{ flex:1, minWidth:0 }}>
                     <span style={{ fontSize:10, fontWeight:700, color: sf.source==="USDA" ? G.forest : sf.source==="Recipe" ? G.forestMid : G.amber, backgroundColor: sf.source==="USDA" ? `${G.forest}12` : sf.source==="Recipe" ? `${G.forestMid}12` : `${G.amber}18`, borderRadius:4, padding:"2px 7px" }}>{sf.source==="USDA" ? "USDA FoodData" : sf.source==="Recipe" ? "Recipe" : "Open Food Facts"}</span>
                     {sf.brand && <span style={{ fontSize:11, color:G.muted, marginLeft:8 }}>{sf.brand}</span>}
-                    <p style={{ fontFamily:"'Playfair Display', Georgia, serif", fontSize:17, fontWeight:600, color:G.text, margin:"6px 0 0", lineHeight:1.25 }}>{sf.name}</p>
+                    <p style={{ fontFamily:serif, fontSize:17, fontWeight:600, color:G.text, margin:"6px 0 0", lineHeight:1.25 }}>{sf.name}</p>
                     {sf.category && <p style={{ fontSize:11, color:G.muted, margin:"3px 0 0" }}>{sf.category}</p>}
                   </div>
                   <button onClick={() => setSelectedFood(null)} style={{ width:30, height:30, borderRadius:"50%", border:`1px solid ${G.border}`, background:"none", cursor:"pointer", fontSize:18, color:G.muted, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>×</button>
@@ -1086,7 +1086,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                   <>
                     {/* Big kcal */}
                     <div style={{ textAlign:"center", padding:"18px 0 16px", borderBottom:`1px solid ${G.border}`, marginBottom:16 }}>
-                      <p style={{ fontFamily:"'Playfair Display', Georgia, serif", fontSize:44, fontWeight:700, color:G.forest, margin:0, lineHeight:1 }}>{calc(p.kcal) ?? 0}</p>
+                      <p style={{ fontFamily:serif, fontSize:44, fontWeight:700, color:G.forest, margin:0, lineHeight:1 }}>{calc(p.kcal) ?? 0}</p>
                       <p style={{ fontSize:12, color:G.muted, margin:"4px 0 0" }}>kcal · {sf.source === "Recipe" ? "per serving" : `${servingSize}g serving`}</p>
                     </div>
                     {/* Macros row */}
