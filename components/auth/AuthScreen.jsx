@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { supabase } from "../../lib/supabase";
 import { C, serif, sans, inp } from "../noraTokens";
@@ -11,6 +11,15 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
+  const [isNarrow, setIsNarrow] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    setIsNarrow(mq.matches);
+    const handler = (e) => setIsNarrow(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   const isRegister = mode === "register";
   const canSubmit = email.trim().length > 0 && password.length >= 6 && (!isRegister || consent) && !loading;
@@ -47,13 +56,13 @@ export default function AuthScreen() {
   return (
     <div style={{ position: "relative", minHeight: "100vh", overflow: "hidden", fontFamily: sans, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <Image
-        src="/images/atmosphere/fog-1.jpg"
+        src={isNarrow ? "/images/atmosphere/fog-1-portrait.jpg" : "/images/atmosphere/fog-1.jpg"}
         alt=""
         fill
         priority
         unoptimized
         sizes="100vw"
-        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 75%", zIndex: 0, filter: "contrast(1.12)" }}
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: isNarrow ? "50% 30%" : "50% 75%", zIndex: 0, filter: "contrast(1.12)" }}
       />
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(31,46,38,0.88) 0%, rgba(31,46,38,0.72) 40%, rgba(31,46,38,0.55) 100%)", zIndex: 1 }} />
       <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 45% at 50% 58%, rgba(244,242,237,0.14) 0%, rgba(244,242,237,0) 70%)", zIndex: 1, pointerEvents: "none" }} />
