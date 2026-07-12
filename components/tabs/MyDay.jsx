@@ -473,7 +473,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
             <p style={{fontSize:9,fontWeight:700,color:"rgba(201,168,110,0.65)",textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 6px"}}>{h<12?"Morning":h<17?"Afternoon":"Evening"} · {profile?.name}</p>
             {greetingLoad
               ? <div style={{display:"flex",gap:5,paddingTop:2}}>{[0,1,2].map(j=><span key={j} style={{width:5,height:5,borderRadius:"50%",backgroundColor:"rgba(245,240,232,0.4)",display:"inline-block",animation:`dotPulse 1.2s ease ${j*0.2}s infinite`}}/>)}</div>
-              : <p style={{fontFamily:serif,fontSize:14,color:"#FAF7F2",lineHeight:1.65,margin:0,fontStyle:"italic"}}>{greeting||`Good ${h<12?"morning":h<17?"afternoon":"evening"}, ${profile?.name}.`}</p>
+              : <p style={{fontFamily:serif,fontSize:15,fontWeight:500,color:"#FAF7F2",lineHeight:1.65,margin:0,fontStyle:"italic"}}>{greeting||`Good ${h<12?"morning":h<17?"afternoon":"evening"}, ${profile?.name}.`}</p>
             }
           </div>
         </div>
@@ -733,7 +733,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                 <p style={{fontSize:10,color:C.muted,margin:0,letterSpacing:"0.03em"}}>{timeOfDay==="morning"?"Morning Insight":timeOfDay==="afternoon"?"Afternoon Check-in":"Evening Reflection"}</p>
               </div>
             </div>
-            <p style={{fontFamily:serif,fontSize:14,color:C.text,lineHeight:1.75,margin:0,fontStyle:"italic"}}>{eveningSummary}</p>
+            <p style={{fontFamily:serif,fontSize:15,fontWeight:500,color:C.text,lineHeight:1.75,margin:0,fontStyle:"italic"}}>{eveningSummary}</p>
           </div>
         )}
 

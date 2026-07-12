@@ -1,15 +1,15 @@
-// ── Design tokens ─────────────────────────────────────────────────────────────
+// ── Design tokens — "Fog & Pine" ──────────────────────────────────────────────
 export const C = {
-  bg:         "#F5F0E8",
-  card:       "#FAFAF7",
-  green:      "#2D4A3E",
+  bg:         "#F4F2ED", // ivory
+  card:       "#EDEAE2", // ivory-2
+  green:      "#1F2E26", // pine
   greenDark:  "#1E3429",
   greenLight: "#EBF0ED",
-  gold:       "#C9A96E",
+  gold:       "#B99A5B",
   goldLight:  "#FAF3E6",
-  text:       "#1C2B26",
-  muted:      "#7A8C86",
-  border:     "#E2DAD0",
+  text:       "#2C2A24", // ink
+  muted:      "#5F5C51", // ink-soft
+  border:     "#EDEAE2", // ivory-2
   sage:       "#7A9E8A",
   tan:        "#A89070",
   slate:      "#7A9BAE",
@@ -18,20 +18,27 @@ export const C = {
   errorBg:    "#F7EDE9",
   amber:      "#B8922A",
   amberBg:    "#FBF3E3",
+  // new named tokens (Fog & Pine vocabulary — for the steps ahead)
+  pine:       "#1F2E26",
+  forest:     "#2A3B31",
+  fog:        "#A8B2A9",
+  ivory:      "#F4F2ED",
+  ivory2:     "#EDEAE2",
+  inkSoft:    "#5F5C51",
 };
 
 export const card = {
   backgroundColor: C.card,
   border: `1px solid ${C.border}`,
   borderRadius: "16px",
-  boxShadow: "0 2px 12px rgba(28,43,38,0.06)",
+  boxShadow: "0 1px 2px rgba(31,46,38,0.06)",
 };
 
-export const serif = "'Playfair Display', Georgia, 'Times New Roman', serif";
-export const sans  = "system-ui, -apple-system, sans-serif";
+export const serif = "'Cormorant Garamond', Georgia, 'Times New Roman', serif";
+export const sans  = "'Inter', system-ui, -apple-system, sans-serif";
 
 export const inp = {
-  width:"100%", backgroundColor:"#FAFAF7", border:`1px solid ${C.border}`,
+  width:"100%", backgroundColor:C.ivory2, border:`1px solid ${C.border}`,
   borderRadius:10, padding:"11px 14px", fontSize:16, color:C.text,
   fontFamily:sans, transition:"border-color 0.15s ease", outline:"none",
 };
