@@ -51,8 +51,9 @@ export default function AuthScreen() {
         alt=""
         fill
         priority
+        unoptimized
         sizes="100vw"
-        style={{ objectFit: "cover", zIndex: 0, filter: "contrast(1.12)" }}
+        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 75%", zIndex: 0, filter: "contrast(1.12)" }}
       />
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(31,46,38,0.88) 0%, rgba(31,46,38,0.72) 40%, rgba(31,46,38,0.55) 100%)", zIndex: 1 }} />
       <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 45% at 50% 58%, rgba(244,242,237,0.14) 0%, rgba(244,242,237,0) 70%)", zIndex: 1, pointerEvents: "none" }} />
