@@ -1,7 +1,7 @@
 import { useState } from "react";
+import Image from "next/image";
 import { supabase } from "../../lib/supabase";
-import { C, card, serif, sans, inp } from "../noraTokens";
-import { NoraAvatar, BotanicalBranch } from "../NoraIcons";
+import { C, serif, sans, inp } from "../noraTokens";
 
 export default function AuthScreen() {
   const [mode, setMode] = useState("login"); // "login" | "register"
@@ -45,22 +45,31 @@ export default function AuthScreen() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: C.bg, fontFamily: sans, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ width: "100%", maxWidth: 400, position: "relative" }}>
-        <div style={{ position: "absolute", top: -34, right: -8, pointerEvents: "none" }}>
-          <BotanicalBranch width={140} opacity={0.12} />
-        </div>
-        <div style={{ ...card, padding: "36px 28px 32px", textAlign: "center", position: "relative" }}>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
-            <NoraAvatar size={44} />
-          </div>
-          <h1 style={{ fontFamily: serif, fontSize: 26, color: C.green, margin: "0 0 6px", fontWeight: 600 }}>Nora</h1>
-          <p style={{ color: C.muted, fontSize: 13, lineHeight: 1.6, margin: "0 0 28px" }}>
+    <div style={{ position: "relative", minHeight: "100vh", overflow: "hidden", fontFamily: sans, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <Image
+        src="/images/atmosphere/fog-1.jpg"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        style={{ objectFit: "cover", zIndex: 0, filter: "contrast(1.12)" }}
+      />
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(31,46,38,0.88) 0%, rgba(31,46,38,0.72) 40%, rgba(31,46,38,0.55) 100%)", zIndex: 1 }} />
+      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 45% at 50% 58%, rgba(244,242,237,0.14) 0%, rgba(244,242,237,0) 70%)", zIndex: 1, pointerEvents: "none" }} />
+
+      <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <h1 style={{ fontFamily: serif, fontSize: 46, fontWeight: 600, color: C.ivory, letterSpacing: "0.02em", margin: "0 0 8px", lineHeight: 1, textShadow: "0 1px 4px rgba(13,20,16,0.35)" }}>nora</h1>
+        <p style={{ fontFamily: sans, fontSize: 11, color: C.ivory, opacity: 0.85, letterSpacing: "0.07em", margin: "0 0 40px", textAlign: "center", textShadow: "0 1px 3px rgba(13,20,16,0.3)" }}>
+          a quieter way to take care
+        </p>
+
+        <div style={{ width: "100%", boxSizing: "border-box", backgroundColor: "rgba(255,240,205,0.28)", backdropFilter: "blur(36px)", WebkitBackdropFilter: "blur(36px)", border: "1px solid rgba(255,246,222,0.4)", borderRadius: 20, boxShadow: "0 8px 40px rgba(13,20,16,0.3)", padding: "32px 28px 28px", textAlign: "center" }}>
+          <p style={{ color: C.text, fontSize: 13, lineHeight: 1.6, margin: "0 0 24px" }}>
             {isRegister ? "Create your account to begin." : "Welcome back."}
           </p>
 
           <form onSubmit={handleSubmit} style={{ textAlign: "left" }}>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.muted, marginBottom: 6 }}>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.text, marginBottom: 6 }}>
               Email
             </label>
             <input
@@ -73,7 +82,7 @@ export default function AuthScreen() {
               required
             />
 
-            <label style={{ display: "block", fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.muted, marginBottom: 6 }}>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.text, marginBottom: 6 }}>
               Password
             </label>
             <input
@@ -121,8 +130,8 @@ export default function AuthScreen() {
               disabled={!canSubmit}
               style={{
                 width: "100%",
-                backgroundColor: canSubmit ? C.green : C.border,
-                color: canSubmit ? C.bg : C.muted,
+                backgroundColor: "#1F2E26",
+                color: "#F4F2ED",
                 border: "none",
                 borderRadius: 12,
                 padding: "15px",
@@ -139,7 +148,7 @@ export default function AuthScreen() {
 
           <button
             onClick={() => switchMode(isRegister ? "login" : "register")}
-            style={{ marginTop: 20, background: "none", border: "none", color: C.muted, fontSize: 12, cursor: "pointer", fontFamily: sans, textDecoration: "underline", textUnderlineOffset: 3 }}
+            style={{ marginTop: 20, background: "none", border: "none", color: C.green, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: sans, textDecoration: "underline", textUnderlineOffset: 3 }}
           >
             {isRegister ? "Already have an account? Log in" : "New here? Create an account"}
           </button>
