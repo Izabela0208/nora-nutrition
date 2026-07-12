@@ -9,16 +9,15 @@ const JUICE_CATS = ["Detox & Cleanse","Energy & Performance","Anti-Inflammatory"
 const DESSERT_CATS = ["No-Bake","Frozen","Baked","Mousse & Pudding","Energy Balls","Fruit-Based"];
 
 const G = {
-  forest:    "#1B3A2D",
-  forestMid: "#2D5A45",
-  ivory:     "#FAF7F2",
-  gold:      "#C9A84C",
-  goldLight: "#FBF5E6",
+  forest:    "#1F2E26", // pine
+  forestMid: "#2A3B31", // forest
+  ivory:     "#F4F2ED", // ivory
+  gold:      "#B99A5B",
   amber:     "#9A7020",
   sage:      "#7A9E8A",
   muted:     "#8C9E97",
   border:    "#DDD7CC",
-  text:      "#1C2B26",
+  text:      "#2C2A24", // ink
   card:      "#FFFFFF",
   error:     "#9E5E52",
   errorBg:   "#F7EDE9",
@@ -291,14 +290,14 @@ const DessertCard = ({ dessert, isSaved, onToggleSave, ingChecked, onIngToggle }
             <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 8px" }}>Benefits</p>
             {dessert.benefits.map((b, i) => (
               <div key={i} style={{ display:"flex", gap:8, marginBottom:5 }}>
-                <span style={{ color:G.gold, flexShrink:0, fontSize:16, marginTop:-2 }}>·</span>
+                <span style={{ color:G.forest, flexShrink:0, fontSize:16, marginTop:-2 }}>·</span>
                 <p style={{ fontSize:13, color:G.text, lineHeight:1.55, margin:0 }}>{b}</p>
               </div>
             ))}
           </div>
         )}
         {dessert.tip && (
-          <div style={{ padding:"10px 14px", backgroundColor:G.goldLight, borderLeft:`3px solid ${G.gold}`, borderRadius:"0 9px 9px 0", marginTop: dessert.benefits?.length ? 12 : 0 }}>
+          <div style={{ padding:"10px 14px", backgroundColor:"#F4F2ED", borderLeft:`3px solid ${G.forest}`, borderRadius:"0 9px 9px 0", marginTop: dessert.benefits?.length ? 12 : 0 }}>
             <p style={{ fontSize:12, color:G.amber, margin:0, lineHeight:1.6 }}>💡 {dessert.tip}</p>
           </div>
         )}
@@ -415,14 +414,14 @@ const JuiceCard = ({ juice, isSaved, onToggleSave, ingChecked, onIngToggle }) =>
           <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 8px" }}>Benefits</p>
           {juice.benefits.map((b, i) => (
             <div key={i} style={{ display:"flex", gap:9, marginBottom:6 }}>
-              <span style={{ color:G.gold, flexShrink:0, fontSize:16, marginTop:-2 }}>·</span>
+              <span style={{ color:G.forest, flexShrink:0, fontSize:16, marginTop:-2 }}>·</span>
               <p style={{ fontSize:13, color:G.text, lineHeight:1.6, margin:0 }}>{b}</p>
             </div>
           ))}
         </div>
       )}
       {juice.tip && (
-        <div style={{ padding:"10px 14px", backgroundColor:G.goldLight, borderLeft:`3px solid ${G.gold}`, borderRadius:"0 9px 9px 0", marginTop:12 }}>
+        <div style={{ padding:"10px 14px", backgroundColor:"#F4F2ED", borderLeft:`3px solid ${G.forest}`, borderRadius:"0 9px 9px 0", marginTop:12 }}>
           <p style={{ fontSize:12, color:G.amber, margin:0, lineHeight:1.6 }}>💡 {juice.tip}</p>
         </div>
       )}
@@ -1048,7 +1047,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                 </div>
               ) : (
                 <div style={{ width:"100%", height:120, flexShrink:0, backgroundColor:`${G.forest}0A`, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  <svg width="52" height="52" viewBox="0 0 52 52" fill="none"><circle cx="26" cy="26" r="26" fill={`${G.forest}12`}/><path d="M16 32c0-5.5 4.5-10 10-10s10 4.5 10 10" stroke={G.forest} strokeWidth="2" strokeLinecap="round"/><circle cx="26" cy="19" r="3" fill={G.forest} opacity="0.4"/><path d="M20 26l3 3 9-9" stroke={G.gold} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.7"/></svg>
+                  <svg width="52" height="52" viewBox="0 0 52 52" fill="none"><circle cx="26" cy="26" r="26" fill={`${G.forest}12`}/><path d="M16 32c0-5.5 4.5-10 10-10s10 4.5 10 10" stroke={G.forest} strokeWidth="2" strokeLinecap="round"/><circle cx="26" cy="19" r="3" fill={G.forest} opacity="0.4"/><path d="M20 26l3 3 9-9" stroke={G.forest} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.7"/></svg>
                 </div>
               )}
               {/* Header */}
@@ -1310,7 +1309,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                   const totalCarbs = mealPlan.reduce((s, m) => s + (m.carbs_g   || 0), 0);
                   const totalFat   = mealPlan.reduce((s, m) => s + (m.fat_g     || 0), 0);
                   return (
-                    <div style={{ backgroundColor:G.goldLight, border:`1px solid ${G.gold}50`, borderRadius:14, padding:"14px 16px", marginBottom:16 }}>
+                    <div style={{ backgroundColor:"#F4F2ED", border:`1px solid ${G.border}`, borderRadius:14, padding:"14px 16px", marginBottom:16 }}>
                       <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:12 }}>
                         <span style={{ fontFamily:serif, fontSize:14, fontWeight:600, color:G.forest }}>Daily total</span>
                         <span style={{ fontSize:10, color:G.muted, fontFamily:sans }}>{mealPlan.length} meals</span>
@@ -1410,7 +1409,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                               </div>
                             )}
                             {meal.tip && (
-                              <div style={{ padding:"10px 14px", backgroundColor:G.goldLight, borderLeft:`3px solid ${G.gold}`, borderRadius:"0 9px 9px 0", marginBottom:12 }}>
+                              <div style={{ padding:"10px 14px", backgroundColor:"#F4F2ED", borderLeft:`3px solid ${G.forest}`, borderRadius:"0 9px 9px 0", marginBottom:12 }}>
                                 <p style={{ fontSize:12, color:G.amber, margin:0, lineHeight:1.55 }}>💡 {meal.tip}</p>
                               </div>
                             )}
@@ -1493,7 +1492,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                   const avgCarbs = days.length > 0 ? Math.round(totalCarbs / days.length) : 0;
                   const avgFat   = days.length > 0 ? Math.round(totalFat   / days.length) : 0;
                   return (
-                    <div style={{ backgroundColor:G.goldLight, border:`1px solid ${G.gold}50`, borderRadius:14, padding:"14px 16px", marginTop:16, marginBottom:4 }}>
+                    <div style={{ backgroundColor:"#F4F2ED", border:`1px solid ${G.border}`, borderRadius:14, padding:"14px 16px", marginTop:16, marginBottom:4 }}>
                       <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:12 }}>
                         <span style={{ fontFamily:serif, fontSize:14, fontWeight:600, color:G.forest }}>Daily average</span>
                         <span style={{ fontSize:10, color:G.muted, fontFamily:sans }}>{days.length} days</span>
@@ -1629,7 +1628,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                 <p style={{ fontSize:11, fontWeight:700, color:G.sage, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 10px" }}>Ingredients</p>
                 <IngList ingredients={smoothie.ingredients||[]} checked={smoothieIngChk} onToggle={i => setSmoothieIngChk(p => ({ ...p, [i]:!p[i] }))} accentColor={G.forest}/>
                 {smoothie.method && <div style={{ marginTop:12, padding:"10px 13px", backgroundColor:`${G.forest}0C`, borderRadius:10 }}><p style={{ fontSize:13, color:G.forest, margin:0, lineHeight:1.55 }}>{smoothie.method}</p></div>}
-                {smoothie.tip && <div style={{ marginTop:10, padding:"9px 13px", backgroundColor:G.goldLight, borderLeft:`3px solid ${G.gold}`, borderRadius:"0 9px 9px 0" }}><p style={{ fontSize:12, color:G.amber, margin:0, lineHeight:1.55 }}>💡 {smoothie.tip}</p></div>}
+                {smoothie.tip && <div style={{ marginTop:10, padding:"9px 13px", backgroundColor:"#F4F2ED", borderLeft:`3px solid ${G.forest}`, borderRadius:"0 9px 9px 0" }}><p style={{ fontSize:12, color:G.amber, margin:0, lineHeight:1.55 }}>💡 {smoothie.tip}</p></div>}
                 <div style={{ display:"flex", gap:8, marginTop:14 }}>
                   <button onClick={() => { if (!smoothieLogged) { addToLog({ name:smoothie.name, calories:smoothie.calories, protein_g:smoothie.protein_g, carbs_g:smoothie.carbs_g||0, fat_g:smoothie.fat_g||0, fiber_g:0, notes:"Smoothie" }); setSmoothieLogged(true); } }} style={{ flex:2, padding:"11px", backgroundColor: smoothieLogged ? `${G.forest}15` : G.forest, color: smoothieLogged ? G.forest : G.ivory, border:"none", borderRadius:11, fontSize:13, fontWeight:600, cursor: smoothieLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
                     {smoothieLogged ? <><CheckIcon size={12} color={G.forest}/>Logged</> : "Log this"}
@@ -1696,8 +1695,8 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
 
             {savedJuiceObjects.length > 0 && (
               <div style={{ marginBottom:22 }}>
-                <p style={{ fontSize:11, fontWeight:700, color:G.gold, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px", display:"flex", alignItems:"center", gap:5 }}>
-                  <svg width="12" height="12" viewBox="0 0 18 18" fill={G.gold} stroke={G.gold} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2h12a1 1 0 0 1 1 1v14l-7-3.5L2 17V3a1 1 0 0 1 1-1z"/></svg>
+                <p style={{ fontSize:11, fontWeight:700, color:G.forest, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px", display:"flex", alignItems:"center", gap:5 }}>
+                  <svg width="12" height="12" viewBox="0 0 18 18" fill={G.forest} stroke={G.forest} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2h12a1 1 0 0 1 1 1v14l-7-3.5L2 17V3a1 1 0 0 1 1-1z"/></svg>
                   Saved
                 </p>
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
@@ -1769,8 +1768,8 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
               {/* Saved desserts */}
               {savedDessertObjects.length > 0 && (
                 <div style={{ marginBottom:20 }}>
-                  <p style={{ fontSize:11, fontWeight:700, color:G.gold, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px", display:"flex", alignItems:"center", gap:5 }}>
-                    <svg width="12" height="12" viewBox="0 0 18 18" fill={G.gold} stroke={G.gold} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2h12a1 1 0 0 1 1 1v14l-7-3.5L2 17V3a1 1 0 0 1 1-1z"/></svg>
+                  <p style={{ fontSize:11, fontWeight:700, color:G.forest, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px", display:"flex", alignItems:"center", gap:5 }}>
+                    <svg width="12" height="12" viewBox="0 0 18 18" fill={G.forest} stroke={G.forest} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2h12a1 1 0 0 1 1 1v14l-7-3.5L2 17V3a1 1 0 0 1 1-1z"/></svg>
                     Saved
                   </p>
                   <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
@@ -1852,7 +1851,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                         {(dessert.ingredients||[]).length > 0 && (
                           <div style={{ marginBottom:12 }}>
                             <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 8px" }}>Ingredients</p>
-                            <IngList ingredients={dessert.ingredients} checked={dessertIngChk} onToggle={i => setDessertIngChk(p => ({ ...p, [i]:!p[i] }))} accentColor={G.gold}/>
+                            <IngList ingredients={dessert.ingredients} checked={dessertIngChk} onToggle={i => setDessertIngChk(p => ({ ...p, [i]:!p[i] }))} accentColor={G.forest}/>
                           </div>
                         )}
                         {(dessert.steps||[]).length > 0 && (
@@ -1860,13 +1859,13 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                             <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 8px" }}>Instructions</p>
                             {dessert.steps.map((step, i) => (
                               <div key={i} style={{ display:"flex", gap:10, marginBottom:8 }}>
-                                <div style={{ width:20, height:20, borderRadius:"50%", flexShrink:0, backgroundColor:G.gold, color:G.ivory, fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{i+1}</div>
+                                <div style={{ width:20, height:20, borderRadius:"50%", flexShrink:0, backgroundColor:G.forest, color:G.ivory, fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{i+1}</div>
                                 <p style={{ fontSize:13, color:G.text, lineHeight:1.6, margin:0, paddingTop:1 }}>{step}</p>
                               </div>
                             ))}
                           </div>
                         )}
-                        {dessert.tip && <div style={{ padding:"9px 13px", backgroundColor:G.goldLight, borderLeft:`3px solid ${G.gold}`, borderRadius:"0 9px 9px 0", marginBottom:12 }}><p style={{ fontSize:12, color:G.amber, margin:0 }}>💡 {dessert.tip}</p></div>}
+                        {dessert.tip && <div style={{ padding:"9px 13px", backgroundColor:"#F4F2ED", borderLeft:`3px solid ${G.forest}`, borderRadius:"0 9px 9px 0", marginBottom:12 }}><p style={{ fontSize:12, color:G.amber, margin:0 }}>💡 {dessert.tip}</p></div>}
                         <div style={{ display:"flex", gap:8 }}>
                           <button onClick={() => { if (!dessertLogged) { addToLog({ name:dessert.name, calories:dessert.calories, protein_g:dessert.protein_g||0, carbs_g:dessert.carbs_g||0, fat_g:dessert.fat_g||0, fiber_g:dessert.fiber_g||0, notes:"AI Dessert" }); setDessertLogged(true); } }} style={{ flex:2, padding:"11px", backgroundColor: dessertLogged ? `${G.forest}15` : G.forest, color: dessertLogged ? G.forest : G.ivory, border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor: dessertLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
                             {dessertLogged ? <><CheckIcon size={12} color={G.forest}/>Logged</> : "Log this"}
@@ -2039,7 +2038,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                                     <p style={{ fontSize:10, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 8px" }}>Instructions</p>
                                     {d.steps.map((step, i) => (
                                       <div key={i} style={{ display:"flex", gap:10, marginBottom:8 }}>
-                                        <span style={{ fontSize:11, fontWeight:700, color:G.gold, minWidth:16, flexShrink:0 }}>{i+1}.</span>
+                                        <span style={{ fontSize:11, fontWeight:700, color:G.forest, minWidth:16, flexShrink:0 }}>{i+1}.</span>
                                         <p style={{ fontSize:13, color:G.text, lineHeight:1.6, margin:0 }}>{step}</p>
                                       </div>
                                     ))}
