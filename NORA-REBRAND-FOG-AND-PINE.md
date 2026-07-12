@@ -83,6 +83,10 @@ Regulă hard: raportul vizual pe orice ecran ≈ 70% ivory, 25% verde, 5% auriu 
 
 **Pas 4 — Login atmosferic.** Ecranul de login/register cu fotografia de pădure (sau placeholder gradient) + overlay + wordmark. → commit `rebrand: atmospheric login`
 
+- **Tratament "frosted glass":** fotografia de pădure ocupă tot ecranul de login; formularul stă pe o suprafață de sticlă mată semi-transparentă (`backdrop-filter: blur(...)` + fundal alb/ivory la opacitate mică), efect gen lock screen de iPhone — nu card opac clasic peste imagine.
+- Headerul superior al aplicației (banda de sus, dacă are fotografie de fundal conform brief-ului) primește același tratament, dar blur mai subtil.
+- Zonele de conținut (taburi, carduri) rămân pe ivory solid, fără blur — frosted glass e exclusiv pentru login și eventual header.
+
 **Pas 5 — Trecere prin taburi.** Tab cu tab (My Day → Eat → Move → Ritual → Boost → Ask Nora → Me): aliniază la noile tokens, mărește spațierea, verifică contrastul. Un commit per tab sau per 2 taburi. → commit-uri `rebrand: <tab> aligned to Fog & Pine`
 
 - Verifică și ordinea taburilor din bara de navigare: **My Day, Eat, Move, Ritual, Boost, Ask Nora, Me** (Journey rămâne ascuns/înghețat, nu apare în bară).
