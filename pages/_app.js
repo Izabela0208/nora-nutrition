@@ -44,12 +44,9 @@ function PasswordGate({ onAuth }) {
     <div style={{ minHeight: "100vh", backgroundColor: IVORY, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", fontFamily: SANS }}>
       <div style={{ width: "100%", maxWidth: 360 }}>
 
-        {/* Monogram */}
+        {/* Wordmark */}
         <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <div style={{ width: 64, height: 64, borderRadius: "50%", backgroundColor: GREEN, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 20, boxShadow: "0 4px 24px rgba(45,74,62,0.18)" }}>
-            <span style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 700, color: IVORY, lineHeight: 1, letterSpacing: "-0.02em" }}>N</span>
-          </div>
-          <p style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 700, color: GREEN, margin: "0 0 6px", letterSpacing: "-0.02em", lineHeight: 1 }}>Nora</p>
+          <p style={{ fontFamily: SERIF, fontSize: 32, fontWeight: 600, color: GREEN, margin: "0 0 10px", letterSpacing: "0.02em", lineHeight: 1 }}>nora</p>
           <p style={{ fontSize: 12, color: MUTED, margin: 0, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 500 }}>Private Access</p>
         </div>
 
