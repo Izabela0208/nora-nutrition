@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { C, card, serif, sans, inp, localDateStr } from "../noraTokens";
-import { NoraAvatar, BotanicalBranch, LeafDecor, DropIcon, CheckIcon, SparkleIcon, CameraIcon, EditIcon } from "../NoraIcons";
+import { BotanicalBranch, LeafDecor, DropIcon, CheckIcon, SparkleIcon, CameraIcon, EditIcon } from "../NoraIcons";
 
 const callClaude = async (sys, user, maxTokens=800) => {
   const res = await fetch("/api/chat", {
@@ -464,18 +464,15 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
     <div style={{padding:"16px 16px 100px",display:"flex",flexDirection:"column",gap:12}}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes dotPulse{0%,80%,100%{opacity:0.3;transform:scale(0.8)}40%{opacity:1;transform:scale(1)}}@keyframes scanLine{0%,100%{top:0}50%{top:calc(100% - 2px)}}`}</style>
 
-      {/* Greeting card */}
-      <div style={{position:"relative",borderRadius:18,overflow:"hidden",backgroundColor:"#1B3A2D",boxShadow:"0 4px 20px rgba(27,58,45,0.20)",padding:"20px 20px 22px"}}>
+      {/* Greeting card — Nora message identity: pine card, no avatar */}
+      <div style={{position:"relative",borderRadius:18,overflow:"hidden",backgroundColor:C.green,boxShadow:"0 4px 20px rgba(31,46,38,0.20)",padding:"20px 20px 22px"}}>
         <div style={{position:"absolute",right:-12,top:-10,opacity:0.09,pointerEvents:"none"}}><BotanicalBranch width={100} opacity={1} flip={true}/></div>
-        <div style={{position:"relative",display:"flex",gap:14,alignItems:"flex-start"}}>
-          <NoraAvatar size={36}/>
-          <div style={{flex:1}}>
-            <p style={{fontSize:9,fontWeight:700,color:"rgba(201,168,110,0.65)",textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 6px"}}>{h<12?"Morning":h<17?"Afternoon":"Evening"} · {profile?.name}</p>
-            {greetingLoad
-              ? <div style={{display:"flex",gap:5,paddingTop:2}}>{[0,1,2].map(j=><span key={j} style={{width:5,height:5,borderRadius:"50%",backgroundColor:"rgba(245,240,232,0.4)",display:"inline-block",animation:`dotPulse 1.2s ease ${j*0.2}s infinite`}}/>)}</div>
-              : <p style={{fontFamily:serif,fontSize:15,fontWeight:500,color:"#FAF7F2",lineHeight:1.65,margin:0,fontStyle:"italic"}}>{greeting||`Good ${h<12?"morning":h<17?"afternoon":"evening"}, ${profile?.name}.`}</p>
-            }
-          </div>
+        <div style={{position:"relative"}}>
+          <p style={{fontSize:9,fontWeight:700,color:"rgba(168,178,169,0.85)",textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 6px"}}>{h<12?"Morning":h<17?"Afternoon":"Evening"} · {profile?.name}</p>
+          {greetingLoad
+            ? <div style={{display:"flex",gap:5,paddingTop:2}}>{[0,1,2].map(j=><span key={j} style={{width:5,height:5,borderRadius:"50%",backgroundColor:"rgba(244,242,237,0.4)",display:"inline-block",animation:`dotPulse 1.2s ease ${j*0.2}s infinite`}}/>)}</div>
+            : <p style={{fontFamily:serif,fontSize:15,fontWeight:500,color:C.ivory,lineHeight:1.65,margin:0,fontStyle:"italic"}}>{greeting||`Good ${h<12?"morning":h<17?"afternoon":"evening"}, ${profile?.name}.`}</p>
+          }
         </div>
       </div>
 
@@ -572,7 +569,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                       </div>
                     </button>
                     <button onClick={()=>{setShowCameraMenu(false);plateFileRef.current?.click();}} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"13px 16px",background:"none",border:"none",cursor:"pointer",textAlign:"left"}}>
-                      <div style={{width:34,height:34,borderRadius:9,backgroundColor:`${C.gold}18`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                      <div style={{width:34,height:34,borderRadius:9,backgroundColor:`${C.green}12`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                         <CameraIcon size={17} color={C.amber}/>
                       </div>
                       <div>
@@ -603,7 +600,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
           <input type="file" accept="image/*" ref={fileRef} style={{display:"none"}} onChange={e=>{if(e.target.files?.[0]){setImageFile(e.target.files[0]);setPhotoMode(true);}}}/>
           <input type="file" accept="image/*" ref={plateFileRef} style={{display:"none"}} onChange={e=>{if(e.target.files?.[0])handlePlatePhoto(e.target.files[0]);}}/>
           {photoMode&&imageFile&&(
-            <div style={{display:"flex",gap:8,alignItems:"center",padding:"10px 12px",backgroundColor:C.goldLight,borderRadius:10,border:`1px solid ${C.gold}30`}}>
+            <div style={{display:"flex",gap:8,alignItems:"center",padding:"10px 12px",backgroundColor:C.card,borderRadius:10,border:`1px solid ${C.border}`}}>
               <span style={{fontSize:13,color:C.amber,fontWeight:500,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{imageFile.name}</span>
               <button onClick={handleLogImage} disabled={logLoading} style={{padding:"8px 14px",backgroundColor:logLoading?"#C8D5D1":C.green,color:C.bg,border:"none",borderRadius:8,fontSize:12,fontWeight:500,cursor:logLoading?"not-allowed":"pointer"}}>{logLoading?"Analysing…":"Analyse"}</button>
               <button onClick={()=>{setImageFile(null);setPhotoMode(false);}} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:18}}>×</button>
@@ -713,27 +710,18 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
           </div>
         )}
 
-        {/* Nora's daily insight — always last */}
+        {/* Nora's daily insight — always last — Nora message identity: pine card, no avatar */}
         {eveningSummaryLoad&&(
-          <div style={{...card,padding:"18px 20px",background:`linear-gradient(160deg,${C.card} 60%,#FBF4E8 100%)`,boxShadow:"0 4px 24px rgba(201,169,110,0.10)",borderLeft:`2px solid ${C.muted}`}}>
-            <div style={{display:"flex",gap:12,alignItems:"center"}}>
-              <NoraAvatar size={28}/>
-              <div style={{display:"flex",gap:5}}>
-                {[0,1,2].map(j=><div key={j} style={{width:6,height:6,borderRadius:"50%",backgroundColor:C.gold,opacity:0.5,animation:`dotPulse 1.2s ease ${j*0.2}s infinite`}}/>)}
-              </div>
+          <div style={{...card,padding:"20px 22px",backgroundColor:C.green,border:"none",boxShadow:"0 4px 20px rgba(31,46,38,0.20)"}}>
+            <div style={{display:"flex",gap:5}}>
+              {[0,1,2].map(j=><div key={j} style={{width:6,height:6,borderRadius:"50%",backgroundColor:"rgba(244,242,237,0.5)",animation:`dotPulse 1.2s ease ${j*0.2}s infinite`}}/>)}
             </div>
           </div>
         )}
         {eveningSummary&&(
-          <div style={{...card,padding:"20px 22px",animation:"fadeIn 0.4s ease",background:`linear-gradient(160deg,${C.card} 60%,#FBF4E8 100%)`,boxShadow:"0 4px 24px rgba(201,169,110,0.10),0 2px 8px rgba(28,43,38,0.05)",borderLeft:`2px solid ${C.muted}`}}>
-            <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12}}>
-              <NoraAvatar size={34}/>
-              <div>
-                <p style={{fontFamily:serif,fontSize:13,fontWeight:600,color:C.gold,margin:0,letterSpacing:"0.01em"}}>Nora</p>
-                <p style={{fontSize:10,color:C.muted,margin:0,letterSpacing:"0.03em"}}>{timeOfDay==="morning"?"Morning Insight":timeOfDay==="afternoon"?"Afternoon Check-in":"Evening Reflection"}</p>
-              </div>
-            </div>
-            <p style={{fontFamily:serif,fontSize:15,fontWeight:500,color:C.text,lineHeight:1.75,margin:0,fontStyle:"italic"}}>{eveningSummary}</p>
+          <div style={{...card,padding:"20px 22px",animation:"fadeIn 0.4s ease",backgroundColor:C.green,border:"none",boxShadow:"0 4px 20px rgba(31,46,38,0.20)"}}>
+            <p style={{fontSize:9,fontWeight:700,color:"rgba(168,178,169,0.85)",textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 10px"}}>{timeOfDay==="morning"?"Morning Insight":timeOfDay==="afternoon"?"Afternoon Check-in":"Evening Reflection"}</p>
+            <p style={{fontFamily:serif,fontSize:15,fontWeight:500,color:C.ivory,lineHeight:1.75,margin:0,fontStyle:"italic"}}>{eveningSummary}</p>
           </div>
         )}
 
