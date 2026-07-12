@@ -329,13 +329,13 @@ function FormattedText({ text }) {
               const numMatch = line.match(/^(\d+)\.\s(.+)/);
               if (numMatch) return (
                 <div key={li} style={{ display:"flex", gap:6, marginBottom:3 }}>
-                  <span style={{ color:C.gold, fontWeight:700, minWidth:16, flexShrink:0 }}>{numMatch[1]}.</span>
+                  <span style={{ color:C.green, fontWeight:700, minWidth:16, flexShrink:0 }}>{numMatch[1]}.</span>
                   <span><Inline text={numMatch[2]}/></span>
                 </div>
               );
               if (/^[-•]\s/.test(line)) return (
                 <div key={li} style={{ display:"flex", gap:7, marginBottom:3 }}>
-                  <span style={{ color:C.gold, flexShrink:0 }}>·</span>
+                  <span style={{ color:C.green, flexShrink:0 }}>·</span>
                   <span><Inline text={line.replace(/^[-•]\s/,"")}/></span>
                 </div>
               );

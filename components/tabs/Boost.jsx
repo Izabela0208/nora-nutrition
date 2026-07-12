@@ -378,7 +378,7 @@ function StudyCitations({ studies }) {
           <p style={{ fontSize:11, color:C.text, margin:"0 0 2px", lineHeight:1.45, fontFamily:sans }}>{s.title}</p>
           <p style={{ fontSize:10, color:C.muted, margin:0, fontFamily:sans }}>
             {[s.authors,s.journal,s.year].filter(Boolean).join(" · ")}
-            {s.url && <span style={{ color:C.gold, marginLeft:6, fontWeight:500 }}>↗ Read on PubMed</span>}
+            {s.url && <span style={{ color:C.green, marginLeft:6, fontWeight:500 }}>↗ Read on PubMed</span>}
           </p>
         </a>
       ))}
@@ -433,7 +433,7 @@ function DefCard({ def, studies }) {
 function FoodAltCard({ alt }) {
   return (
     <div style={{ backgroundColor:C.bg, borderRadius:12, padding:"13px 14px", marginBottom:8, border:`1px solid ${C.border}`, borderLeft:`3px solid ${C.muted}` }}>
-      <p style={{ fontSize:10, fontWeight:700, color:C.gold, textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 6px", fontFamily:sans }}>Instead of {alt.for}</p>
+      <p style={{ fontSize:10, fontWeight:700, color:C.green, textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 6px", fontFamily:sans }}>Instead of {alt.for}</p>
       <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
         <span style={{ fontSize:20, flexShrink:0, lineHeight:1.3, marginTop:1 }}>{alt.emoji || "🥗"}</span>
         <div style={{ flex:1 }}>

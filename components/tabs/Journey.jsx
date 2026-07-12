@@ -123,7 +123,7 @@ export default function Journey({ profile, targets, entries, waterMl, cyclePhase
             {streak >= 14 ? "🏆" : streak >= 7 ? "🔥" : streak >= 3 ? "⚡" : "🌱"}
           </div>
         </div>
-        <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.65, margin: 0, fontStyle: "italic", borderLeft: `3px solid ${C.gold}`, paddingLeft: 12 }}>
+        <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.65, margin: 0, fontStyle: "italic", borderLeft: `3px solid ${C.green}`, paddingLeft: 12 }}>
           "{motivMsg}"
         </p>
       </div>
