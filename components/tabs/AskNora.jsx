@@ -319,7 +319,7 @@ RESPONSE STYLE:
 function FormattedText({ text }) {
   const paragraphs = text.split(/\n\n+/);
   return (
-    <div style={{ fontFamily: sans }}>
+    <div style={{ fontFamily: serif, fontStyle: "italic", fontWeight: 500 }}>
       {paragraphs.map((para, pi) => {
         const lines = para.split("\n");
         return (
