@@ -220,16 +220,6 @@ const DAILY_SCORES = getDailyScores();
 const scoreColor = s => s >= 80 ? "#00C896" : s >= 65 ? "#27AE82" : s >= 50 ? "#F59E0B" : "#EF5350";
 const scoreLabel = s => s >= 80 ? "Optimal" : s >= 65 ? "Good" : s >= 50 ? "Fair" : "Needs work";
 
-const SCORE_CATS = [
-  { id:"sleep",     emoji:"\uD83D\uDE34", label:"Sleep"     },
-  { id:"hydration", emoji:"\uD83D\uDCA7", label:"Hydration" },
-  { id:"movement",  emoji:"\uD83D\uDCAA", label:"Movement"  },
-  { id:"nutrition", emoji:"\uD83E\uDD57", label:"Nutrition" },
-  { id:"breathwork",emoji:"\uD83C\uDF2C\uFE0F", label:"Breathwork"},
-  { id:"cold",      emoji:"\u2744\uFE0F",  label:"Cold"      },
-  { id:"sauna",     emoji:"\uD83D\uDD25", label:"Sauna"     },
-];
-
 const FOCUS_CAT_MAP = {
   "sleep optimization":"sleep","afternoon energy":"movement","evening wind-down":"sleep",
   "workout recovery":"movement","stress management":"breathwork","gut health":"nutrition",
@@ -318,26 +308,6 @@ function CategoryIcon({ id, size=22, color="#1F2E26" }) {
     case "longevity":   return <svg {...s}><path d="M9 3Q12 6 9 9Q6 12 9 15Q12 18 9 21" {...p} strokeWidth="1.2"/><path d="M15 3Q12 6 15 9Q18 12 15 15Q12 18 15 21" {...p} strokeWidth="1.2"/><line x1="9" y1="6" x2="15" y2="6" {...p} strokeWidth="0.9"/><line x1="9" y1="12" x2="15" y2="12" {...p} strokeWidth="0.9"/><line x1="9" y1="18" x2="15" y2="18" {...p} strokeWidth="0.9"/></svg>;
     default: return null;
   }
-}
-
-// ─── CIRCULAR SCORE ──────────────────────────────────────────────────────────
-function CircularScore({ score, size=110 }) {
-  const r = 46, circ = 2 * Math.PI * r;
-  const offset = circ * (1 - Math.min(score, 100) / 100);
-  const col = scoreColor(score);
-  const scale = size / 110;
-  return (
-    <div style={{ position:"relative", width:size, height:size, flexShrink:0 }}>
-      <svg width={size} height={size} viewBox="0 0 110 110" style={{ position:"absolute", transform:"rotate(-90deg)" }}>
-        <circle cx="55" cy="55" r={r} fill="none" stroke={`${C.border}`} strokeWidth="7"/>
-        <circle cx="55" cy="55" r={r} fill="none" stroke={col} strokeWidth="7" strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}/>
-      </svg>
-      <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
-        <span style={{ fontFamily:serif, fontSize:Math.round(30*scale), fontWeight:700, color:C.text, lineHeight:1 }}>{score}</span>
-        <span style={{ fontSize:Math.round(9*scale), color:C.muted, fontFamily:sans, marginTop:1 }}>/ 100</span>
-      </div>
-    </div>
-  );
 }
 
 // ─── SECTION LABEL ───────────────────────────────────────────────────────────
@@ -1267,10 +1237,6 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
   const focusKey   = FOCUS_CAT_MAP[todayDailyCat] || "sleep";
   const focusMeta  = FOCUS_META[focusKey];
   const focusScore = DAILY_SCORES[focusKey] || 70;
-  const overall    = Math.round(
-    DAILY_SCORES.sleep*0.25 + DAILY_SCORES.hydration*0.15 + DAILY_SCORES.movement*0.20 +
-    DAILY_SCORES.nutrition*0.20 + DAILY_SCORES.breathwork*0.10 + DAILY_SCORES.cold*0.05 + DAILY_SCORES.sauna*0.05
-  );
 
   // Journey: history + sun
   useEffect(() => {
@@ -1410,13 +1376,8 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
     return streak;
   };
 
-  // Journey: weekly chart
-  const days = [];
-  for(let i=6; i>=0; i--){ const d=new Date(); d.setDate(d.getDate()-i); const key=localDateStr(d); const isToday=i===0; const dayData=history[key]||null; const calories=isToday?entries.filter(e=>e.type==="food").reduce((s,e)=>s+(e.calories||0),0):(dayData?.calories||0); const label=isToday?"Today":["Su","Mo","Tu","We","Th","Fr","Sa"][d.getDay()]; days.push({key,label,calories,hasData:isToday?entries.length>0:!!dayData}); }
   let journeyStreak=0; const todayKey=localDateStr();
   for(let i=0;i<60;i++){ const d=new Date(); d.setDate(d.getDate()-i); const key=localDateStr(d); const hasData=key===todayKey?entries.length>0:!!history[key]; if(hasData)journeyStreak++; else break; }
-  const target=targets?.calories||2000;
-  const maxCal=Math.max(...days.map(d=>d.calories),target,100);
   const motivMsg=MOTIVATIONAL[dayOfYear%MOTIVATIONAL.length];
 
   return (
@@ -1502,36 +1463,6 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
         <p style={{ fontSize:12, color:"rgba(253,250,245,0.7)", lineHeight:1.7, margin:"0 0 12px", fontFamily:sans }}>{focusMeta.insight}</p>
         <div style={{ height:3, backgroundColor:"rgba(255,255,255,0.12)", borderRadius:2 }}>
           <div style={{ height:3, width:`${focusScore}%`, background:`linear-gradient(90deg,${C.gold},#E2C07A)`, borderRadius:2 }}/>
-        </div>
-      </div>
-
-      {/* Biohacking Score + Category Scores */}
-      <div style={{ ...card, padding:"16px 18px" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:14 }}>
-          <CircularScore score={overall} size={88}/>
-          <div style={{ flex:1 }}>
-            <p style={{ fontFamily:serif, fontSize:18, fontWeight:700, color:C.text, margin:"0 0 3px", lineHeight:1 }}>{scoreLabel(overall)}</p>
-            <p style={{ fontSize:11, color:C.muted, margin:"0 0 8px", lineHeight:1.5, fontFamily:sans }}>Overall biohacking score across all categories.</p>
-            <div style={{ display:"inline-flex", alignItems:"center", gap:5, backgroundColor:`${scoreColor(overall)}18`, borderRadius:20, padding:"4px 10px" }}>
-              <div style={{ width:6, height:6, borderRadius:"50%", backgroundColor:scoreColor(overall) }}/>
-              <span style={{ fontSize:11, fontWeight:600, color:scoreColor(overall), fontFamily:sans }}>{overall} / 100</span>
-            </div>
-          </div>
-        </div>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:6 }}>
-          {SCORE_CATS.map(cat => {
-            const s = DAILY_SCORES[cat.id]||60;
-            return (
-              <div key={cat.id} style={{ backgroundColor:C.bg, borderRadius:10, padding:"8px 7px", textAlign:"center" }}>
-                <span style={{ fontSize:14 }}>{cat.emoji}</span>
-                <p style={{ fontFamily:serif, fontSize:14, fontWeight:700, color:C.text, margin:"3px 0 1px", lineHeight:1 }}>{s}</p>
-                <p style={{ fontSize:8, color:C.muted, margin:0, fontFamily:sans, textTransform:"uppercase", letterSpacing:"0.03em" }}>{cat.label}</p>
-                <div style={{ height:2, backgroundColor:C.track, borderRadius:1, marginTop:4 }}>
-                  <div style={{ height:2, width:`${s}%`, backgroundColor:scoreColor(s), borderRadius:1 }}/>
-                </div>
-              </div>
-            );
-          })}
         </div>
       </div>
 
@@ -1752,38 +1683,6 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
           </div>
         </div>
         <p style={{ fontSize:13, color:C.muted, lineHeight:1.65, margin:0, fontStyle:"italic", borderLeft:`3px solid ${C.green}`, paddingLeft:12 }}>"{motivMsg}"</p>
-      </div>
-
-      {/* Weekly chart */}
-      <div style={{ ...card, padding:"18px 20px 20px" }}>
-        <p style={{ fontSize:11, color:C.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 16px", fontWeight:600 }}>Weekly Energy</p>
-        <div style={{ display:"flex", alignItems:"flex-end", gap:5, height:100 }}>
-          {days.map(day => {
-            const barH = day.calories>0?Math.max((day.calories/maxCal)*84,6):0;
-            const pct = day.calories/target;
-            const barColor = !day.hasData?C.track:pct>1.12?C.error:pct>0.88?C.green:C.sage;
-            const isToday = day.label==="Today";
-            return (
-              <div key={day.key} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-                <span style={{ fontSize:9, color:C.muted, fontWeight:500, height:12, lineHeight:"12px" }}>{day.calories>0?`${Math.round(day.calories/100)/10}k`:""}</span>
-                <div style={{ width:"100%", height:84, display:"flex", alignItems:"flex-end" }}>
-                  <div style={{ width:"100%", height:barH||3, backgroundColor:barColor, borderRadius:"4px 4px 0 0", opacity:day.hasData?1:0.3, transition:"height 0.5s ease" }}/>
-                </div>
-                <span style={{ fontSize:10, color:isToday?C.green:C.muted, fontWeight:isToday?700:400 }}>{day.label}</span>
-              </div>
-            );
-          })}
-        </div>
-        <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:12 }}>
-          <div style={{ flex:1, borderTop:`1px dashed ${C.border}` }}/><span style={{ fontSize:10, color:C.muted, whiteSpace:"nowrap" }}>Target {target} kcal</span><div style={{ flex:1, borderTop:`1px dashed ${C.border}` }}/>
-        </div>
-        <div style={{ display:"flex", gap:12, marginTop:10, justifyContent:"center" }}>
-          {[{color:C.green,label:"On target"},{color:C.sage,label:"Under"},{color:C.error,label:"Over"}].map(l => (
-            <div key={l.label} style={{ display:"flex", alignItems:"center", gap:4 }}>
-              <div style={{ width:8, height:8, borderRadius:2, backgroundColor:l.color }}/><span style={{ fontSize:10, color:C.muted }}>{l.label}</span>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Female: cycle phase */}
