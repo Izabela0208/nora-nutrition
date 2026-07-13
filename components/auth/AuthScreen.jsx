@@ -64,12 +64,12 @@ export default function AuthScreen() {
         sizes="100vw"
         style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: isNarrow ? "50% 30%" : "50% 75%", zIndex: 0, filter: "contrast(1.12)" }}
       />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(31,46,38,0.88) 0%, rgba(31,46,38,0.72) 40%, rgba(31,46,38,0.55) 100%)", zIndex: 1 }} />
-      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 45% at 50% 58%, rgba(244,242,237,0.14) 0%, rgba(244,242,237,0) 70%)", zIndex: 1, pointerEvents: "none" }} />
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(20,30,25,0.52) 0%, rgba(20,30,25,0.38) 35%, rgba(20,30,25,0.30) 100%)", zIndex: 1 }} />
+      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 45% at 50% 58%, rgba(244,242,237,0.08) 0%, rgba(244,242,237,0) 70%)", zIndex: 1, pointerEvents: "none" }} />
 
       <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <h1 style={{ fontFamily: serif, fontSize: 46, fontWeight: 600, color: C.ivory, letterSpacing: "0.02em", margin: "0 0 8px", lineHeight: 1, textShadow: "0 1px 4px rgba(13,20,16,0.35)" }}>nora</h1>
-        <p style={{ fontFamily: sans, fontSize: 11, color: C.ivory, opacity: 0.85, letterSpacing: "0.07em", margin: "0 0 40px", textAlign: "center", textShadow: "0 1px 3px rgba(13,20,16,0.3)" }}>
+        <h1 style={{ fontFamily: serif, fontSize: 46, fontWeight: 600, color: C.ivory, letterSpacing: "0.02em", margin: "0 0 8px", lineHeight: 1, textShadow: "0 2px 10px rgba(10,16,13,0.75), 0 1px 3px rgba(10,16,13,0.9)" }}>nora</h1>
+        <p style={{ fontFamily: sans, fontSize: 11, color: C.ivory, opacity: 0.9, letterSpacing: "0.07em", margin: "0 0 40px", textAlign: "center", textShadow: "0 2px 8px rgba(10,16,13,0.75), 0 1px 3px rgba(10,16,13,0.9)" }}>
           a quieter way to take care
         </p>
 
