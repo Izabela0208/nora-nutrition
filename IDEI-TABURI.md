@@ -27,11 +27,11 @@ Principiu general pentru orice ordine nedecisă: **acțiunea zilnică sus, bibli
 **Ce există azi în cod (`Ritual.jsx`), neacoperit de documentul de mai sus:**
 - Butoane utilitare sus de tot: "Library" (catalog complet) și "Saved" (bookmark-uri) — nu apar deloc în ordinea documentată.
 - Secțiunea "Active Challenges" (challenge-uri pornite, cu check-in zilnic) — vine imediat după challenge-ul zilei, înaintea Circadian Rhythm.
-- Secțiune de tip Journey (streak săptămânal + grafic) — trăiește încă în `Ritual.jsx`, sub Circadian Rhythm.
+- Secțiunea "Your Journey" — acum doar cardul "Current Streak" (graficul "Weekly Energy" și scorul "Overall biohacking" au fost șterse pe 13.07, erau decorative, nu calculau din date reale — vezi MICI.md, Weekly Intelligence Report va acoperi retrospectiva săptămânală vizuală în Journey).
 - "Cycle Phase Insights" / "Performance Windows" (personalizare biologică opt-in) — la finalul tabului.
 **De decis:**
 - Active Challenges rămâne imediat sub challenge-ul zilei (e tot acțiune zilnică) — de confirmat.
-- Conținutul Journey din Ritual.jsx: rămâne aici sau se mută complet în tabul Journey când se dezgheață (C1)?
+- Cardul Current Streak din Ritual.jsx: rămâne aici sau se mută complet în tabul Journey când se dezgheață (C1)?
 - Cycle Phase Insights / Performance Windows: sus lângă challenge, sau jos ca extra?
 - Library / Saved: rămân butoane de acces sus, sau se mută la finalul tabului (bibliotecă = jos)?
 

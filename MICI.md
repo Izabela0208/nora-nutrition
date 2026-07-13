@@ -7,6 +7,7 @@
 
 ## Idei prioritare
 - **Onboarding conversațional:** 1-2 ecrane după înregistrare în care Nora se prezintă și explică ce face aplicația (nutrition + rituals + ghidare personalizată) — aici se rezolvă înțelegerea aplicației, nu pe login. De construit odată cu / imediat după capitolul B (vocea).
+- **Weekly Intelligence Report** (Journey, când se dezgheață — C1): va acoperi și nevoia de retrospectivă săptămânală vizuală — fostul Weekly Energy, șters 13.07.
 
 ## Idei post-validare
 - **Login biometric (Face ID/amprentă) prin passkeys/WebAuthn** — suportat nativ de Supabase Auth; telefonul verifică, noi primim doar confirmarea, zero date biometrice stocate la noi. De adăugat când există utilizatori recurenți, ca reducere de fricțiune la login.
