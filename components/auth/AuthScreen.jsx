@@ -62,10 +62,10 @@ export default function AuthScreen() {
         priority
         unoptimized
         sizes="100vw"
-        style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: isNarrow ? "50% 30%" : "50% 75%", zIndex: 0, filter: "contrast(1.12)" }}
+        style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", objectFit: "cover", objectPosition: isNarrow ? "50% 50%" : "50% 75%", zIndex: 0, filter: "contrast(1.12)" }}
       />
-      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(20,30,25,0.52) 0%, rgba(20,30,25,0.38) 35%, rgba(20,30,25,0.30) 100%)", zIndex: 1 }} />
-      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 45% at 50% 58%, rgba(244,242,237,0.08) 0%, rgba(244,242,237,0) 70%)", zIndex: 1, pointerEvents: "none" }} />
+      <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "linear-gradient(180deg, rgba(20,30,25,0.52) 0%, rgba(20,30,25,0.38) 35%, rgba(20,30,25,0.30) 100%)", zIndex: 1 }} />
+      <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "radial-gradient(ellipse 60% 45% at 50% 58%, rgba(244,242,237,0.08) 0%, rgba(244,242,237,0) 70%)", zIndex: 1, pointerEvents: "none" }} />
 
       <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", alignItems: "center" }}>
         <h1 style={{ fontFamily: serif, fontSize: 46, fontWeight: 600, color: C.ivory, letterSpacing: "0.02em", margin: "0 0 8px", lineHeight: 1, textShadow: "0 2px 10px rgba(10,16,13,0.75), 0 1px 3px rgba(10,16,13,0.9)" }}>nora</h1>
@@ -73,7 +73,7 @@ export default function AuthScreen() {
           a quieter way to take care
         </p>
 
-        <div style={{ width: "100%", boxSizing: "border-box", backgroundColor: "rgba(255,240,205,0.28)", backdropFilter: "blur(36px)", WebkitBackdropFilter: "blur(36px)", border: "1px solid rgba(255,246,222,0.4)", borderRadius: 20, boxShadow: "0 8px 40px rgba(13,20,16,0.3)", padding: "32px 28px 28px", textAlign: "center" }}>
+        <div style={{ width: "100%", boxSizing: "border-box", backgroundColor: "rgba(255,232,205,0.28)", backdropFilter: "blur(36px) brightness(1.7) saturate(0.6)", WebkitBackdropFilter: "blur(36px) brightness(1.7) saturate(0.6)", border: "1px solid rgba(255,246,222,0.4)", borderRadius: 20, boxShadow: "0 8px 40px rgba(13,20,16,0.3)", padding: "32px 28px 28px", textAlign: "center" }}>
           <p style={{ color: C.text, fontSize: 13, lineHeight: 1.6, margin: "0 0 24px" }}>
             {isRegister ? "Create your account to begin." : "Welcome back."}
           </p>
