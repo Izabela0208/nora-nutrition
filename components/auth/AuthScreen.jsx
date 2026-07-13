@@ -73,13 +73,13 @@ export default function AuthScreen() {
           a quieter way to take care
         </p>
 
-        <div style={{ width: "100%", boxSizing: "border-box", backgroundColor: "rgba(255,232,205,0.28)", backdropFilter: "blur(36px) brightness(1.7) saturate(0.6)", WebkitBackdropFilter: "blur(36px) brightness(1.7) saturate(0.6)", border: "1px solid rgba(255,246,222,0.4)", borderRadius: 20, boxShadow: "0 8px 40px rgba(13,20,16,0.3)", padding: "32px 28px 28px", textAlign: "center" }}>
-          <p style={{ color: C.text, fontSize: 13, lineHeight: 1.6, margin: "0 0 24px" }}>
+        <div style={{ width: "100%", boxSizing: "border-box", backgroundColor: "rgba(255,255,255,0.10)", backdropFilter: "blur(40px) brightness(1.2)", WebkitBackdropFilter: "blur(40px) brightness(1.2)", border: "1px solid rgba(255,255,255,0.5)", borderRadius: 20, boxShadow: "0 20px 60px rgba(10,16,13,0.35)", padding: "32px 28px 28px", textAlign: "center" }}>
+          <p style={{ color: C.ivory, fontSize: 13, lineHeight: 1.6, margin: "0 0 24px", textShadow: "0 1px 4px rgba(10,16,13,0.6)" }}>
             {isRegister ? "Create your account to begin." : "Welcome back."}
           </p>
 
           <form onSubmit={handleSubmit} style={{ textAlign: "left" }}>
-            <label style={{ display: "block", fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.text, marginBottom: 6 }}>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.ivory, marginBottom: 6, textShadow: "0 1px 3px rgba(10,16,13,0.6)" }}>
               Email
             </label>
             <input
@@ -92,7 +92,7 @@ export default function AuthScreen() {
               required
             />
 
-            <label style={{ display: "block", fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.text, marginBottom: 6 }}>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.ivory, marginBottom: 6, textShadow: "0 1px 3px rgba(10,16,13,0.6)" }}>
               Password
             </label>
             <input
@@ -114,9 +114,9 @@ export default function AuthScreen() {
                   onChange={(e) => setConsent(e.target.checked)}
                   style={{ marginTop: 3, width: 16, height: 16, accentColor: C.green, cursor: "pointer", flexShrink: 0 }}
                 />
-                <span style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>
+                <span style={{ fontSize: 12, color: C.ivory, lineHeight: 1.6, textShadow: "0 1px 3px rgba(10,16,13,0.6)" }}>
                   I agree to the processing of my data as described in the{" "}
-                  <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: C.green, textDecoration: "underline" }}>
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: C.ivory, textDecoration: "underline", fontWeight: 600 }}>
                     Privacy Policy
                   </a>
                   , so Nora can personalise my experience.
@@ -158,7 +158,7 @@ export default function AuthScreen() {
 
           <button
             onClick={() => switchMode(isRegister ? "login" : "register")}
-            style={{ marginTop: 20, background: "none", border: "none", color: C.green, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: sans, textDecoration: "underline", textUnderlineOffset: 3 }}
+            style={{ marginTop: 20, background: "none", border: "none", color: C.ivory, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: sans, textDecoration: "underline", textUnderlineOffset: 3, textShadow: "0 1px 3px rgba(10,16,13,0.6)" }}
           >
             {isRegister ? "Already have an account? Log in" : "New here? Create an account"}
           </button>
