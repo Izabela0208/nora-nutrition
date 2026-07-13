@@ -55,15 +55,17 @@ export default function AuthScreen() {
 
   return (
     <div style={{ position: "relative", minHeight: "100vh", overflow: "hidden", fontFamily: sans, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <Image
-        src={isNarrow ? "/images/atmosphere/fog-1-portrait.jpg" : "/images/atmosphere/fog-1.jpg"}
-        alt=""
-        fill
-        priority
-        unoptimized
-        sizes="100vw"
-        style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", objectFit: "cover", objectPosition: isNarrow ? "50% 50%" : "50% 75%", zIndex: 0, filter: "contrast(1.12)" }}
-      />
+      <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 0 }}>
+        <Image
+          src={isNarrow ? "/images/atmosphere/fog-1-portrait.jpg" : "/images/atmosphere/fog-1.jpg"}
+          alt=""
+          fill
+          priority
+          unoptimized
+          sizes="100vw"
+          style={{ objectFit: "cover", objectPosition: isNarrow ? "50% 50%" : "50% 75%", filter: "contrast(1.12)" }}
+        />
+      </div>
       <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "linear-gradient(180deg, rgba(20,30,25,0.52) 0%, rgba(20,30,25,0.38) 35%, rgba(20,30,25,0.30) 100%)", zIndex: 1 }} />
       <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "radial-gradient(ellipse 60% 45% at 50% 58%, rgba(244,242,237,0.08) 0%, rgba(244,242,237,0) 70%)", zIndex: 1, pointerEvents: "none" }} />
 

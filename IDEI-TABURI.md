@@ -4,6 +4,9 @@
 
 Principiu general pentru orice ordine nedecisă: **acțiunea zilnică sus, biblioteca/arhiva jos.**
 
+## Explorări respinse
+- **Fundal atmosferic la interior** — explorat 13.07, respins: cost de lizibilitate pe textele de fundal + diluează contrastul poartă/luminiș. Atmosfera de pădure rămâne exclusiv pe login (Pas 4); interiorul (My Day și restul) rămâne ivory solid, carduri neschimbate.
+
 ---
 
 ## My Day
