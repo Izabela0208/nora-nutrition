@@ -68,8 +68,8 @@ export default function AuthScreen() {
       <div style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "radial-gradient(ellipse 60% 45% at 50% 58%, rgba(244,242,237,0.08) 0%, rgba(244,242,237,0) 70%)", zIndex: 1, pointerEvents: "none" }} />
 
       <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <h1 style={{ fontFamily: serif, fontSize: 46, fontWeight: 600, color: C.ivory, letterSpacing: "0.02em", margin: "0 0 8px", lineHeight: 1, textShadow: "0 2px 10px rgba(10,16,13,0.75), 0 1px 3px rgba(10,16,13,0.9)" }}>nora</h1>
-        <p style={{ fontFamily: sans, fontSize: 11, color: C.ivory, opacity: 0.9, letterSpacing: "0.07em", margin: "0 0 40px", textAlign: "center", textShadow: "0 2px 8px rgba(10,16,13,0.75), 0 1px 3px rgba(10,16,13,0.9)" }}>
+        <h1 style={{ fontFamily: serif, fontSize: 46, fontWeight: 600, color: C.ivory, letterSpacing: "0.02em", margin: "0 0 8px", lineHeight: 1, textShadow: "0 2px 14px rgba(8,13,10,0.85), 0 1px 4px rgba(8,13,10,1)" }}>nora</h1>
+        <p style={{ fontFamily: sans, fontSize: 11, color: C.ivory, opacity: 0.9, letterSpacing: "0.07em", margin: "0 0 40px", textAlign: "center", textShadow: "0 2px 10px rgba(8,13,10,0.85), 0 1px 4px rgba(8,13,10,1)" }}>
           a quieter way to take care
         </p>
 
