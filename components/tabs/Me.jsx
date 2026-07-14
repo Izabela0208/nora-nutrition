@@ -17,6 +17,32 @@ const ACTIVITY_OPTIONS = [
   { id: "Extremely active",  desc: "Daily intense training" },
 ];
 
+const FASTING_PRESETS = [
+  { label: "16:8",  start: "12:00", end: "20:00" },
+  { label: "14:10", start: "11:00", end: "21:00" },
+  { label: "12:12", start: "09:00", end: "21:00" },
+];
+
+const fmtDuration = (ms) => {
+  const totalMin = Math.max(0, Math.round(ms / 60000));
+  const d = Math.floor(totalMin / 1440);
+  const h = Math.floor((totalMin % 1440) / 60);
+  const m = totalMin % 60;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+};
+
+const fmtDT = (iso) => new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+const fmtDate = (ymd) => { const [y,m,d] = ymd.split("-").map(Number); return new Date(y,m-1,d).toLocaleDateString([], { month: "short", day: "numeric" }); };
+
+const daysInclusive = (startYmd, endYmd) => {
+  const [sy,sm,sd] = startYmd.split("-").map(Number);
+  const [ey,em,ed] = endYmd.split("-").map(Number);
+  return Math.round((new Date(ey,em-1,ed) - new Date(sy,sm-1,sd)) / 86400000) + 1;
+};
+
 const BIO_CONTEXTS = [
   { id: "cycle",         label: "Menstruation"  },
   { id: "pregnancy",     label: "Pregnancy"     },
@@ -25,10 +51,29 @@ const BIO_CONTEXTS = [
   { id: "none",          label: "Not applicable"},
 ];
 
-export default function Me({ profile, saveProfile, targets, resetProfile, signOut, notificationsEnabled, saveNotifications, deleteAccount }) {
+export default function Me({ profile, saveProfile, targets, resetProfile, signOut, notificationsEnabled, saveNotifications, deleteAccount, fastingEnabled, fastingStart, fastingEnd, saveFastingWindow, fastingMode, fastingExtendedStartAt, fastingExtendedHours, saveExtendedFast, stopExtendedFast, periodLogs, cyclePhase, logPeriodStart, logPeriodEnd, deletePeriodLog }) {
   const [form,     setForm]     = useState({ ...profile });
   const [saved,    setSaved]    = useState(false);
   const [plans,    setPlans]    = useState([]);
+  const [fastingOtherOpen, setFastingOtherOpen] = useState(false);
+  const [fastingDays,      setFastingDays]      = useState(0);
+  const [fastingHours,     setFastingHours]     = useState(36);
+  const [fastingStartAt,   setFastingStartAt]   = useState(() => {
+    const d = new Date(); d.setSeconds(0,0);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0,16);
+  });
+  const [fastingAckOpen,   setFastingAckOpen]   = useState(false);
+  const [fastingNowTick,   setFastingNowTick]   = useState(() => Date.now());
+  const [periodStartDraft, setPeriodStartDraft] = useState(() => localDateStr());
+  const [periodEndOpen,    setPeriodEndOpen]    = useState(false);
+  const [periodEndDraft,   setPeriodEndDraft]   = useState(() => localDateStr());
+
+  useEffect(() => {
+    if (fastingMode !== "extended") return;
+    const id = setInterval(() => setFastingNowTick(Date.now()), 60000);
+    return () => clearInterval(id);
+  }, [fastingMode]);
   const [open,     setOpen]     = useState({ edit: false, plans: false, about: false });
   const [heightUnit, setHeightUnit] = useState(profile?.heightUnit || "cm");
   const [weightUnit, setWeightUnit] = useState(profile?.weightUnit || "kg");
@@ -271,24 +316,202 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
                   ))}
                 </div>
 
-                {profile?.biologicalContext === "cycle" && (
-                  <div style={{ padding: "14px", backgroundColor: C.bg, borderRadius: 10, border: `1px solid ${C.border}` }}>
-                    <label style={{ fontSize: 11, color: C.muted, fontWeight: 500, display: "block", marginBottom: 6 }}>First day of last period</label>
-                    <input type="date" style={{ ...inp, colorScheme: "light", marginBottom: 12 }} value={profile?.lastPeriodDate || ""} onChange={e => saveProfile({ ...profile, lastPeriodDate: e.target.value })}/>
-                    <label style={{ fontSize: 11, color: C.muted, fontWeight: 500, display: "block", marginBottom: 6 }}>Average cycle length</label>
-                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                      {[21, 24, 28, 30, 32, 35].map(n => (
-                        <button key={n} onClick={() => saveProfile({ ...profile, cycleLength: n })} style={{ padding: "6px 10px", borderRadius: 7, border: `1px solid ${profile?.cycleLength === n ? C.green : C.border}`, backgroundColor: profile?.cycleLength === n ? C.green : C.card, color: profile?.cycleLength === n ? C.bg : C.text, fontSize: 12, cursor: "pointer", fontWeight: profile?.cycleLength === n ? 600 : 400 }}>
-                          {n}d
-                        </button>
-                      ))}
+                {profile?.biologicalContext === "cycle" && (() => {
+                  const logs = (periodLogs || []).slice().sort((a, b) => b.start_date.localeCompare(a.start_date));
+                  const ongoing = logs[0] && !logs[0].end_date ? logs[0] : null;
+                  const history = logs.slice(0, 6);
+                  return (
+                    <div style={{ padding: "14px", backgroundColor: C.bg, borderRadius: 10, border: `1px solid ${C.border}` }}>
+                      <label style={{ fontSize: 11, color: C.muted, fontWeight: 500, display: "block", marginBottom: 6 }}>
+                        {ongoing ? "Current period" : "Log period start"}
+                      </label>
+
+                      {ongoing ? (
+                        <div>
+                          <p style={{ fontSize: 13, color: C.text, margin: "0 0 10px" }}>Started {fmtDate(ongoing.start_date)}</p>
+                          {periodEndOpen ? (
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <input type="date" style={{ ...inp, colorScheme: "light", flex: 1 }} value={periodEndDraft} min={ongoing.start_date} max={localDateStr()} onChange={e => setPeriodEndDraft(e.target.value)}/>
+                              <button onClick={() => { logPeriodEnd(ongoing.id, periodEndDraft); setPeriodEndOpen(false); }} style={{ padding: "0 16px", backgroundColor: C.green, color: C.bg, border: "none", borderRadius: 9, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Save</button>
+                            </div>
+                          ) : (
+                            <button onClick={() => { setPeriodEndDraft(localDateStr()); setPeriodEndOpen(true); }} style={{ width: "100%", padding: "10px", backgroundColor: "transparent", color: C.green, border: `1px solid ${C.green}`, borderRadius: 9, fontSize: 13, cursor: "pointer" }}>
+                              Add end date
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <input type="date" style={{ ...inp, colorScheme: "light", flex: 1 }} value={periodStartDraft} max={localDateStr()} onChange={e => setPeriodStartDraft(e.target.value)}/>
+                          <button onClick={() => logPeriodStart(periodStartDraft)} style={{ padding: "0 16px", backgroundColor: C.green, color: C.bg, border: "none", borderRadius: 9, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Log start</button>
+                        </div>
+                      )}
+
+                      {history.length > 0 && (
+                        <div style={{ marginTop: 14 }}>
+                          <label style={{ fontSize: 10, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 8 }}>History</label>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            {history.map(l => (
+                              <div key={l.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                                <span style={{ fontSize: 12, color: C.text }}>
+                                  {fmtDate(l.start_date)} – {l.end_date ? fmtDate(l.end_date) : <em style={{ color: C.muted }}>estimated</em>}
+                                  <span style={{ color: C.muted }}> · {l.end_date ? `${daysInclusive(l.start_date, l.end_date)}d` : "~5d"}</span>
+                                </span>
+                                <button onClick={() => deletePeriodLog(l.id)} style={{ background: "none", border: "none", color: C.muted, fontSize: 15, cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div style={{ marginTop: 14 }}>
+                        <label style={{ fontSize: 11, color: C.muted, fontWeight: 500, display: "block", marginBottom: 6 }}>
+                          Estimated cycle length {cyclePhase && !cyclePhase.cycleLengthEstimated ? "(refined by your history)" : "(used until 2+ cycles are logged)"}
+                        </label>
+                        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                          {[21, 24, 28, 30, 32, 35].map(n => (
+                            <button key={n} onClick={() => saveProfile({ ...profile, cycleLength: n })} style={{ padding: "6px 10px", borderRadius: 7, border: `1px solid ${profile?.cycleLength === n ? C.green : C.border}`, backgroundColor: profile?.cycleLength === n ? C.green : C.card, color: profile?.cycleLength === n ? C.bg : C.text, fontSize: 12, cursor: "pointer", fontWeight: profile?.cycleLength === n ? 600 : 400 }}>
+                              {n}d
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             )}
           </>
         )}
+
+        {/* Fasting window — opt-in, read by the eating window band in My Day */}
+        <div style={{ height: 1, backgroundColor: C.border, margin: "14px 0" }}/>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: fastingEnabled ? 14 : 0 }}>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", margin: 0 }}>Fasting window</p>
+            <p style={{ fontSize: 11, color: C.muted, margin: "3px 0 0", lineHeight: 1.5 }}>Optional. Turn on to adjust your eating window or start an extended fast — My Day always shows your window and current phase.</p>
+          </div>
+          <button onClick={() => saveFastingWindow(!fastingEnabled, fastingStart, fastingEnd)} style={{ width: 44, height: 24, borderRadius: 12, backgroundColor: fastingEnabled ? C.green : C.border, border: "none", cursor: "pointer", position: "relative", flexShrink: 0, marginLeft: 12 }}>
+            <div style={{ width: 18, height: 18, borderRadius: "50%", backgroundColor: "white", position: "absolute", top: 3, left: fastingEnabled ? 23 : 3, transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}/>
+          </button>
+        </div>
+
+        {fastingEnabled && (() => {
+          const totalHours = (Number(fastingDays)||0)*24 + (Number(fastingHours)||0);
+          const endAt = fastingExtendedStartAt ? new Date(fastingExtendedStartAt).getTime() + (fastingExtendedHours||0)*3600000 : null;
+          const remainingMs = endAt ? endAt - fastingNowTick : null;
+          const isOtherActive = fastingMode === "extended" || fastingOtherOpen;
+
+          const startExtended = () => {
+            saveExtendedFast(totalHours, new Date(fastingStartAt).toISOString());
+            setFastingOtherOpen(false); setFastingAckOpen(false);
+          };
+
+          return (
+            <div style={{ marginTop: 14 }}>
+              <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.6, margin: "0 0 12px" }}>
+                Start gently — a 12:12 window is a full night's rest, not a challenge. Narrow it only once it feels easy. Water, herbal tea and black coffee are fine during the fasting hours; anything with calories breaks the fast. If you have a health condition or take medication on a schedule, check with your doctor before narrowing the window.
+              </p>
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+                {FASTING_PRESETS.map(({ label, start, end }) => {
+                  const active = fastingMode === "recurring" && fastingStart === start && fastingEnd === end;
+                  return (
+                    <button key={label} onClick={() => { setFastingOtherOpen(false); saveFastingWindow(true, start, end); }} style={{ padding: "7px 12px", borderRadius: 8, border: `1px solid ${active ? C.green : C.border}`, backgroundColor: active ? C.green : C.card, color: active ? C.bg : C.text, fontSize: 12, fontWeight: active ? 500 : 400, cursor: "pointer" }}>
+                      {label}
+                    </button>
+                  );
+                })}
+                <button onClick={() => setFastingOtherOpen(true)} style={{ padding: "7px 12px", borderRadius: 8, border: `1px solid ${isOtherActive ? C.green : C.border}`, backgroundColor: isOtherActive ? C.green : C.card, color: isOtherActive ? C.bg : C.text, fontSize: 12, fontWeight: isOtherActive ? 500 : 400, cursor: "pointer" }}>
+                  Other
+                </button>
+              </div>
+
+              {fastingMode === "recurring" && !fastingOtherOpen && (
+                <div style={{ padding: "14px", backgroundColor: C.bg, borderRadius: 10, border: `1px solid ${C.border}`, display: "flex", gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, color: C.muted, fontWeight: 500, display: "block", marginBottom: 6 }}>Eating starts</label>
+                    <input type="time" style={{ ...inp, colorScheme: "light" }} value={fastingStart} onChange={e => saveFastingWindow(fastingEnabled, e.target.value, fastingEnd)}/>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, color: C.muted, fontWeight: 500, display: "block", marginBottom: 6 }}>Eating ends</label>
+                    <input type="time" style={{ ...inp, colorScheme: "light" }} value={fastingEnd} onChange={e => saveFastingWindow(fastingEnabled, fastingStart, e.target.value)}/>
+                  </div>
+                </div>
+              )}
+
+              {fastingMode === "extended" && !fastingOtherOpen && (
+                <div style={{ padding: "14px", backgroundColor: C.bg, borderRadius: 10, border: `1px solid ${C.border}` }}>
+                  <p style={{ fontSize: 13, color: C.text, margin: "0 0 4px", fontWeight: 500 }}>
+                    {remainingMs > 0
+                      ? <>Fasting · <strong>{fmtDuration(remainingMs)}</strong> remaining</>
+                      : "Fast complete"}
+                  </p>
+                  <p style={{ fontSize: 11, color: C.muted, margin: "0 0 12px" }}>
+                    Since {fmtDT(fastingExtendedStartAt)} · ends {fmtDT(new Date(endAt).toISOString())}
+                  </p>
+                  {(fastingExtendedHours||0) > 72 && (
+                    <p style={{ fontSize: 11, color: C.error, lineHeight: 1.6, margin: "0 0 12px", padding: "10px 12px", backgroundColor: C.errorBg, borderRadius: 8 }}>
+                      This fast runs beyond 72 hours. Continue only with prior experience or medical guidance — Nora cannot assess your individual risk, and this length carries real considerations for electrolytes, medication and blood sugar.
+                    </p>
+                  )}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => setFastingOtherOpen(true)} style={{ flex: 1, padding: "10px", backgroundColor: "transparent", color: C.green, border: `1px solid ${C.green}`, borderRadius: 9, fontSize: 12, cursor: "pointer" }}>Adjust</button>
+                    <button onClick={stopExtendedFast} style={{ flex: 1, padding: "10px", backgroundColor: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 9, fontSize: 12, cursor: "pointer" }}>End fast</button>
+                  </div>
+                </div>
+              )}
+
+              {fastingOtherOpen && (
+                <div style={{ padding: "14px", backgroundColor: C.bg, borderRadius: 10, border: `1px solid ${C.border}` }}>
+                  <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: 11, color: C.muted, fontWeight: 500, display: "block", marginBottom: 6 }}>Days</label>
+                      <input type="number" min="0" max="14" style={inp} value={fastingDays} onChange={e => { setFastingDays(e.target.value); setFastingAckOpen(false); }}/>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ fontSize: 11, color: C.muted, fontWeight: 500, display: "block", marginBottom: 6 }}>Hours</label>
+                      <input type="number" min="0" max="23" style={inp} value={fastingHours} onChange={e => { setFastingHours(e.target.value); setFastingAckOpen(false); }}/>
+                    </div>
+                  </div>
+                  <label style={{ fontSize: 11, color: C.muted, fontWeight: 500, display: "block", marginBottom: 6 }}>Start</label>
+                  <input type="datetime-local" style={{ ...inp, colorScheme: "light", marginBottom: 12 }} value={fastingStartAt} onChange={e => { setFastingStartAt(e.target.value); setFastingAckOpen(false); }}/>
+
+                  <p style={{ fontSize: 12, color: C.muted, margin: "0 0 12px" }}>Total: <strong>{totalHours}h</strong></p>
+
+                  {totalHours > 24 && !fastingAckOpen && (
+                    <button onClick={() => setFastingAckOpen(true)} disabled={totalHours<=0} style={{ width: "100%", padding: "12px", backgroundColor: C.green, color: C.bg, border: "none", borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: "pointer", marginBottom: 8 }}>
+                      Start fasting
+                    </button>
+                  )}
+
+                  {totalHours > 24 && fastingAckOpen && (
+                    <div style={{ padding: "12px 14px", backgroundColor: C.errorBg, borderRadius: 10, marginBottom: 8 }}>
+                      <p style={{ fontSize: 12, color: C.error, lineHeight: 1.6, margin: "0 0 10px" }}>
+                        {totalHours > 72
+                          ? "This fast runs beyond 72 hours. Continue only with prior experience or medical guidance — Nora cannot assess your individual risk, and this length carries real considerations for electrolytes, medication and blood sugar."
+                          : "Extended fasting beyond 24 hours works best with medical guidance, especially with existing conditions or medication. Nora doesn't replace a doctor's advice."}
+                      </p>
+                      <button onClick={startExtended} style={{ width: "100%", padding: "11px", backgroundColor: C.green, color: C.bg, border: "none", borderRadius: 9, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+                        I understand, continue
+                      </button>
+                    </div>
+                  )}
+
+                  {totalHours <= 24 && (
+                    <button onClick={startExtended} disabled={totalHours<=0} style={{ width: "100%", padding: "12px", backgroundColor: totalHours>0?C.green:C.border, color: C.bg, border: "none", borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: totalHours>0?"pointer":"not-allowed", marginBottom: 8 }}>
+                      Start fasting
+                    </button>
+                  )}
+
+                  <button onClick={() => { setFastingOtherOpen(false); setFastingAckOpen(false); }} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontSize: 12, cursor: "pointer", padding: "4px 0" }}>
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Wearables placeholder */}
         <div style={{ marginTop: 14, padding: "12px 14px", backgroundColor: C.bg, borderRadius: 10, border: `1px dashed ${C.border}`, opacity: 0.6 }}>

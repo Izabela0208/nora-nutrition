@@ -145,7 +145,14 @@ export default function NutritionApp() {
   const [entries,    setEntries]    = useState([]);
   const [activeChallenges, setActiveChallenges] = useState([]);
   const [completionDates, setCompletionDates] = useState([]);
+  const [periodLogs, setPeriodLogs] = useState([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [fastingEnabled, setFastingEnabled] = useState(false);
+  const [fastingStart,   setFastingStart]   = useState("09:00");
+  const [fastingEnd,     setFastingEnd]     = useState("21:00");
+  const [fastingMode,             setFastingMode]             = useState("recurring");
+  const [fastingExtendedStartAt,  setFastingExtendedStartAt]  = useState(null);
+  const [fastingExtendedHours,    setFastingExtendedHours]    = useState(null);
   const [waterMl,    setWaterMl]    = useState(0);
   const [history,    setHistory]    = useState({});
   const [profileLoading,  setProfileLoading]  = useState(true);
@@ -190,8 +197,19 @@ export default function NutritionApp() {
           setCompletionDates([...new Set((ccRows || []).map(r => r.completed_date))]);
         }
 
-        const { data: settingsRow } = await supabase.from("user_settings").select("notifications_enabled").eq("user_id", session.user.id).maybeSingle();
-        if(!cancelled) setNotificationsEnabled(settingsRow ? settingsRow.notifications_enabled : true);
+        const { data: plRows } = await supabase.from("period_logs").select("id, start_date, end_date").eq("user_id", session.user.id).order("start_date", { ascending: false }).limit(12);
+        if(!cancelled) setPeriodLogs(plRows || []);
+
+        const { data: settingsRow } = await supabase.from("user_settings").select("notifications_enabled, fasting_enabled, fasting_start, fasting_end, fasting_mode, fasting_extended_start_at, fasting_extended_hours").eq("user_id", session.user.id).maybeSingle();
+        if(!cancelled){
+          setNotificationsEnabled(settingsRow ? settingsRow.notifications_enabled : true);
+          setFastingEnabled(settingsRow?.fasting_enabled || false);
+          setFastingStart(settingsRow?.fasting_start || "09:00");
+          setFastingEnd(settingsRow?.fasting_end || "21:00");
+          setFastingMode(settingsRow?.fasting_mode || "recurring");
+          setFastingExtendedStartAt(settingsRow?.fasting_extended_start_at || null);
+          setFastingExtendedHours(settingsRow?.fasting_extended_hours || null);
+        }
 
         setPhase("app");
       } else {
@@ -320,10 +338,44 @@ export default function NutritionApp() {
     await supabase.from("active_challenges").delete().eq("id", instanceId);
   };
 
+  const logPeriodStart = async (startDate) => {
+    if(!session?.user?.id) return;
+    const { data } = await supabase.from("period_logs").insert({ user_id: session.user.id, start_date: startDate }).select().single();
+    if(data) setPeriodLogs(prev => [data, ...prev].sort((a,b) => b.start_date.localeCompare(a.start_date)));
+  };
+
+  const logPeriodEnd = async (logId, endDate) => {
+    setPeriodLogs(prev => prev.map(l => l.id === logId ? { ...l, end_date: endDate } : l));
+    if(!session?.user?.id) return;
+    await supabase.from("period_logs").update({ end_date: endDate }).eq("id", logId);
+  };
+
+  const deletePeriodLog = async (logId) => {
+    setPeriodLogs(prev => prev.filter(l => l.id !== logId));
+    if(!session?.user?.id) return;
+    await supabase.from("period_logs").delete().eq("id", logId);
+  };
+
   const saveNotifications = async (enabled) => {
     setNotificationsEnabled(enabled);
     if(!session?.user?.id) return;
     await supabase.from("user_settings").upsert({ user_id: session.user.id, notifications_enabled: enabled, updated_at: new Date().toISOString() });
+  };
+
+  const saveFastingWindow = async (enabled, start, end) => {
+    setFastingEnabled(enabled); setFastingStart(start); setFastingEnd(end); setFastingMode("recurring");
+    if(!session?.user?.id) return;
+    await supabase.from("user_settings").upsert({ user_id: session.user.id, fasting_enabled: enabled, fasting_start: start, fasting_end: end, fasting_mode: "recurring", updated_at: new Date().toISOString() });
+  };
+
+  const saveExtendedFast = async (hours, startAtISO) => {
+    setFastingEnabled(true); setFastingMode("extended"); setFastingExtendedStartAt(startAtISO); setFastingExtendedHours(hours);
+    if(!session?.user?.id) return;
+    await supabase.from("user_settings").upsert({ user_id: session.user.id, fasting_enabled: true, fasting_mode: "extended", fasting_extended_start_at: startAtISO, fasting_extended_hours: hours, updated_at: new Date().toISOString() });
+  };
+
+  const stopExtendedFast = async () => {
+    await saveFastingWindow(fastingEnabled, fastingStart, fastingEnd);
   };
 
   const deleteAccount = async () => {
@@ -375,13 +427,13 @@ export default function NutritionApp() {
   };
 
   const resetProfile=()=>{
-    ["nora_today_water","nora_today_entries","nora_sleep","nora_history","nora_supps_list","nora_supps_taken","nora_boost_recs","nora_smoothie","nora_evening_summary"].forEach(k=>{try{localStorage.removeItem(k);}catch{}});
-    setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setActiveChallenges([]);setCompletionDates([]);setNotificationsEnabled(true);setWaterMl(0);setHistory({});setPhase("onboarding");
+    ["nora_today_water","nora_today_entries","nora_sleep","nora_history","nora_supps_list","nora_supps_taken","nora_boost_recs","nora_smoothie","nora_evening_reflection"].forEach(k=>{try{localStorage.removeItem(k);}catch{}});
+    setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setActiveChallenges([]);setCompletionDates([]);setPeriodLogs([]);setNotificationsEnabled(true);setFastingEnabled(false);setFastingStart("09:00");setFastingEnd("21:00");setFastingMode("recurring");setFastingExtendedStartAt(null);setFastingExtendedHours(null);setWaterMl(0);setHistory({});setPhase("onboarding");
   };
 
   // Cycle phase — only when the user opted in and chose "Menstruation" as context
   const cyclePhase = (profile?.sex === "female" && profile?.biologicalTrackingEnabled && profile?.biologicalContext === "cycle")
-    ? getCyclePhase(profile?.lastPeriodDate, profile?.cycleLength || 28)
+    ? getCyclePhase(periodLogs, profile?.cycleLength || 28)
     : null;
 
   // ── Auth ────────────────────────────────────────────────────────
@@ -448,12 +500,12 @@ export default function NutritionApp() {
   const ritualStreak = calcRitualStreak(completionDates);
 
   const tabContent = {
-    myday:   <MyDay {...sharedProps}/>,
+    myday:   <MyDay {...sharedProps} activeChallenges={activeChallenges} checkInChallenge={checkInChallenge} setActiveTab={setActiveTab} fastingEnabled={fastingEnabled} fastingStart={fastingStart} fastingEnd={fastingEnd} fastingMode={fastingMode} fastingExtendedStartAt={fastingExtendedStartAt} fastingExtendedHours={fastingExtendedHours}/>,
     eat:     <Eat     profile={profile} targets={targets} entries={entries} logMeal={logMeal} cyclePhase={cyclePhase}/>,
-    ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} activeChallenges={activeChallenges} startChallenge={startChallenge} checkInChallenge={checkInChallenge} abandonChallenge={abandonChallenge} ritualStreak={ritualStreak} markChallengeDone={markChallengeDone}/>,
+    ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} periodLogs={periodLogs} activeChallenges={activeChallenges} startChallenge={startChallenge} checkInChallenge={checkInChallenge} abandonChallenge={abandonChallenge} ritualStreak={ritualStreak} markChallengeDone={markChallengeDone}/>,
     boost:   <Boost   profile={profile} targets={targets} entries={entries} cyclePhase={cyclePhase}/>,
     asknora: <AskNora profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase}/>,
-    me:      <Me      profile={profile} saveProfile={saveProfile} targets={targets} resetProfile={resetProfile} signOut={signOut} notificationsEnabled={notificationsEnabled} saveNotifications={saveNotifications} deleteAccount={deleteAccount}/>,
+    me:      <Me      profile={profile} saveProfile={saveProfile} targets={targets} resetProfile={resetProfile} signOut={signOut} notificationsEnabled={notificationsEnabled} saveNotifications={saveNotifications} deleteAccount={deleteAccount} fastingEnabled={fastingEnabled} fastingStart={fastingStart} fastingEnd={fastingEnd} saveFastingWindow={saveFastingWindow} fastingMode={fastingMode} fastingExtendedStartAt={fastingExtendedStartAt} fastingExtendedHours={fastingExtendedHours} saveExtendedFast={saveExtendedFast} stopExtendedFast={stopExtendedFast} periodLogs={periodLogs} cyclePhase={cyclePhase} logPeriodStart={logPeriodStart} logPeriodEnd={logPeriodEnd} deletePeriodLog={deletePeriodLog}/>,
   };
 
   return (

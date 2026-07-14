@@ -10,8 +10,7 @@ Principiu general pentru orice ordine nedecisă: **acțiunea zilnică sus, bibli
 ---
 
 ## My Day
-**Documentat (PLAYBOOK):** salut + moment al zilei → insight din ieri → challenge-ul zilei (card mic) → acțiunea recomandată azi. STOP, maxim 4 elemente.
-**Documentat (CLAUDE.md):** salut, un insight, o acțiune recomandată, challenge-ul zilei — NU dashboard cu date duplicate.
+**Decis 13.07 (Pas 5):** My Day e hub-ul zilei — voce, orientare, misiune, context, acțiune rapidă, istorie, adâncime, seară — nu doar brief minimal. Ordine finală: mesajul Norei (contextual) → Today's Progress → challenge-ul zilei (afișare + bifă rapidă din active_challenges, link spre Ritual, fără logică duplicată) → eating window (bandă compactă: prima/ultima masă logată azi, fără țintă de fereastră — fasting real nu există încă ca feature, vezi MICI.md) → zona de logare rapidă (input + water tracker) → Today's log → insight-uri contextuale (circadian, ciclu) → reflecția de seară (strict după ~18:00, retrospectivă, nu al doilea mesaj de tip afternoon). Utilitățile duplicate cu Eat rămân intenționat.
 **De decis:** —
 
 ## Eat

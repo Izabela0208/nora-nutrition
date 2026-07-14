@@ -196,9 +196,16 @@ Mesaj către 2-3 colege + postare în 2 grupuri (FB wellness RO / Reddit): "Am c
 
 ---
 
+# CAPITOLUL G — PERSONALIZARE AVANSATĂ (post-lansare)
+
+## G1 — Fasting ca stare globală
+Notat 13.07, de implementat după validarea cu cei 5 testeri: toată aplicația ține cont de fereastra de fasting/eating, la fel cum ține cont de faza ciclului menstrual. Abordare: un helper central (ex. `getFastingState()`) folosit de meal suggestions, Ask Nora, Boost/Ritual și circadian timeline, fără logică duplicată în tab-uri. Fasting-ul propriu-zis (fereastră recurentă + post extins custom) e deja construit în Me + My Day (13.07) — acest item e despre EXTINDEREA lui ca sursă de context pentru restul aplicației, nu despre feature-ul de bază.
+
+---
+
 # ORDINEA ELEMENTELOR PE FIECARE TAB (referință permanentă)
 
-**My Day:** salut+moment → insight din ieri → challenge-ul zilei → acțiunea de azi. STOP (max 4).
+**My Day — hub-ul zilei** (scop actualizat 13.07, decizie Pas 5: voce, orientare, misiune, context, acțiune rapidă, istorie, adâncime, seară — nu doar brief minimal): mesajul Norei (contextual pe momentul zilei) → Today's Progress → challenge-ul zilei (afișare + bifă rapidă, date din active_challenges, link spre Ritual) → eating window (bandă compactă, prima/ultima masă logată azi, fără țintă de fereastră — link discret spre Me pentru un viitor fasting opt-in) → zona de logare rapidă (input + water tracker) → Today's log → insight-uri contextuale (circadian, ciclu) → reflecția de seară (STRICT după ~18:00, retrospectivă blândă — nu un al doilea mesaj de tip afternoon). Utilitățile duplicate cu Eat (logare, water tracker, jurnal) rămân intenționat — My Day e hub-ul zilei, Eat e gestiunea detaliată.
 **Eat:** rezumat discret al zilei (o linie) → butonul de logare → mesele de azi cronologic + comentariul Norei → sugestii/plan. STOP.
 **Move:** recomandarea momentului (1 card) → Energie / Calm / Respirație. STOP.
 **Ritual:** challenge-ul de azi (mare, cu "de ce") → timeline circadian → calendar lunar discret → Library discret. STOP.

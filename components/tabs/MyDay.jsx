@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { C, card, serif, sans, inp, localDateStr } from "../noraTokens";
+import { C, card, serif, sans, inp, localDateStr, pickDailyVariant } from "../noraTokens";
 import { BotanicalBranch, LeafDecor, DropIcon, CheckIcon, SparkleIcon, CameraIcon, EditIcon } from "../NoraIcons";
 
 const callClaude = async (sys, user, maxTokens=800) => {
@@ -18,12 +18,42 @@ const parseJSON = (text) => {
   }
 };
 
+const MALE_TIP_POOLS = {
+  strength: { icon:"💪", title:"Strength window", tips:[
+    "Morning testosterone peaks — optimal for heavy lifts. Fuel with a protein-rich breakfast 1–2 hours before training.",
+    "Grip strength and reaction time are typically sharper in the morning — a good window for technical lifts.",
+    "Training fasted or fed both work, but a small protein hit beforehand supports better bar speed under load.",
+    "Morning strength sessions tend to carry lower injury risk once a proper warm-up raises core temperature.",
+    "Creatine timing matters less than consistency — daily intake, any time, sustains muscle phosphocreatine stores.",
+  ]},
+  cardio: { icon:"🏃", title:"Cardio peak", tips:[
+    "Core temperature and reaction time peak now. Great for HIIT or endurance. Load up on complex carbs beforehand.",
+    "Lung function and aerobic capacity are measurably higher in the afternoon than first thing in the morning.",
+    "A carb-inclusive meal 2–3 hours before cardio tops up glycogen without the sluggishness of eating too close to training.",
+    "Afternoon heat tolerance is higher — a good window for harder conditioning work if you train outdoors.",
+    "Perceived exertion tends to feel lower in the afternoon for the same actual effort — useful for pushing pace work.",
+  ]},
+  recovery: { icon:"🔄", title:"Recovery window", tips:[
+    "Muscle repair happens post-workout. Prioritise protein and magnesium-rich foods; quality sleep completes the cycle.",
+    "Evening protein intake supports overnight muscle protein synthesis nearly as well as daytime meals.",
+    "Magnesium-rich foods in the evening — leafy greens, nuts, seeds — may ease muscle tension going into sleep.",
+    "A short mobility or stretching session now can reduce next-day stiffness more than static rest alone.",
+    "Tart cherry juice has modest evidence for reducing exercise-induced muscle soreness when taken in the evening.",
+  ]},
+  restRepair: { icon:"🌙", title:"Rest & repair", tips:[
+    "Avoid heavy meals after 9 pm. Your body detoxes and rebuilds during deep sleep — protect that window.",
+    "Testosterone production is closely tied to deep sleep — cutting sleep short has a measurable next-day cost.",
+    "A cool, dark room supports the testosterone and growth hormone release that happens overnight.",
+    "Late-night alcohol blunts the deep sleep stages where most physical recovery happens.",
+    "Consistent sleep and wake times matter more for hormonal recovery than total hours alone.",
+  ]},
+};
+
 const getMaleTip = () => {
   const h = new Date().getHours();
-  if (h>=5&&h<12)  return { icon:"💪", title:"Strength window",   tip:"Morning testosterone peaks — optimal for heavy lifts. Fuel with a protein-rich breakfast 1–2 hours before training." };
-  if (h>=12&&h<18) return { icon:"🏃", title:"Cardio peak",        tip:"Core temperature and reaction time peak now. Great for HIIT or endurance. Load up on complex carbs beforehand." };
-  if (h>=18&&h<22) return { icon:"🔄", title:"Recovery window",    tip:"Muscle repair happens post-workout. Prioritise protein and magnesium-rich foods; quality sleep completes the cycle." };
-  return               { icon:"🌙", title:"Rest & repair",        tip:"Avoid heavy meals after 9 pm. Your body detoxes and rebuilds during deep sleep — protect that window." };
+  const key = h>=5&&h<12 ? "strength" : h>=12&&h<18 ? "cardio" : h>=18&&h<22 ? "recovery" : "restRepair";
+  const pool = MALE_TIP_POOLS[key];
+  return { icon: pool.icon, title: pool.title, tip: pickDailyVariant(`male_${key}`, pool.tips) };
 };
 
 const HORMONAL_TIPS = [
@@ -92,7 +122,17 @@ const detectWater = (input) => {
   return "prompt";
 };
 
-export default function MyDay({ profile, targets, entries, logMeal, updateMeal, deleteMeal, clearTodayMeals, waterMl, setWaterMl, cyclePhase }) {
+const fmtRemaining = (ms) => {
+  const totalMin = Math.max(0, Math.round(ms / 60000));
+  const d = Math.floor(totalMin / 1440);
+  const h = Math.floor((totalMin % 1440) / 60);
+  const m = totalMin % 60;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+};
+
+export default function MyDay({ profile, targets, entries, logMeal, updateMeal, deleteMeal, clearTodayMeals, waterMl, setWaterMl, cyclePhase, activeChallenges, checkInChallenge, setActiveTab, fastingEnabled, fastingStart, fastingEnd, fastingMode, fastingExtendedStartAt, fastingExtendedHours }) {
   const [greeting,          setGreeting]          = useState("");
   const [greetingLoad,      setGreetingLoad]      = useState(false);
   const [greetingDone,      setGreetingDone]      = useState(false);
@@ -142,15 +182,16 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   const totalCarb    = foodE.reduce((s,e)=>s+(e.carbs_g||0),0);
   const totalFat     = foodE.reduce((s,e)=>s+(e.fat_g||0),0);
   const h            = new Date().getHours();
-  const timeOfDay    = h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
+  const isEvening    = h >= 18;
   const maleTip      = !isFemale ? getMaleTip() : null;
 
   useEffect(()=>{
+    if(!isEvening) return;
     try {
-      const ev=localStorage.getItem("nora_evening_summary");
+      const ev=localStorage.getItem("nora_evening_reflection");
       if(ev){
         const d=JSON.parse(ev);
-        if(d.date===localDateStr()&&(!d.period||d.period===timeOfDay))setEveningSummary(d.text);
+        if(d.date===localDateStr())setEveningSummary(d.text);
       }
     } catch{}
   },[]);
@@ -160,8 +201,8 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   },[profile]);
 
   useEffect(()=>{
-    if(profile&&!eveningSummary&&!eveningSummaryLoad) fetchEveningSummary();
-  },[profile,timeOfDay]);
+    if(profile&&isEvening&&!eveningSummary&&!eveningSummaryLoad) fetchEveningSummary();
+  },[profile,isEvening]);
 
   useEffect(()=>{
     try{const hd=localStorage.getItem("nora_health");if(hd)setHealthData(JSON.parse(hd));}catch{}
@@ -382,21 +423,16 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   const fetchEveningSummary = async()=>{
     setEveningSummaryLoad(true);
     try{
-      const period = h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
       const dataStr = entries.length > 0
-        ? `Cal so far:${Math.round(netCal)}/${targets?.calories||2000}, P:${Math.round(totalPro)}g/${targets?.protein_g||150}g, Water:${waterMl}ml/${targets?.water_ml||2500}ml, ${entries.length} items logged.`
-        : "Nothing logged yet today.";
-      const userPrompt = period === "morning"
-        ? `Morning check-in for ${profile?.name}. Goals:${(profile?.goals||[]).join(", ")}. ${dataStr} 2–3 warm sentences to start the day with intention and one focused morning nutrition tip.`
-        : period === "afternoon"
-        ? `Afternoon check-in for ${profile?.name}. Goals:${(profile?.goals||[]).join(", ")}. ${dataStr} 2–3 warm sentences acknowledging progress and one tip to power through the rest of the day.`
-        : `Evening summary for ${profile?.name}. Goals:${(profile?.goals||[]).join(", ")}. ${dataStr} 2–3 warm sentences celebrating wins and gently noting any gaps.`;
+        ? `Cal today:${Math.round(netCal)}/${targets?.calories||2000}, P:${Math.round(totalPro)}g/${targets?.protein_g||150}g, Water:${waterMl}ml/${targets?.water_ml||2500}ml, ${entries.length} items logged.`
+        : "Nothing logged today.";
+      const userPrompt = `Evening reflection for ${profile?.name}. Goals:${(profile?.goals||[]).join(", ")}. ${dataStr} Write 2–3 warm sentences that close the day: a gentle look back at how it went (acknowledge wins, note any gaps without judgement — or if nothing was logged, a soft closing thought instead of a reminder), then a small thought or intention to carry into tomorrow.`;
       const t=await callClaude(
-        "You are Nora, a warm and knowledgeable nutrition coach. 2–3 sentences only. Use the user's name.",
+        "You are Nora, a warm and knowledgeable nutrition coach. Write a closing reflection for the end of the day — retrospective in tone, looking back and gently ahead to tomorrow. Never a tip, a reminder, or a call to action. 2–3 sentences only. Use the user's name.",
         userPrompt
       );
       setEveningSummary(t);
-      try{localStorage.setItem("nora_evening_summary",JSON.stringify({date:localDateStr(),period,text:t}));}catch{}
+      try{localStorage.setItem("nora_evening_reflection",JSON.stringify({date:localDateStr(),text:t}));}catch{}
     }catch{}
     setEveningSummaryLoad(false);
   };
@@ -491,11 +527,6 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         </div>
       )}
 
-      {/* Notifications */}
-      {waterToast&&<div style={{...card,padding:"12px 16px",display:"flex",alignItems:"center",gap:10,backgroundColor:C.greenLight,border:`1px solid ${C.sage}40`,animation:"fadeIn 0.2s ease"}}><DropIcon size={16} color={C.slate}/><span style={{fontSize:13,color:C.green,fontWeight:500}}>{waterToast}</span></div>}
-      {logToast&&<div onClick={()=>{startEdit(logToast.entry);setLogToast(null);clearTimeout(toastTimer.current);}} style={{...card,padding:"12px 16px",display:"flex",alignItems:"center",gap:10,backgroundColor:C.greenLight,border:`1px solid ${C.sage}40`,animation:"fadeIn 0.2s ease",cursor:"pointer"}}><CheckIcon size={14} color={C.sage}/><span style={{fontSize:13,color:C.green,fontWeight:500,flex:1}}>{logToast.msg}</span><EditIcon size={13} color={C.muted}/></div>}
-
-
       {/* Today's Progress */}
       {targets&&(
         <div style={{position:"relative",borderRadius:18,overflow:"hidden",backgroundColor:"#F5F0E8",boxShadow:"0 4px 20px rgba(27,58,45,0.10)",border:"1px solid rgba(155,123,42,0.18)"}}>
@@ -544,8 +575,52 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
       )}
 
 
-        {/* Circadian tip */}
-        <CircadianCard/>
+        {/* Today's challenge — quick view only, data from active_challenges, no duplicated logic */}
+        {activeChallenges&&activeChallenges.length>0&&(
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {activeChallenges.map(ac=>{
+              const checkedIn=ac.checkIns.includes(localDateStr());
+              return(
+                <div key={ac.instanceId} style={{...card,padding:"14px 16px",display:"flex",alignItems:"center",gap:12}}>
+                  <button
+                    onClick={()=>{if(!checkedIn)checkInChallenge(ac.instanceId);}}
+                    disabled={checkedIn}
+                    style={{width:26,height:26,borderRadius:"50%",border:`1.5px solid ${checkedIn?C.green:C.border}`,backgroundColor:checkedIn?C.green:"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:checkedIn?"default":"pointer",flexShrink:0,padding:0}}>
+                    {checkedIn&&<CheckIcon size={13} color={C.bg}/>}
+                  </button>
+                  <div style={{flex:1,minWidth:0}}>
+                    <p style={{fontSize:9,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 2px"}}>Today's challenge</p>
+                    <p style={{fontFamily:serif,fontSize:14,fontWeight:600,color:C.text,margin:0,lineHeight:1.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{ac.title.replace(/^✦ For Her - |^✦ For Him - /,"")}</p>
+                  </div>
+                  <button onClick={()=>setActiveTab("ritual")} style={{background:"none",border:"none",color:C.green,fontSize:11,fontWeight:600,cursor:"pointer",padding:0,flexShrink:0,fontFamily:sans,whiteSpace:"nowrap"}}>
+                    Ritual →
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Eating window — always visible, independent of the fasting toggle; extended fast (>24h) shows a countdown instead */}
+        {fastingMode==="extended" ? (() => {
+          const endAt = fastingExtendedStartAt ? new Date(fastingExtendedStartAt).getTime() + (fastingExtendedHours||0)*3600000 : null;
+          const remainingMs = endAt!==null ? endAt - Date.now() : null;
+          return (
+            <div style={{...card,padding:"12px 16px",borderLeft:`3px solid ${C.green}`}}>
+              <p style={{fontSize:12,color:C.text,margin:0,lineHeight:1.5}}>
+                {remainingMs>0
+                  ? <>Fasting · <strong>{fmtRemaining(remainingMs)}</strong> remaining</>
+                  : "Fast complete ✓"}
+              </p>
+            </div>
+          );
+        })() : (
+          <EatingWindowBand fastingStart={fastingStart} fastingEnd={fastingEnd} setActiveTab={setActiveTab}/>
+        )}
+
+        {/* Notifications */}
+        {waterToast&&<div style={{...card,padding:"12px 16px",display:"flex",alignItems:"center",gap:10,backgroundColor:C.greenLight,border:`1px solid ${C.sage}40`,animation:"fadeIn 0.2s ease"}}><DropIcon size={16} color={C.slate}/><span style={{fontSize:13,color:C.green,fontWeight:500}}>{waterToast}</span></div>}
+        {logToast&&<div onClick={()=>{startEdit(logToast.entry);setLogToast(null);clearTimeout(toastTimer.current);}} style={{...card,padding:"12px 16px",display:"flex",alignItems:"center",gap:10,backgroundColor:C.greenLight,border:`1px solid ${C.sage}40`,animation:"fadeIn 0.2s ease",cursor:"pointer"}}><CheckIcon size={14} color={C.sage}/><span style={{fontSize:13,color:C.green,fontWeight:500,flex:1}}>{logToast.msg}</span><EditIcon size={13} color={C.muted}/></div>}
 
         {/* Log input */}
         <div style={{...card,padding:"14px"}}>
@@ -679,12 +754,15 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
           </div>
         )}
 
+        {/* Circadian tip */}
+        <CircadianCard/>
+
         {/* Cycle & hormonal insights — compact */}
         {isFemale&&cyclePhase&&(
           <div style={{...card,padding:"16px 18px",borderLeft:`3px solid ${cyclePhase.color}`,background:`linear-gradient(135deg,${C.card} 0%,${cyclePhase.color}08 100%)`}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
               <p style={{fontFamily:serif,fontSize:13,fontWeight:600,color:cyclePhase.color,margin:0}}>{cyclePhase.label} Phase</p>
-              <span style={{fontSize:10,color:cyclePhase.color,backgroundColor:`${cyclePhase.color}18`,padding:"2px 9px",borderRadius:20,fontWeight:600,letterSpacing:"0.04em"}}>Day {cyclePhase.day}</span>
+              <span style={{fontSize:10,color:cyclePhase.color,backgroundColor:`${cyclePhase.color}18`,padding:"2px 9px",borderRadius:20,fontWeight:600,letterSpacing:"0.04em"}}>Day {cyclePhase.day}{(cyclePhase.periodLengthEstimated||cyclePhase.cycleLengthEstimated)&&" (est.)"}</span>
             </div>
             <div style={{marginBottom:10}}>
               <p style={{fontSize:9,fontWeight:700,color:cyclePhase.color,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 4px"}}>✦ Cycle Insight</p>
@@ -710,17 +788,17 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
           </div>
         )}
 
-        {/* Nora's daily insight — always last — Nora message identity: pine card, no avatar */}
-        {eveningSummaryLoad&&(
+        {/* Evening reflection — closing the day, only after ~18:00 — Nora message identity: pine card, no avatar */}
+        {isEvening&&eveningSummaryLoad&&(
           <div style={{...card,padding:"20px 22px",backgroundColor:C.green,border:"none",boxShadow:"0 4px 20px rgba(31,46,38,0.20)"}}>
             <div style={{display:"flex",gap:5}}>
               {[0,1,2].map(j=><div key={j} style={{width:6,height:6,borderRadius:"50%",backgroundColor:"rgba(244,242,237,0.5)",animation:`dotPulse 1.2s ease ${j*0.2}s infinite`}}/>)}
             </div>
           </div>
         )}
-        {eveningSummary&&(
+        {isEvening&&eveningSummary&&(
           <div style={{...card,padding:"20px 22px",animation:"fadeIn 0.4s ease",backgroundColor:C.green,border:"none",boxShadow:"0 4px 20px rgba(31,46,38,0.20)"}}>
-            <p style={{fontSize:9,fontWeight:700,color:"rgba(168,178,169,0.85)",textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 10px"}}>{timeOfDay==="morning"?"Morning Insight":timeOfDay==="afternoon"?"Afternoon Check-in":"Evening Reflection"}</p>
+            <p style={{fontSize:9,fontWeight:700,color:"rgba(168,178,169,0.85)",textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 10px"}}>Evening Reflection</p>
             <p style={{fontFamily:serif,fontSize:15,fontWeight:500,color:C.ivory,lineHeight:1.75,margin:0,fontStyle:"italic"}}>{eveningSummary}</p>
           </div>
         )}
@@ -966,116 +1044,129 @@ function parseTimeToH(timeStr) {
   return h + min / 60;
 }
 
+const CIRCADIAN_TIP_POOLS = {
+  overnightRest: { icon:"🌙", title:"Overnight rest", tips:[
+    "Quality sleep is when your body rebuilds and hormones reset. Protect this recovery window.",
+    "Growth hormone peaks in early deep sleep — a consistent bedtime does more for recovery than any supplement.",
+    "Core body temperature drops to enable deep sleep. A cool, dark room supports this more than most people realise.",
+    "Blood sugar naturally stabilises overnight when sleep is uninterrupted — screens and late snacks work against it.",
+    "The glymphatic system clears metabolic waste from the brain almost exclusively during deep sleep.",
+  ]},
+  wakeLight: { icon:"🌅", title:"Wake & light", tips:[
+    "Step outside within 30 min of sunrise — natural light anchors your circadian clock and boosts serotonin.",
+    "Morning light exposure sets your cortisol rhythm for the whole day — even a cloudy sky provides enough lux.",
+    "Ten minutes of outdoor light beats any indoor bulb for circadian signalling — intensity matters more than duration indoors.",
+    "Delaying morning light exposure pushes your whole sleep-wake cycle later — consistency here compounds over weeks.",
+    "Pairing morning light with movement — even just a short walk — amplifies the alertness signal to your brain.",
+  ]},
+  breakfast: { icon:"🍳", title:"Breakfast window", tips:[
+    "Eat within 60 min of waking. Protein at breakfast stabilises blood sugar and curbs cravings all day.",
+    "A protein-forward breakfast blunts the mid-morning energy dip better than a carb-heavy one.",
+    "Breaking your fast with fibre and protein — not just carbohydrate — steadies insulin response for hours.",
+    "Eggs, yoghurt or legumes at breakfast support satiety longer than cereal or pastries alone.",
+    "The first meal sets the tone for glucose control for the rest of the day — starting with protein helps.",
+  ]},
+  peakMetabolism: { icon:"☀️", title:"Peak metabolism", tips:[
+    "Your body processes nutrients most efficiently now — make this your most nutritious meal.",
+    "Insulin sensitivity tends to peak around midday, making this a good window for your largest meal.",
+    "Digestive enzyme activity is typically highest in this window — a heavier, nutrient-dense meal is well tolerated now.",
+    "Core temperature and metabolic rate run slightly higher at midday, supporting efficient nutrient processing.",
+    "This is a strong window for protein-dense meals — muscle protein synthesis responds well to midday intake.",
+  ]},
+  afternoonFuel: { icon:"🌤", title:"Afternoon fuel", tips:[
+    "A protein + complex-carb snack prevents the 3 pm energy dip. Avoid refined sugar.",
+    "Blood sugar dips naturally in the early afternoon — pairing protein with fibre softens the drop.",
+    "A handful of nuts or seeds with fruit is a steadier afternoon choice than something sugary.",
+    "Caffeine after 2 pm can still be circulating at bedtime — worth timing your last cup earlier.",
+    "A short walk after an afternoon snack helps shuttle glucose into muscle instead of storage.",
+  ]},
+  dinnerWindow: { icon:"🌆", title:"Dinner window", tips:[
+    "Aim to finish eating 2–3 hours before sleep to support melatonin and deeper rest.",
+    "A lighter dinner, eaten earlier, tends to produce more restorative sleep than a late, heavy one.",
+    "Melatonin production is suppressed by digestion — an earlier dinner gives your body a head start on winding down.",
+    "Complex carbs at dinner, in modest portions, can support serotonin and an easier transition to sleep.",
+    "Alcohol with dinner fragments sleep architecture later in the night, even when it feels relaxing at first.",
+  ]},
+  windDown: { icon:"🌇", title:"Wind down", tips:[
+    "Dim lights and reduce screen brightness. Melatonin production begins as light fades.",
+    "Blue light in the evening is the strongest signal that delays melatonin — warmer, dimmer light helps it along.",
+    "A short walk or light stretching now supports digestion without the stimulation of a full workout.",
+    "Herbal tea — chamomile or valerian — can be part of a calming wind-down ritual without caffeine's disruption.",
+    "Keeping the bedroom cooler in this window primes the body-temperature drop that deep sleep depends on.",
+  ]},
+  overnightFast: { icon:"🌙", title:"Overnight fast", tips:[
+    "Water and herbal tea support cellular recovery without breaking your metabolic reset.",
+    "The overnight fast gives digestion a genuine rest — most of the repair work happening now doesn't need fuel.",
+    "If thirst wakes you, water is enough — a full glass rarely disrupts sleep the way food does.",
+    "This window is when autophagy — the body's cellular clean-up process — is thought to be most active.",
+    "Staying hydrated before bed, not during the night, avoids disrupting sleep with bathroom trips.",
+  ]},
+};
+
+const circadianTipFromKey = (key) => {
+  const pool = CIRCADIAN_TIP_POOLS[key];
+  return { icon: pool.icon, title: pool.title, tip: pickDailyVariant(`circadian_${key}`, pool.tips) };
+};
+
 function computeCircadianTip(srH, ssH) {
   const now = new Date();
   const h = now.getHours() + now.getMinutes() / 60;
   const dayLen = ssH - srH;
-  if (h < srH - 0.5) return { icon: "🌙", title: "Overnight rest",    tip: "Quality sleep is when your body rebuilds and hormones reset. Protect this recovery window." };
-  if (h < srH + 0.75) return { icon: "🌅", title: "Wake & light",     tip: "Step outside within 30 min of sunrise — natural light anchors your circadian clock and boosts serotonin." };
-  if (h < srH + 2.5)  return { icon: "🍳", title: "Breakfast window", tip: "Eat within 60 min of waking. Protein at breakfast stabilises blood sugar and curbs cravings all day." };
-  if (h < srH + dayLen * 0.45) return { icon: "☀️", title: "Peak metabolism",  tip: "Your body processes nutrients most efficiently now — make this your most nutritious meal." };
-  if (h < srH + dayLen * 0.62) return { icon: "🌤", title: "Afternoon fuel",   tip: "A protein + complex-carb snack prevents the 3 pm energy dip. Avoid refined sugar." };
-  if (h < ssH)                  return { icon: "🌆", title: "Dinner window",   tip: "Aim to finish eating 2–3 hours before sleep to support melatonin and deeper rest." };
-  if (h < ssH + 1.5)            return { icon: "🌇", title: "Wind down",       tip: "Dim lights and reduce screen brightness. Melatonin production begins as light fades." };
-  return                               { icon: "🌙", title: "Overnight fast",  tip: "Water and herbal tea support cellular recovery without breaking your metabolic reset." };
+  if (h < srH - 0.5) return circadianTipFromKey("overnightRest");
+  if (h < srH + 0.75) return circadianTipFromKey("wakeLight");
+  if (h < srH + 2.5)  return circadianTipFromKey("breakfast");
+  if (h < srH + dayLen * 0.45) return circadianTipFromKey("peakMetabolism");
+  if (h < srH + dayLen * 0.62) return circadianTipFromKey("afternoonFuel");
+  if (h < ssH)                  return circadianTipFromKey("dinnerWindow");
+  if (h < ssH + 1.5)            return circadianTipFromKey("windDown");
+  return                               circadianTipFromKey("overnightFast");
 }
 
 function getFallbackCircadianTip() {
   const h = new Date().getHours() + new Date().getMinutes() / 60;
-  if (h >= 6  && h < 10) return { icon: "🌅", title: "Breakfast window", tip: "Eat within 60 min of waking. Protein at breakfast stabilises blood sugar all morning." };
-  if (h >= 10 && h < 14) return { icon: "☀️", title: "Peak metabolism",  tip: "Your body processes nutrients most efficiently now. Make lunch the most nutritious meal." };
-  if (h >= 14 && h < 17) return { icon: "🌤", title: "Afternoon fuel",   tip: "A protein + complex-carb snack prevents the 3 pm energy dip. Avoid refined sugar." };
-  if (h >= 17 && h < 21) return { icon: "🌆", title: "Dinner timing",    tip: "Finish eating 2–3 hours before sleep to support melatonin production." };
-  return                        { icon: "🌙", title: "Overnight fast",   tip: "Water and herbal tea support cellular recovery without breaking your metabolic reset." };
+  if (h >= 6  && h < 10) return circadianTipFromKey("breakfast");
+  if (h >= 10 && h < 14) return circadianTipFromKey("peakMetabolism");
+  if (h >= 14 && h < 17) return circadianTipFromKey("afternoonFuel");
+  if (h >= 17 && h < 21) return circadianTipFromKey("dinnerWindow");
+  return                        circadianTipFromKey("overnightFast");
 }
 
-function CircadianCard() {
-  const [tip, setTip] = useState(null);
-  const [sunTimes, setSunTimes] = useState(null);
-
-  useEffect(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    const cached = (() => {
-      try { const s = localStorage.getItem("nora_circadian"); if (s) { const d = JSON.parse(s); if (d.date === today) return d; } } catch {}
-      return null;
-    })();
-
-    if (cached) {
-      setSunTimes({ srH: cached.srH, ssH: cached.ssH });
-      setTip(computeCircadianTip(cached.srH, cached.ssH));
-      return;
-    }
-
-    if (!navigator.geolocation) { setTip(getFallbackCircadianTip()); return; }
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const res  = await fetch(`https://api.sunrisesunset.io/json?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`);
-          const data = await res.json();
-          if (data.status === "OK") {
-            const srH = parseTimeToH(data.results.sunrise);
-            const ssH = parseTimeToH(data.results.sunset);
-            if (srH && ssH) {
-              try { localStorage.setItem("nora_circadian", JSON.stringify({ date: today, srH, ssH })); } catch {}
-              setSunTimes({ srH, ssH });
-              setTip(computeCircadianTip(srH, ssH));
-              return;
-            }
-          }
-        } catch {}
-        setTip(getFallbackCircadianTip());
-      },
-      () => setTip(getFallbackCircadianTip()),
-      { timeout: 5000, maximumAge: 86400000 }
-    );
-  }, []);
-
-  if (!tip) return null;
-
-  if (tip.title === "Dinner window" || tip.title === "Dinner timing") {
-    return <EatingWindowTimeline sunTimes={sunTimes} />;
-  }
-
-  return (
-    <div style={{ ...card, padding: "14px 16px", borderLeft: `3px solid ${C.slate}`, animation: "fadeIn 0.3s ease" }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: C.slate, textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 5px" }}>
-        {tip.icon} {tip.title}
-      </p>
-      <p style={{ fontSize: 13, color: C.text, lineHeight: 1.55, margin: 0 }}>{tip.tip}</p>
-    </div>
-  );
-}
-
-function EatingWindowTimeline({ sunTimes }) {
+function EatingWindowBand({ fastingStart, fastingEnd, setActiveTab }) {
   const now  = new Date();
   const nowH = now.getHours() + now.getMinutes() / 60;
 
-  const eatStart = sunTimes ? sunTimes.srH + 1   : 7;
-  const eatEnd   = sunTimes ? sunTimes.ssH + 0.5  : 19;
-  const bedtime  = sunTimes ? sunTimes.ssH + 3.5  : 22.5;
+  const [sh, sm] = fastingStart.split(":").map(Number);
+  const [eh, em] = fastingEnd.split(":").map(Number);
+  const eatStart = sh + sm / 60;
+  const eatEnd   = eh + em / 60;
+  const bedtime  = eatEnd + 1.5;
 
   const TL_START = 5, TL_END = 24;
   const span = TL_END - TL_START;
-  const pct  = (h) => Math.max(0, Math.min(100, ((h - TL_START) / span) * 100));
+  const pct  = (hh) => Math.max(0, Math.min(100, ((hh - TL_START) / span) * 100));
 
-  const fmtH = (h) => {
-    const hr  = Math.floor(h) % 24;
-    const min = Math.round((h % 1) * 60);
+  const fmtH = (hh) => {
+    const hr  = Math.floor(hh) % 24;
+    const min = Math.round((hh % 1) * 60);
     const lbl = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
     return min > 0 ? `${lbl}:${String(min).padStart(2,"0")}${hr < 12 ? "am":"pm"}` : `${lbl}${hr < 12 ? "am":"pm"}`;
   };
 
-  const nowPct     = pct(nowH);
+  const nowPct      = pct(nowH);
   const eatStartPct = pct(eatStart);
   const eatEndPct   = pct(eatEnd);
   const bedtimePct  = pct(bedtime);
 
   return (
-    <div style={{ ...card, padding: "14px 16px", borderLeft: `3px solid ${C.slate}`, animation: "fadeIn 0.3s ease" }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: C.slate, textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 12px" }}>
-        🌆 Eating Window
-      </p>
+    <div style={{ ...card, padding: "14px 16px", borderLeft: `3px solid ${C.green}`, animation: "fadeIn 0.3s ease" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <p style={{ fontSize: 11, fontWeight: 700, color: C.green, textTransform: "uppercase", letterSpacing: "0.07em", margin: 0 }}>
+          🌆 Eating Window
+        </p>
+        <button onClick={() => setActiveTab("me")} style={{ background: "none", border: "none", color: C.muted, fontSize: 10, cursor: "pointer", padding: 0, fontFamily: sans, textDecoration: "underline", textUnderlineOffset: 2, whiteSpace: "nowrap" }}>
+          Fasting settings →
+        </button>
+      </div>
 
       {/* Bar */}
       <div style={{ position: "relative", marginBottom: 6 }}>
@@ -1086,11 +1177,11 @@ function EatingWindowTimeline({ sunTimes }) {
             left: `${eatStartPct}%`, width: `${eatEndPct - eatStartPct}%`,
             background: `linear-gradient(90deg, ${C.green}BB, ${C.green}EE)`,
           }}/>
-          {/* Gold: wind-down caution */}
+          {/* Slate: wind-down caution */}
           <div style={{
             position: "absolute", top: 0, height: "100%",
             left: `${eatEndPct}%`, width: `${bedtimePct - eatEndPct}%`,
-            background: `linear-gradient(90deg, ${C.gold}99, ${C.amber}BB)`,
+            background: `linear-gradient(90deg, ${C.slate}99, ${C.slate}CC)`,
           }}/>
         </div>
         {/* Current-time needle */}
@@ -1109,9 +1200,9 @@ function EatingWindowTimeline({ sunTimes }) {
 
       {/* Time labels */}
       <div style={{ position: "relative", height: 16, marginBottom: 10 }}>
-        {[[eatStart, fmtH(eatStart)], [eatEnd, fmtH(eatEnd)], [bedtime, fmtH(bedtime)]].map(([h, lbl]) => (
-          <span key={h} style={{
-            position: "absolute", left: `${pct(h)}%`,
+        {[[eatStart, fmtH(eatStart)], [eatEnd, fmtH(eatEnd)], [bedtime, fmtH(bedtime)]].map(([hh, lbl]) => (
+          <span key={hh} style={{
+            position: "absolute", left: `${pct(hh)}%`,
             transform: "translateX(-50%)", fontSize: 9,
             color: C.muted, letterSpacing: "0.02em", whiteSpace: "nowrap",
           }}>{lbl}</span>
@@ -1122,7 +1213,7 @@ function EatingWindowTimeline({ sunTimes }) {
       <div style={{ display: "flex", gap: 14 }}>
         {[
           { color: C.green, label: "Eat freely" },
-          { color: C.gold,  label: "Wind down" },
+          { color: C.slate, label: "Wind down" },
           { color: C.track, label: "Overnight fast", border: `1px solid ${C.border}` },
         ].map(({ color, label, border }) => (
           <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -1131,6 +1222,57 @@ function EatingWindowTimeline({ sunTimes }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function CircadianCard() {
+  const [tip, setTip] = useState(null);
+
+  useEffect(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const cached = (() => {
+      try { const s = localStorage.getItem("nora_circadian"); if (s) { const d = JSON.parse(s); if (d.date === today) return d; } } catch {}
+      return null;
+    })();
+
+    if (cached) {
+      setTip(computeCircadianTip(cached.srH, cached.ssH));
+      return;
+    }
+
+    if (!navigator.geolocation) { setTip(getFallbackCircadianTip()); return; }
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res  = await fetch(`https://api.sunrisesunset.io/json?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`);
+          const data = await res.json();
+          if (data.status === "OK") {
+            const srH = parseTimeToH(data.results.sunrise);
+            const ssH = parseTimeToH(data.results.sunset);
+            if (srH && ssH) {
+              try { localStorage.setItem("nora_circadian", JSON.stringify({ date: today, srH, ssH })); } catch {}
+              setTip(computeCircadianTip(srH, ssH));
+              return;
+            }
+          }
+        } catch {}
+        setTip(getFallbackCircadianTip());
+      },
+      () => setTip(getFallbackCircadianTip()),
+      { timeout: 5000, maximumAge: 86400000 }
+    );
+  }, []);
+
+  if (!tip) return null;
+
+  return (
+    <div style={{ ...card, padding: "14px 16px", borderLeft: `3px solid ${C.slate}`, animation: "fadeIn 0.3s ease" }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: C.slate, textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 5px" }}>
+        {tip.icon} {tip.title}
+      </p>
+      <p style={{ fontSize: 13, color: C.text, lineHeight: 1.55, margin: 0 }}>{tip.tip}</p>
     </div>
   );
 }

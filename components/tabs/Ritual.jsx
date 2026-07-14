@@ -1212,7 +1212,7 @@ function CircadianTimeline({ sun, geoError, entries }) {
 }
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
-export default function Ritual({ profile, targets, entries, waterMl, cyclePhase, activeChallenges, startChallenge, checkInChallenge, abandonChallenge, ritualStreak, markChallengeDone }) {
+export default function Ritual({ profile, targets, entries, waterMl, cyclePhase, periodLogs, activeChallenges, startChallenge, checkInChallenge, abandonChallenge, ritualStreak, markChallengeDone }) {
   const [biohack,        setBiohack]        = useState(null);
   const [loading,        setLoading]        = useState(false);
   const [loadingStatus,  setLoadingStatus]  = useState("");
@@ -1229,7 +1229,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
 
   const tog = k => setOpen(p => ({ ...p, [k]: !p[k] }));
 
-  const localCyclePhase = cyclePhase || ((profile?.sex==="female" && profile?.cycleRegularity!=="Absent") ? getCyclePhase(profile?.lastPeriod, profile?.cycleLength||28) : null);
+  const localCyclePhase = cyclePhase || ((profile?.sex==="female" && profile?.biologicalTrackingEnabled && profile?.biologicalContext==="cycle") ? getCyclePhase(periodLogs, profile?.cycleLength||28) : null);
   const weekTheme  = WEEKLY_THEMES[getWeekIndex()];
   const dn = new Date();
   const dayOfYear = Math.floor((dn - new Date(dn.getFullYear(),0,0)) / 86400000);
@@ -1688,7 +1688,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
       {/* Female: cycle phase */}
       {profile?.sex==="female" && localCyclePhase && (
         <div style={{ ...card }}>
-          <SectionHeader title="Cycle Phase Insights" sub={`${localCyclePhase.label} phase \u00B7 Day ${localCyclePhase.day}`} open={open.cycle} onToggle={() => tog("cycle")} accent/>
+          <SectionHeader title="Cycle Phase Insights" sub={`${localCyclePhase.label} phase \u00B7 Day ${localCyclePhase.day}${localCyclePhase.periodLengthEstimated||localCyclePhase.cycleLengthEstimated?" (estimated)":""}`} open={open.cycle} onToggle={() => tog("cycle")} accent/>
           <Collapsible open={open.cycle}>
             <div style={{ padding:"0 18px 18px" }}>
               <div style={{ borderLeft:`3px solid ${localCyclePhase.color}`, paddingLeft:12, marginBottom:16 }}>
