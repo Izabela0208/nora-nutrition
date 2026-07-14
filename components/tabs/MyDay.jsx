@@ -2,6 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { C, card, serif, sans, inp, localDateStr, pickDailyVariant } from "../noraTokens";
 import { BotanicalBranch, LeafDecor, DropIcon, CheckIcon, SparkleIcon, CameraIcon, EditIcon } from "../NoraIcons";
 
+const MovementIcon = ({ size = 15, color = C.sage }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <path d="M1.5 10.5h2.8l1.7-4 2 7 1.7-5.5 1.3 2.5h3.5" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
 const callClaude = async (sys, user, maxTokens=800) => {
   const res = await fetch("/api/chat", {
     method:"POST", headers:{"Content-Type":"application/json"},
@@ -494,7 +500,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   const startEdit=(e)=>{setEditingId(e.id);setEditFields({name:e.name,calories:String(e.calories),protein_g:String(e.protein_g||0),carbs_g:String(e.carbs_g||0),fat_g:String(e.fat_g||0),notes:e.notes||""});};
   const saveEdit=(id)=>{updateMeal(id,{...editFields,calories:Number(editFields.calories),protein_g:Number(editFields.protein_g),carbs_g:Number(editFields.carbs_g),fat_g:Number(editFields.fat_g),estimated:false});setEditingId(null);};
   const mealGroups=["Morning","Midday","Snacks","Evening"];
-  const grouped=mealGroups.reduce((a,g)=>({...a,[g]:entries.filter(e=>e.mealGroup===g)}),{});
+  const grouped=mealGroups.reduce((a,g)=>({...a,[g]:entries.filter(e=>e.mealGroup===g&&e.type!=="exercise")}),{});
 
   return (
     <div style={{padding:"16px 16px 100px",display:"flex",flexDirection:"column",gap:12}}>
@@ -736,12 +742,12 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                         </div>
                       ):(
                         <div style={{padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
-                          <div style={{width:6,height:6,borderRadius:"50%",backgroundColor:entry.type==="exercise"?C.sage:C.gold,flexShrink:0}}/>
+                          <div style={{width:6,height:6,borderRadius:"50%",backgroundColor:C.gold,flexShrink:0}}/>
                           <div style={{flex:1,minWidth:0}}>
                             <p style={{fontSize:13,color:C.text,fontWeight:500,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{entry.name}</p>
                             {entry.notes&&<p style={{fontSize:11,color:C.muted,margin:"1px 0 0"}}>{entry.notes}</p>}
                           </div>
-                          <span style={{fontSize:13,fontWeight:600,color:entry.type==="exercise"?C.sage:C.text,flexShrink:0}}>{entry.type==="exercise"?"-":""}{Math.abs(Math.round(entry.calories))}<span style={{fontSize:11,color:C.muted,fontWeight:400}}> kcal{entry.estimated?" ~":""}</span></span>
+                          <span style={{fontSize:13,fontWeight:600,color:C.text,flexShrink:0}}>{Math.abs(Math.round(entry.calories))}<span style={{fontSize:11,color:C.muted,fontWeight:400}}> kcal{entry.estimated?" ~":""}</span></span>
                           <button onClick={()=>startEdit(entry)} style={{background:"none",border:"none",cursor:"pointer",padding:4,flexShrink:0}}><EditIcon size={13} color={C.muted}/></button>
                           <button onClick={()=>deleteMeal(entry.id)} style={{background:"none",border:"none",cursor:"pointer",padding:4,color:C.muted,fontSize:16,lineHeight:1,flexShrink:0}}>×</button>
                         </div>
@@ -751,6 +757,50 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Movement — exercise entries, separate from meals (no mealGroup dependency) */}
+        {exerE.length>0&&(
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <MovementIcon size={15} color={C.sage}/>
+              <h3 style={{fontFamily:serif,fontSize:18,color:C.green,fontWeight:600,margin:0}}>Movement</h3>
+              <span style={{marginLeft:"auto",fontSize:12,fontWeight:600,color:C.sage}}>−{Math.round(burnedCal)} kcal today</span>
+            </div>
+            <div style={{...card,overflow:"hidden"}}>
+              {exerE.map((entry,idx)=>(
+                <div key={entry.id}>
+                  {idx>0&&<div style={{height:1,backgroundColor:C.border,margin:"0 14px"}}/>}
+                  {editingId===entry.id?(
+                    <div style={{padding:"12px 14px",display:"flex",flexDirection:"column",gap:8}}>
+                      <input style={inp} value={editFields.name} onChange={e=>setEditFields(f=>({...f,name:e.target.value}))} placeholder="Name"/>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6}}>
+                        {[["calories","kcal"],["protein_g","prot"],["carbs_g","carbs"],["fat_g","fat"]].map(([k,l])=>(
+                          <div key={k}><label style={{fontSize:10,color:C.muted,display:"block",marginBottom:3}}>{l}</label><input type="number" style={{...inp,padding:"8px 10px",fontSize:13}} value={editFields[k]} onChange={e=>setEditFields(f=>({...f,[k]:e.target.value}))}/></div>
+                        ))}
+                      </div>
+                      <input style={inp} value={editFields.notes} onChange={e=>setEditFields(f=>({...f,notes:e.target.value}))} placeholder="Duration / notes"/>
+                      <div style={{display:"flex",gap:8}}>
+                        <button onClick={()=>saveEdit(entry.id)} style={{flex:2,padding:"10px",backgroundColor:C.green,color:C.bg,border:"none",borderRadius:9,fontSize:13,fontWeight:500,cursor:"pointer"}}>Save</button>
+                        <button onClick={()=>setEditingId(null)} style={{flex:1,padding:"10px",backgroundColor:"transparent",color:C.green,border:`1px solid ${C.green}`,borderRadius:9,fontSize:13,cursor:"pointer"}}>Cancel</button>
+                      </div>
+                    </div>
+                  ):(
+                    <div style={{padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
+                      <div style={{width:6,height:6,borderRadius:"50%",backgroundColor:C.sage,flexShrink:0}}/>
+                      <div style={{flex:1,minWidth:0}}>
+                        <p style={{fontSize:13,color:C.text,fontWeight:500,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{entry.name}</p>
+                        {entry.notes&&<p style={{fontSize:11,color:C.muted,margin:"1px 0 0"}}>{entry.notes}</p>}
+                      </div>
+                      <span style={{fontSize:13,fontWeight:600,color:C.sage,flexShrink:0}}>−{Math.abs(Math.round(entry.calories))}<span style={{fontSize:11,color:C.muted,fontWeight:400}}> kcal{entry.estimated?" ~":""}</span></span>
+                      <button onClick={()=>startEdit(entry)} style={{background:"none",border:"none",cursor:"pointer",padding:4,flexShrink:0}}><EditIcon size={13} color={C.muted}/></button>
+                      <button onClick={()=>deleteMeal(entry.id)} style={{background:"none",border:"none",cursor:"pointer",padding:4,color:C.muted,fontSize:16,lineHeight:1,flexShrink:0}}>×</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
