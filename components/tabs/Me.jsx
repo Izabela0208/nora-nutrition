@@ -384,6 +384,22 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
           </>
         )}
 
+        {/* Biological personalisation — opt-in, males only, symmetric to the female path above */}
+        {profile?.sex === "male" && (
+          <>
+            <div style={{ height: 1, backgroundColor: C.border, margin: "14px 0" }}/>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 12, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", margin: 0 }}>Biological personalisation</p>
+                <p style={{ fontSize: 11, color: C.muted, margin: "3px 0 0", lineHeight: 1.5 }}>Optional. Adapts insights to the typical male hormonal rhythm — testosterone's daily peak and decline shape training, recovery and sleep guidance.</p>
+              </div>
+              <button onClick={() => saveProfile({ ...profile, biologicalTrackingEnabled: !profile.biologicalTrackingEnabled })} style={{ width: 44, height: 24, borderRadius: 12, backgroundColor: profile?.biologicalTrackingEnabled ? C.green : C.border, border: "none", cursor: "pointer", position: "relative", flexShrink: 0, marginLeft: 12 }}>
+                <div style={{ width: 18, height: 18, borderRadius: "50%", backgroundColor: "white", position: "absolute", top: 3, left: profile?.biologicalTrackingEnabled ? 23 : 3, transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}/>
+              </button>
+            </div>
+          </>
+        )}
+
         {/* Fasting window — opt-in, read by the eating window band in My Day */}
         <div style={{ height: 1, backgroundColor: C.border, margin: "14px 0" }}/>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: fastingEnabled ? 14 : 0 }}>

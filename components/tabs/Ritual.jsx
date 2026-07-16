@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect } from "react";
-import { C, card, serif, sans, localDateStr, getCyclePhase, getWeekKey } from "../noraTokens";
+import { C, card, serif, sans, localDateStr, getCyclePhase, getCycleTip, getMaleTip, getWeekKey } from "../noraTokens";
 import { SectionHeader, Collapsible } from "../NoraUI";
 import { BotanicalBranch, NoraAvatar } from "../NoraIcons";
 
@@ -20,22 +20,6 @@ const CYCLE_NUTRITION = {
   ovulatory:  { foods:["Zinc-rich seeds — hemp, pumpkin","Salmon or sardines for anti-inflammation","Fibre-rich vegetables to support oestrogen clearance"], avoid:"Excess sugar and alcohol during this sensitive window." },
   luteal:     { foods:["Magnesium foods — dark chocolate, almonds, leafy greens","Vitamin B6 — bananas, poultry, avocado","Complex carbs to balance serotonin — sweet potato, brown rice"], avoid:"Salt and processed foods that worsen bloating and mood shifts." },
 };
-
-const MALE_WINDOWS = [
-  { time:"06:00-10:00", title:"Cortisol peak",          tip:"Testosterone is at its daily high - ideal for strength training, sprinting or competitive sport." },
-  { time:"10:00-14:00", title:"Peak output",             tip:"Best window for high-intensity work, complex movements and skill-based training." },
-  { time:"14:00-17:00", title:"Afternoon power",         tip:"Reaction time and muscle strength peak again. Excellent for a second session or team sport." },
-  { time:"17:00-20:00", title:"Endurance & flexibility", tip:"Core temperature is highest - ideal for longer runs, yoga or deep stretching." },
-  { time:"20:00+",      title:"Recovery mode",           tip:"Wind down. Prioritise protein-rich foods to support overnight muscle repair and growth hormone release." },
-];
-
-const CIRCADIAN_INFO = [
-  { icon:"\u2600\uFE0F", time:"06:00-09:00", title:"Morning light",    tip:"Sunlight within 30 min of waking anchors your circadian clock, boosts cortisol naturally and improves sleep that night." },
-  { icon:"\uD83C\uDF7D\uFE0F", time:"07:00-10:00", title:"Breakfast window", tip:"Eating within 2 hours of waking activates metabolism. Protein at breakfast stabilises blood sugar all day." },
-  { icon:"\u26A1",  time:"10:00-14:00", title:"Peak metabolism",  tip:"Digestive enzymes and insulin sensitivity are highest. Eat your largest, most nutritionally dense meal here." },
-  { icon:"\uD83C\uDF3F", time:"14:00-17:00", title:"Afternoon fuel",   tip:"A light snack with complex carbs sustains focus. Avoid heavy meals that divert blood flow from the brain." },
-  { icon:"\uD83C\uDF19", time:"19:00-21:00", title:"Wind-down window", tip:"Finish your last meal 3 hours before bed. Digestion slows and body temperature drops as evening progresses." },
-];
 
 // ─── THRIVE DATA ─────────────────────────────────────────────────────────────
 const WEEKLY_THEMES = ["Sleep Optimization","Hydration","Movement & Strength","Cold Exposure","Intermittent Fasting","Mindfulness","Sugar-Free Challenge","Morning Routine"];
@@ -1692,7 +1676,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
           <Collapsible open={open.cycle}>
             <div style={{ padding:"0 18px 18px" }}>
               <div style={{ borderLeft:`3px solid ${localCyclePhase.color}`, paddingLeft:12, marginBottom:16 }}>
-                <p style={{ fontSize:13, color:C.text, lineHeight:1.7, margin:0 }}>{localCyclePhase.tip}</p>
+                <p style={{ fontSize:13, color:C.text, lineHeight:1.7, margin:0 }}>{getCycleTip(localCyclePhase.phase, "long")}</p>
               </div>
               <p style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 8px" }}>Best foods this phase</p>
               {(CYCLE_NUTRITION[localCyclePhase.phase]?.foods||[]).map((f,i,arr) => (
@@ -1711,25 +1695,22 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
         </div>
       )}
 
-      {/* Male: performance windows */}
-      {profile?.sex==="male" && (
-        <div style={{ ...card }}>
-          <SectionHeader title="Performance Windows" sub="Optimise training & nutrition by the clock" open={open.male} onToggle={() => tog("male")} accent/>
-          <Collapsible open={open.male}>
-            <div style={{ padding:"0 18px 18px", display:"flex", flexDirection:"column", gap:10 }}>
-              {MALE_WINDOWS.map((w,i) => (
-                <div key={i} style={{ borderLeft:`3px solid ${C.green}`, paddingLeft:12, paddingTop:2, paddingBottom:2 }}>
-                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:3, flexWrap:"wrap", gap:4 }}>
-                    <p style={{ fontSize:13, fontWeight:600, color:C.text, margin:0 }}>{w.title}</p>
-                    <span style={{ fontSize:10, color:C.muted, backgroundColor:C.greenLight, padding:"2px 8px", borderRadius:20 }}>{w.time}</span>
-                  </div>
-                  <p style={{ fontSize:12, color:C.muted, margin:0, lineHeight:1.6 }}>{w.tip}</p>
+      {/* Male: hormonal rhythm — opt-in, mirrors Cycle Phase Insights */}
+      {profile?.sex==="male" && profile?.biologicalTrackingEnabled && (() => {
+        const maleTip = getMaleTip("long");
+        return (
+          <div style={{ ...card }}>
+            <SectionHeader title="Hormonal Rhythm" sub={`${maleTip.icon} ${maleTip.title}`} open={open.male} onToggle={() => tog("male")} accent/>
+            <Collapsible open={open.male}>
+              <div style={{ padding:"0 18px 18px" }}>
+                <div style={{ borderLeft:`3px solid ${C.green}`, paddingLeft:12 }}>
+                  <p style={{ fontSize:13, color:C.text, lineHeight:1.7, margin:0 }}>{maleTip.tip}</p>
                 </div>
-              ))}
-            </div>
-          </Collapsible>
-        </div>
-      )}
+              </div>
+            </Collapsible>
+          </div>
+        );
+      })()}
 
     </div>
   );

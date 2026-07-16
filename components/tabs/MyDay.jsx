@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { C, card, serif, sans, inp, localDateStr, pickDailyVariant } from "../noraTokens";
+import { C, card, serif, sans, inp, localDateStr, pickDailyVariant, getMaleTip, getDailyFact } from "../noraTokens";
 import { BotanicalBranch, LeafDecor, DropIcon, CheckIcon, SparkleIcon, CameraIcon, EditIcon } from "../NoraIcons";
 
 const MovementIcon = ({ size = 15, color = C.sage }) => (
@@ -22,44 +22,6 @@ const parseJSON = (text) => {
     const o=text.match(/\{[\s\S]*\}/); if(o) return JSON.parse(o[0]);
     throw new Error("parse error");
   }
-};
-
-const MALE_TIP_POOLS = {
-  strength: { icon:"💪", title:"Strength window", tips:[
-    "Morning testosterone peaks — optimal for heavy lifts. Fuel with a protein-rich breakfast 1–2 hours before training.",
-    "Grip strength and reaction time are typically sharper in the morning — a good window for technical lifts.",
-    "Training fasted or fed both work, but a small protein hit beforehand supports better bar speed under load.",
-    "Morning strength sessions tend to carry lower injury risk once a proper warm-up raises core temperature.",
-    "Creatine timing matters less than consistency — daily intake, any time, sustains muscle phosphocreatine stores.",
-  ]},
-  cardio: { icon:"🏃", title:"Cardio peak", tips:[
-    "Core temperature and reaction time peak now. Great for HIIT or endurance. Load up on complex carbs beforehand.",
-    "Lung function and aerobic capacity are measurably higher in the afternoon than first thing in the morning.",
-    "A carb-inclusive meal 2–3 hours before cardio tops up glycogen without the sluggishness of eating too close to training.",
-    "Afternoon heat tolerance is higher — a good window for harder conditioning work if you train outdoors.",
-    "Perceived exertion tends to feel lower in the afternoon for the same actual effort — useful for pushing pace work.",
-  ]},
-  recovery: { icon:"🔄", title:"Recovery window", tips:[
-    "Muscle repair happens post-workout. Prioritise protein and magnesium-rich foods; quality sleep completes the cycle.",
-    "Evening protein intake supports overnight muscle protein synthesis nearly as well as daytime meals.",
-    "Magnesium-rich foods in the evening — leafy greens, nuts, seeds — may ease muscle tension going into sleep.",
-    "A short mobility or stretching session now can reduce next-day stiffness more than static rest alone.",
-    "Tart cherry juice has modest evidence for reducing exercise-induced muscle soreness when taken in the evening.",
-  ]},
-  restRepair: { icon:"🌙", title:"Rest & repair", tips:[
-    "Avoid heavy meals after 9 pm. Your body detoxes and rebuilds during deep sleep — protect that window.",
-    "Testosterone production is closely tied to deep sleep — cutting sleep short has a measurable next-day cost.",
-    "A cool, dark room supports the testosterone and growth hormone release that happens overnight.",
-    "Late-night alcohol blunts the deep sleep stages where most physical recovery happens.",
-    "Consistent sleep and wake times matter more for hormonal recovery than total hours alone.",
-  ]},
-};
-
-const getMaleTip = () => {
-  const h = new Date().getHours();
-  const key = h>=5&&h<12 ? "strength" : h>=12&&h<18 ? "cardio" : h>=18&&h<22 ? "recovery" : "restRepair";
-  const pool = MALE_TIP_POOLS[key];
-  return { icon: pool.icon, title: pool.title, tip: pickDailyVariant(`male_${key}`, pool.tips) };
 };
 
 const HORMONAL_TIPS = [
@@ -100,12 +62,6 @@ const HORMONAL_TIPS = [
   { tip: "Curcumin in turmeric inhibits NF-kB, a key inflammatory pathway activated during menstruation. Adding turmeric with black pepper and a healthy fat daily may reduce period-related inflammation over time." },
   { tip: "Dehydration concentrates prostaglandins in uterine tissue and worsens cramping. Electrolyte-balanced water — a pinch of sea salt and lemon — hydrates cells more effectively than plain water alone." },
 ];
-
-const getHormonalTip = (offset = 0) => {
-  const now = new Date();
-  const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
-  return HORMONAL_TIPS[(dayOfYear + offset) % HORMONAL_TIPS.length];
-};
 
 const PHASE_EXTRAS = {
   menstrual:  { foods: ["Iron: lentils, red meat, dark leafy greens", "Ginger tea for cramps"], exercise: "Yoga · gentle walking" },
@@ -178,6 +134,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   const plateFileRef    = useRef(null);
 
   const isFemale     = profile?.sex === "female";
+  const isMale       = profile?.sex === "male";
   const isPeri       = profile?.biologicalTrackingEnabled && profile?.biologicalContext === "perimenopause";
   const foodE        = entries.filter(e=>e.type==="food");
   const exerE        = entries.filter(e=>e.type==="exercise");
@@ -189,7 +146,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   const totalFat     = foodE.reduce((s,e)=>s+(e.fat_g||0),0);
   const h            = new Date().getHours();
   const isEvening    = h >= 18;
-  const maleTip      = !isFemale ? getMaleTip() : null;
+  const maleTip      = (isMale && profile?.biologicalTrackingEnabled) ? getMaleTip("short") : null;
 
   useEffect(()=>{
     if(!isEvening) return;
@@ -807,36 +764,35 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         {/* Circadian tip */}
         <CircadianCard/>
 
-        {/* Cycle & hormonal insights — compact */}
+        {/* Biological insight — opt-in only, one per user: cycle, perimenopause or male rhythm */}
         {isFemale&&cyclePhase&&(
           <div style={{...card,padding:"16px 18px",borderLeft:`3px solid ${cyclePhase.color}`,background:`linear-gradient(135deg,${C.card} 0%,${cyclePhase.color}08 100%)`}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
               <p style={{fontFamily:serif,fontSize:13,fontWeight:600,color:cyclePhase.color,margin:0}}>{cyclePhase.label} Phase</p>
               <span style={{fontSize:10,color:cyclePhase.color,backgroundColor:`${cyclePhase.color}18`,padding:"2px 9px",borderRadius:20,fontWeight:600,letterSpacing:"0.04em"}}>Day {cyclePhase.day}{(cyclePhase.periodLengthEstimated||cyclePhase.cycleLengthEstimated)&&" (est.)"}</span>
             </div>
-            <div style={{marginBottom:10}}>
-              <p style={{fontSize:9,fontWeight:700,color:cyclePhase.color,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 4px"}}>✦ Cycle Insight</p>
-              <p style={{fontFamily:serif,fontSize:12,color:C.text,margin:0,lineHeight:1.6}}>{cyclePhase.tip}</p>
-            </div>
-            <div style={{height:1,backgroundColor:`${cyclePhase.color}20`,margin:"0 0 10px"}}/>
-            <div>
-              <p style={{fontSize:9,fontWeight:700,color:C.gold,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 4px"}}>✦ Today's Tip</p>
-              <p style={{fontFamily:serif,fontSize:12,color:C.text,margin:0,lineHeight:1.6}}>{getHormonalTip().tip}</p>
-            </div>
+            <p style={{fontSize:9,fontWeight:700,color:cyclePhase.color,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 4px"}}>✦ Cycle Insight</p>
+            <p style={{fontFamily:serif,fontSize:12,color:C.text,margin:0,lineHeight:1.6}}>{cyclePhase.tip}</p>
           </div>
         )}
         {isFemale&&isPeri&&(
           <div style={{...card,padding:"10px 14px",borderLeft:`2px solid ${C.muted}`}}>
             <p style={{fontSize:10,fontWeight:700,color:C.amber,textTransform:"uppercase",letterSpacing:"0.05em",margin:"0 0 3px"}}>Hormonal balance</p>
-            <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{getHormonalTip(18).tip}</p>
+            <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{pickDailyVariant("perimenopause_tip",HORMONAL_TIPS).tip}</p>
           </div>
         )}
-        {!isFemale&&maleTip&&(
+        {isMale&&maleTip&&(
           <div style={{...card,padding:"10px 14px",borderLeft:`2px solid ${C.muted}`}}>
             <p style={{fontSize:10,fontWeight:700,color:C.green,textTransform:"uppercase",letterSpacing:"0.05em",margin:"0 0 3px"}}>{maleTip.icon} {maleTip.title}</p>
             <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{maleTip.tip}</p>
           </div>
         )}
+
+        {/* Today's Tip — general life/health, for everyone, independent of Biological personalisation */}
+        <div style={{...card,padding:"10px 14px",borderLeft:`2px solid ${C.gold}60`}}>
+          <p style={{fontSize:9,fontWeight:700,color:C.gold,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 3px"}}>✦ Today's Tip</p>
+          <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{getDailyFact()}</p>
+        </div>
 
         {/* Evening reflection — closing the day, only after ~18:00 — Nora message identity: pine card, no avatar */}
         {isEvening&&eveningSummaryLoad&&(
