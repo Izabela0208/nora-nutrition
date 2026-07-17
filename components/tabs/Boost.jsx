@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { C, card, serif, sans, localDateStr } from "../noraTokens";
-import { PlusIcon, CheckIcon, NoraAvatar } from "../NoraIcons";
+import { PlusIcon, CheckIcon } from "../NoraIcons";
 
 const SUPP_KEY  = "nora_supps_list";
 const TAKEN_KEY = "nora_supps_taken";
@@ -196,7 +196,6 @@ ${foodLog}`;
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} details summary{list-style:none} details summary::-webkit-details-marker{display:none} .boost-chev{display:inline-block;transition:transform 0.2s} details[open] .boost-chev{transform:rotate(90deg)}`}</style>
       <div style={{ background:`linear-gradient(160deg,${C.greenDark} 0%,${C.green} 100%)`, padding:"20px 20px 18px", margin:"-24px -20px 18px", position:"relative", overflow:"hidden" }}>
         <div style={{ display:"flex", alignItems:"center", gap:12, flex:1 }}>
-          <NoraAvatar size={36}/>
           <div style={{ flex:1 }}>
             <h2 style={{ fontFamily:serif, fontSize:21, color:"#FDFAF5", fontWeight:700, margin:0, lineHeight:1.2, letterSpacing:"-0.01em" }}>Boost</h2>
             <p style={{ fontSize:11, color:"rgba(253,250,245,0.55)", margin:0, fontFamily:sans }}>Supplements & personalised recommendations</p>

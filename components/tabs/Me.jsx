@@ -215,7 +215,6 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
       {/* ── Header ───────────────────────────────────────── */}
       <div style={{ background:`linear-gradient(160deg,${C.greenDark} 0%,${C.green} 100%)`, padding:"20px 20px 18px", margin:"-24px -20px 18px", position:"relative", overflow:"hidden" }}>
         <div style={{ display:"flex", alignItems:"center", gap:12, flex:1 }}>
-          <NoraAvatar size={36}/>
           <div style={{ flex:1 }}>
             <h2 style={{ fontFamily:serif, fontSize:21, color:"#FDFAF5", fontWeight:700, margin:0, lineHeight:1.2, letterSpacing:"-0.01em" }}>Me</h2>
             <p style={{ fontSize:11, color:"rgba(253,250,245,0.55)", margin:0, fontFamily:sans }}>Profile · Goals · Settings</p>
