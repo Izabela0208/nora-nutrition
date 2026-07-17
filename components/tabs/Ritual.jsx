@@ -22,9 +22,6 @@ const CYCLE_NUTRITION = {
 };
 
 // ─── THRIVE DATA ─────────────────────────────────────────────────────────────
-const WEEKLY_THEMES = ["Sleep Optimization","Hydration","Movement & Strength","Cold Exposure","Intermittent Fasting","Mindfulness","Sugar-Free Challenge","Morning Routine"];
-const DAILY_CATEGORIES = ["sleep optimization","afternoon energy","evening wind-down","workout recovery","stress management","gut health","breathwork","cold exposure","fasting","supplement timing","mindfulness","hydration"];
-
 const CATEGORY_PUBMED = {
   "sleep optimization": ["sleep quality health","sleep duration outcomes","sleep intervention humans"],
   "afternoon energy":   ["afternoon fatigue alertness","post-lunch energy performance","circadian afternoon productivity"],
@@ -50,6 +47,7 @@ const CHALLENGE_TARGET_DAYS = {
   movement: 14, mindfulness: 14, stress: 14, hydration: 14,
 };
 const getChallengeTargetDays = c => {
+  if (c.recommendedDays) return c.recommendedDays;
   const t = (c.title || "").toLowerCase();
   if (t.includes("magnesium") || t.includes("vitamin") || t.includes("omega")) return 30;
   if (t.includes("sunlight") || t.includes("light") || t.includes("circadian")) return 30;
@@ -67,7 +65,6 @@ const CHALLENGES_GENERAL = [
   { id:"g05", title:"14:10 Fasting Window", category:"fasting", difficulty:"Beginner", duration:"All day", instruction:"Eat your first meal at 9 AM and finish by 7 PM. During the fast: water, black coffee, plain herbal tea only. Break your fast with protein, not carbohydrates. Contraindicated in pregnancy and eating disorder history.", science:"14-hour fasting initiates autophagy and aligns food intake with the cortisol peak, measurably improving insulin sensitivity within 2 weeks.", pubmedQ:"intermittent fasting health", pubmedFbs:["time restricted eating insulin","14:10 fasting outcomes"] },
   { id:"g06", title:"Morning Electrolyte Hydration", category:"hydration", difficulty:"Beginner", duration:"2 min", instruction:"Before coffee or food, drink 500ml of water with a pinch of sea salt and a squeeze of lemon. Have the glass ready on your nightstand the night before.", science:"After 7-9 hours without fluid, cells are sodium-depleted. Plain water dilutes intracellular electrolytes; salt enables water to cross cell membranes via sodium-potassium pumps.", pubmedQ:"water intake health morning", pubmedFbs:["hydration electrolytes cells","morning hydration performance"] },
   { id:"g07", title:"20-Minute Nature Walk", category:"stress", difficulty:"Beginner", duration:"20 min", instruction:"Walk in a natural setting - park, woodland, or waterside. Slow pace. No phone, no headphones. Look at trees, water, and the middle distance. This is a reset, not a workout.", science:"Twenty minutes in nature measurably lowers cortisol, blood pressure, and inflammatory markers without any active effort - the Shinrin-yoku effect replicated across dozens of controlled trials.", pubmedQ:"nature walk stress cortisol", pubmedFbs:["shinrin-yoku health","forest bathing cortisol"] },
-  { id:"g08", title:"30-Plant Week Challenge", category:"nutrition", difficulty:"Intermediate", duration:"All week", instruction:"Count every distinct plant you eat today - vegetables, fruits, legumes, grains, herbs, spices, nuts, seeds each count separately. Aim for 6-8 unique plants today. Track toward 30 this week.", science:"30 plant varieties per week is the strongest single dietary predictor of microbiome diversity - and diversity predicts mood, immunity, and metabolic health.", pubmedQ:"plant diversity microbiome health", pubmedFbs:["gut microbiome diet variety","plant based microbiome"] },
   { id:"g09", title:"Wim Hof Breathing", category:"breathwork", difficulty:"Intermediate", duration:"15 min", instruction:"Lie down on a bed or floor - NEVER near water. Take 30 deep full breaths in through nose, out through mouth. After the 30th exhale, hold on empty as long as comfortable. Inhale fully, hold 15 sec. Repeat 3 rounds.", science:"Cyclic hyperventilation floods the brain with oxygen and triggers adrenaline release, enabling voluntary immune activation documented in Radboud University trials.", pubmedQ:"Wim Hof breathing method", pubmedFbs:["cyclic hyperventilation immune","breathwork adrenaline"] },
   { id:"g10", title:"Magnesium Before Bed", category:"supplements", difficulty:"Beginner", duration:"2 min", instruction:"Take 300-400mg of magnesium glycinate 30 minutes before bed tonight. Use glycinate form - oxide does not effectively cross the blood-brain barrier. Consult your doctor before starting.", science:"Magnesium activates GABA receptors in the brain, reducing neuronal excitability and measurably increasing slow-wave sleep depth in double-blind trials.", pubmedQ:"magnesium sleep quality", pubmedFbs:["magnesium glycinate GABA sleep","magnesium supplement insomnia"] },
   { id:"g11", title:"Zone 2 Cardio Session", category:"movement", difficulty:"Intermediate", duration:"30 min", instruction:"Walk briskly, jog, cycle, or row at a pace where you can speak in full sentences but find it slightly uncomfortable to sing. Maintain for 30 continuous minutes. Heart rate ~60-70% of max.", science:"Zone 2 intensity maximises mitochondrial biogenesis and fat oxidation - the primary adaptations linked to reduced all-cause mortality in longitudinal data.", pubmedQ:"Zone 2 cardio mitochondria", pubmedFbs:["low intensity cardio fat oxidation","aerobic exercise mitochondria"] },
@@ -85,7 +82,6 @@ const CHALLENGES_GENERAL = [
   { id:"g23", title:"Afternoon NSDR Reset", category:"stress", difficulty:"Beginner", duration:"20 min", instruction:"At 1-3 PM, lie flat with eyes closed and listen to a Non-Sleep Deep Rest or yoga nidra protocol. 20 minutes minimum. Set an alarm. Do not attempt to sleep.", science:"NSDR restores dopamine in the striatum by 65% and replenishes cognitive capacity equivalent to correcting partial sleep deprivation - validated by Stanford neuroplasticity research.", pubmedQ:"yoga nidra brain recovery", pubmedFbs:["NSDR restoration","yoga nidra dopamine"] },
   { id:"g24", title:"16:8 Fasting Window", category:"fasting", difficulty:"Intermediate", duration:"All day", instruction:"Eat only between 12 PM and 8 PM today. Break your fast with a protein-rich meal - not juice or fruit alone. Water, black coffee, plain herbal tea before noon. Contraindicated in pregnancy and eating disorder history.", science:"16 hours fasting reliably triggers autophagy and activates AMPK - the cellular energy sensor linked to mitochondrial biogenesis and metabolic flexibility.", pubmedQ:"16:8 intermittent fasting metabolism", pubmedFbs:["16 hour fast autophagy","AMPK fasting activation"] },
   { id:"g25", title:"Sleep Temperature Optimisation", category:"sleep", difficulty:"Beginner", duration:"All night", instruction:"Set bedroom to 16-19°C tonight. Wear light clothing or nothing. If you can't control room temperature, keep feet outside the covers - the hands and feet are the body's primary heat-loss surfaces.", science:"Core body temperature must drop 1-3°C to initiate and maintain deep sleep. Even a 2°C room temperature reduction increases slow-wave sleep by an average of 20 minutes.", pubmedQ:"sleep temperature thermoregulation", pubmedFbs:["cool bedroom sleep quality","body temperature sleep"] },
-  { id:"g26", title:"Fixed Wake Time - 7 Days", category:"sleep", difficulty:"Intermediate", duration:"All week", instruction:"Set a single wake time and hold it every day this week, including weekends. No exceptions. Allow sleep time to vary but not wake time. The first 3 days may feel harder; by day 5 the system recalibrates.", science:"The suprachiasmatic nucleus uses wake-time consistency to synchronise melatonin, cortisol, and insulin rhythms. Variable wake times disrupt these rhythms as severely as crossing two time zones.", pubmedQ:"sleep consistency circadian health", pubmedFbs:["fixed wake time sleep quality","social jetlag health"] },
   { id:"g27", title:"Pre-Bed Casein Protein", category:"nutrition", difficulty:"Beginner", duration:"5 min", instruction:"Eat 30-40g of casein protein or 200g of Greek yogurt 30-45 minutes before bed tonight. Casein digests slowly, releasing amino acids throughout the night during muscle repair cycles.", science:"Pre-sleep protein ingestion increases overnight muscle protein synthesis by 22% and improves morning fat oxidation without disrupting sleep onset or architecture.", pubmedQ:"pre-sleep protein muscle synthesis", pubmedFbs:["casein protein before bed","nocturnal protein metabolism"] },
   { id:"g28", title:"Post-Dinner Walk", category:"movement", difficulty:"Beginner", duration:"15 min", instruction:"Within 30 minutes of finishing dinner tonight, take a 15-minute walk at easy pace. Flat terrain. This is blood glucose management, not exercise.", science:"A 15-minute post-meal walk lowers postprandial glucose spikes by 30-37% and reduces glucose variability throughout the night, improving next-morning insulin sensitivity.", pubmedQ:"post-meal walk glucose", pubmedFbs:["exercise after eating blood sugar","walking postprandial glucose"] },
   { id:"g29", title:"Progressive Muscle Relaxation", category:"stress", difficulty:"Beginner", duration:"12 min", instruction:"Lie flat. Starting at feet - tense each muscle group hard for 5 seconds, then release completely. Move upward: calves, thighs, abdomen, hands, arms, shoulders, face. Finish with 3 slow full breaths.", science:"PMR reduces cortisol and adrenaline and activates the parasympathetic nervous system within one session. In clinical trials it reduces pre-procedural anxiety more effectively than medication in some populations.", pubmedQ:"progressive muscle relaxation anxiety", pubmedFbs:["PMR stress reduction","muscle relaxation cortisol"] },
@@ -100,37 +96,82 @@ const CHALLENGES_GENERAL = [
   { id:"g38", title:"Vitamin D + K2 Protocol", category:"supplements", difficulty:"Beginner", duration:"2 min", instruction:"Take 2000-4000 IU of vitamin D3 with K2 (MK-7) alongside a fat-containing meal today. Test 25-OH-D levels before adjusting dose - consult your doctor. Optimal range is 40-60 ng/mL.", science:"Vitamin D3 acts as a hormone, regulating 2000+ genes. Deficiency - present in 42% of adults - is independently associated with increased all-cause mortality and impaired immune function.", pubmedQ:"vitamin D3 supplementation health", pubmedFbs:["vitamin D deficiency immune","D3 K2 outcomes"] },
   { id:"g39", title:"Expressive Writing Reset", category:"mindfulness", difficulty:"Beginner", duration:"10 min", instruction:"Set a 10-minute timer. Write continuously about whatever is occupying your mind - without stopping to edit. When the timer ends, close the notebook. Do not reread today.", science:"Expressive writing externalises working memory load from the prefrontal cortex, measurably reducing rumination and improving task-switching performance within a single session.", pubmedQ:"expressive writing working memory", pubmedFbs:["journaling stress mental health","writing emotional processing"] },
   { id:"g40", title:"Three-Minute Ice-Cold Immersion", category:"cold", difficulty:"Advanced", duration:"5 min", instruction:"Submerge to shoulders in ice water at 1-15°C for 3 minutes. Breathe steadily - do not hyperventilate before entering. Exit if shivering becomes uncontrollable. Warm up by moving actively. NEVER alone or in open water.", science:"Three minutes at <15°C produces sustained norepinephrine elevation of +300% and dopamine increase of +250% above baseline lasting 3-6 hours - the longest neurochemical window of any biohacking protocol.", pubmedQ:"cold water immersion norepinephrine dopamine", pubmedFbs:["ice bath neurochemistry","cold immersion mental health"] },
+  { id:"g41", title:"30-Plant Week Challenge", category:"nutrition", difficulty:"Intermediate", duration:"All week", recommendedDays:7, instruction:"Count every distinct plant you eat today - vegetables, fruits, legumes, grains, herbs, spices, nuts, seeds each count separately. Aim for 6-8 unique plants today. Track toward 30 this week.", science:"30 plant varieties per week is the strongest single dietary predictor of microbiome diversity - and diversity predicts mood, immunity, and metabolic health.", pubmedQ:"plant diversity microbiome health", pubmedFbs:["gut microbiome diet variety","plant based microbiome"] },
+  { id:"g42", title:"Fixed Wake Time - 7 Days", category:"sleep", difficulty:"Intermediate", duration:"All week", recommendedDays:7, instruction:"Set a single wake time and hold it every day this week, including weekends. No exceptions. Allow sleep time to vary but not wake time. The first 3 days may feel harder; by day 5 the system recalibrates.", science:"The suprachiasmatic nucleus uses wake-time consistency to synchronise melatonin, cortisol, and insulin rhythms. Variable wake times disrupt these rhythms as severely as crossing two time zones.", pubmedQ:"sleep consistency circadian health", pubmedFbs:["fixed wake time sleep quality","social jetlag health"] },
 ];
 
 const CHALLENGES_FEMALE = [
-  { id:"f01", title:"✦ For Her - Follicular Phase Energy Walk", category:"movement", difficulty:"Beginner", duration:"20 min", label:"✦ For Her", instruction:"During your follicular phase (days 1-14), take a brisk 20-minute walk in the morning. Your rising oestrogen increases pain tolerance and energy - this is the ideal phase to push intensity.", science:"Oestrogen activates dopamine receptors and enhances muscle glycogen storage in the follicular phase. Exercise performance and recovery capacity are measurably higher in this phase.", pubmedQ:"follicular phase exercise performance", pubmedFbs:["oestrogen exercise capacity","menstrual cycle training"] },
-  { id:"f02", title:"✦ For Her - Iron-Rich Recovery Meal", category:"nutrition", difficulty:"Beginner", duration:"30 min", label:"✦ For Her", instruction:"During menstruation, eat red meat, lentils, or spinach alongside a vitamin C source - orange, bell pepper, or strawberries. Avoid tea and coffee within 2 hours of this meal (they block iron).", science:"Menstrual blood loss depletes iron stores monthly. Pairing plant iron with vitamin C converts non-haem iron to the haem form, tripling absorption rate and preventing energy dips from low ferritin.", pubmedQ:"iron absorption vitamin C menstruation", pubmedFbs:["iron deficiency women menstrual","haem iron women health"] },
-  { id:"f03", title:"✦ For Her - Seed Cycling Protocol", category:"nutrition", difficulty:"Beginner", duration:"5 min", label:"✦ For Her", instruction:"Follicular phase (days 1-14): 1 tbsp ground flaxseeds + 1 tbsp pumpkin seeds at breakfast. Luteal phase (days 15-28): switch to 1 tbsp ground sesame seeds + 1 tbsp sunflower seeds daily.", science:"Flaxseed lignans modulate oestrogen receptor activity; pumpkin seed zinc supports progesterone production. Sesame and sunflower provide selenium and vitamin E that support the corpus luteum.", pubmedQ:"seed cycling hormonal balance women", pubmedFbs:["flaxseed oestrogen","pumpkin seed zinc progesterone"] },
-  { id:"f04", title:"✦ For Her - Luteal Phase Wind-Down", category:"sleep", difficulty:"Beginner", duration:"30 min", label:"✦ For Her", instruction:"In your luteal phase (days 15-28), start your evening wind-down 30 minutes earlier. Reduce high-intensity training. Eat a magnesium-rich snack before bed - dark chocolate with almonds or a banana.", science:"Progesterone metabolites act on GABA receptors, but their sedating effect is disrupted by blue light and cortisol spikes. Earlier wind-down prevents the progesterone-withdrawal insomnia of late luteal phase.", pubmedQ:"luteal phase sleep progesterone", pubmedFbs:["progesterone sleep quality women","late luteal insomnia"] },
-  { id:"f05", title:"✦ For Her - Adaptogen Morning Tonic", category:"supplements", difficulty:"Beginner", duration:"5 min", label:"✦ For Her", instruction:"Stir into warm water: ½ tsp ashwagandha, ½ tsp maca root, 1 tsp raw honey, ½ tsp cinnamon. Drink before breakfast. Take for 4-8 weeks then rest 2 weeks. Consult your doctor before starting.", science:"Ashwagandha reduces cortisol by 27% and supports adrenal function in double-blind trials. Maca root improves hormonal balance through hypothalamic-pituitary axis modulation.", pubmedQ:"ashwagandha cortisol women", pubmedFbs:["maca root hormonal health","adaptogen stress women"] },
-  { id:"f06", title:"✦ For Her - Ovulatory Strength Peak", category:"movement", difficulty:"Advanced", duration:"45 min", label:"✦ For Her", instruction:"During ovulation (around days 12-16): schedule your most demanding workout - heavier weights, higher reps, or longest run. You are at peak strength and pain tolerance. Use this 3-4 day window.", science:"Oestrogen peaks at ovulation, binding to muscle receptors to enhance force production and glycogen utilisation. This is the single phase where women measurably outperform their cycle average.", pubmedQ:"ovulation exercise peak performance women", pubmedFbs:["oestrogen peak strength","ovulatory phase capacity"] },
-  { id:"f07", title:"✦ For Her - PMS Magnesium Protocol", category:"supplements", difficulty:"Beginner", duration:"2 min", label:"✦ For Her", instruction:"From day 15 through menstruation, take 300-400mg magnesium glycinate at bedtime. Eat 2 squares of 85%+ dark chocolate daily - it contains ~50mg magnesium and reduces cortisol. Consult your doctor.", science:"Magnesium deficiency worsens PMS symptoms including cramps, mood fluctuations, and breast tenderness. Supplementation reduces PMS severity scores by 34% after 2 cycles in clinical trials.", pubmedQ:"magnesium PMS premenstrual syndrome", pubmedFbs:["magnesium PMS women","magnesium menstrual cramps"] },
-  { id:"f08", title:"✦ For Her - Anti-Cramp Ginger Tea", category:"nutrition", difficulty:"Beginner", duration:"10 min", label:"✦ For Her", instruction:"During menstruation: steep 5-8 slices of fresh ginger in boiling water for 10 minutes. Add honey and lemon. Drink 2-3 cups throughout the day starting the first day of cramps.", science:"Ginger inhibits prostaglandin synthesis as effectively as 250mg ibuprofen in clinical trials for primary dysmenorrhea, reducing uterine muscle cramping without gastrointestinal side effects.", pubmedQ:"ginger dysmenorrhea menstrual cramps", pubmedFbs:["ginger anti-inflammatory prostaglandins","ginger ibuprofen pain"] },
-  { id:"f09", title:"✦ For Her - Cycle-Synced Carbohydrates", category:"nutrition", difficulty:"Intermediate", duration:"All day", label:"✦ For Her", instruction:"Follicular phase (days 1-14): moderate carbs, higher protein. Luteal phase (days 15-28): increase complex carbs by 15-20% - sweet potato, oats, brown rice. This matches your elevated metabolic rate.", science:"Resting metabolic rate rises by 5-10% in the luteal phase due to progesterone's thermogenic effects. Aligned carbohydrate intake maintains serotonin precursors and prevents the cravings that follow energy crashes.", pubmedQ:"menstrual cycle nutrition carbohydrate", pubmedFbs:["luteal phase metabolism women","cycle syncing diet"] },
-  { id:"f10", title:"✦ For Her - Perimenopause Resistance Training", category:"movement", difficulty:"Intermediate", duration:"40 min", label:"✦ For Her", instruction:"Three times per week, lift weights heavy enough that the last 2 reps of each set are difficult. Focus on hip hinges, squats, and rows (8-10 rep sets). This is the most evidence-based intervention for perimenopause.", science:"Oestrogen loss accelerates bone density loss and muscle wasting. Resistance training 3×/week maintains bone mineral density independently of hormone therapy in perimenopausal women.", pubmedQ:"resistance training perimenopause bone density", pubmedFbs:["menopause exercise muscle","oestrogen decline strength training"] },
-  { id:"f11", title:"✦ For Her - Spearmint Tea for Androgens", category:"nutrition", difficulty:"Beginner", duration:"5 min", label:"✦ For Her", instruction:"Drink 2 cups of spearmint tea daily (morning and evening). Steep 5 minutes. Particularly useful if you experience excess androgen symptoms - acne, hirsutism, or PCOS-related concerns.", science:"Spearmint contains compounds that inhibit 5α-reductase and reduce free testosterone. In double-blind trials, 2 cups daily reduced androgen levels and improved hormonal markers in women with PCOS.", pubmedQ:"spearmint tea androgen PCOS", pubmedFbs:["spearmint testosterone women","spearmint hormonal acne"] },
-  { id:"f12", title:"✦ For Her - Oestrogen Clearance Dinner", category:"nutrition", difficulty:"Beginner", duration:"45 min", label:"✦ For Her", instruction:"Build dinner around cruciferous vegetables - broccoli, cauliflower, Brussels sprouts, or kale - lightly cooked. Add 1 tbsp ground flaxseed. These support the liver's Phase II oestrogen detoxification pathway.", science:"DIM from cruciferous vegetables supports hepatic oestrogen metabolism, preventing oestrogen recirculation from the gut and reducing oestrogen dominance symptoms over 4-8 weeks.", pubmedQ:"cruciferous vegetables oestrogen metabolism", pubmedFbs:["DIM estrogen detox women","liver oestrogen clearance"] },
+  { id:"f01", title:"Follicular Phase Energy Walk", category:"movement", difficulty:"Beginner", duration:"20 min", instruction:"During your follicular phase (days 1-14), take a brisk 20-minute walk in the morning. Your rising oestrogen increases pain tolerance and energy - this is the ideal phase to push intensity.", science:"Oestrogen activates dopamine receptors and enhances muscle glycogen storage in the follicular phase. Exercise performance and recovery capacity are measurably higher in this phase.", pubmedQ:"follicular phase exercise performance", pubmedFbs:["oestrogen exercise capacity","menstrual cycle training"] },
+  { id:"f02", title:"Iron-Rich Recovery Meal", category:"nutrition", difficulty:"Beginner", duration:"30 min", instruction:"During menstruation, eat red meat, lentils, or spinach alongside a vitamin C source - orange, bell pepper, or strawberries. Avoid tea and coffee within 2 hours of this meal (they block iron).", science:"Menstrual blood loss depletes iron stores monthly. Pairing plant iron with vitamin C converts non-haem iron to the haem form, tripling absorption rate and preventing energy dips from low ferritin.", pubmedQ:"iron absorption vitamin C menstruation", pubmedFbs:["iron deficiency women menstrual","haem iron women health"] },
+  { id:"f03", title:"Seed Cycling Protocol", category:"nutrition", difficulty:"Beginner", duration:"5 min", instruction:"Follicular phase (days 1-14): 1 tbsp ground flaxseeds + 1 tbsp pumpkin seeds at breakfast. Luteal phase (days 15-28): switch to 1 tbsp ground sesame seeds + 1 tbsp sunflower seeds daily.", science:"Flaxseed lignans modulate oestrogen receptor activity; pumpkin seed zinc supports progesterone production. Sesame and sunflower provide selenium and vitamin E that support the corpus luteum.", pubmedQ:"seed cycling hormonal balance women", pubmedFbs:["flaxseed oestrogen","pumpkin seed zinc progesterone"] },
+  { id:"f04", title:"Luteal Phase Wind-Down", category:"sleep", difficulty:"Beginner", duration:"30 min", instruction:"In your luteal phase (days 15-28), start your evening wind-down 30 minutes earlier. Reduce high-intensity training. Eat a magnesium-rich snack before bed - dark chocolate with almonds or a banana.", science:"Progesterone metabolites act on GABA receptors, but their sedating effect is disrupted by blue light and cortisol spikes. Earlier wind-down prevents the progesterone-withdrawal insomnia of late luteal phase.", pubmedQ:"luteal phase sleep progesterone", pubmedFbs:["progesterone sleep quality women","late luteal insomnia"] },
+  { id:"f05", title:"Adaptogen Morning Tonic", category:"supplements", difficulty:"Beginner", duration:"5 min", instruction:"Stir into warm water: ½ tsp ashwagandha, ½ tsp maca root, 1 tsp raw honey, ½ tsp cinnamon. Drink before breakfast. Take for 4-8 weeks then rest 2 weeks. Consult your doctor before starting.", science:"Ashwagandha reduces cortisol by 27% and supports adrenal function in double-blind trials. Maca root improves hormonal balance through hypothalamic-pituitary axis modulation.", pubmedQ:"ashwagandha cortisol women", pubmedFbs:["maca root hormonal health","adaptogen stress women"] },
+  { id:"f06", title:"Ovulatory Strength Peak", category:"movement", difficulty:"Advanced", duration:"45 min", instruction:"During ovulation (around days 12-16): schedule your most demanding workout - heavier weights, higher reps, or longest run. You are at peak strength and pain tolerance. Use this 3-4 day window.", science:"Oestrogen peaks at ovulation, binding to muscle receptors to enhance force production and glycogen utilisation. This is the single phase where women measurably outperform their cycle average.", pubmedQ:"ovulation exercise peak performance women", pubmedFbs:["oestrogen peak strength","ovulatory phase capacity"] },
+  { id:"f07", title:"PMS Magnesium Protocol", category:"supplements", difficulty:"Beginner", duration:"2 min", instruction:"From day 15 through menstruation, take 300-400mg magnesium glycinate at bedtime. Eat 2 squares of 85%+ dark chocolate daily - it contains ~50mg magnesium and reduces cortisol. Consult your doctor.", science:"Magnesium deficiency worsens PMS symptoms including cramps, mood fluctuations, and breast tenderness. Supplementation reduces PMS severity scores by 34% after 2 cycles in clinical trials.", pubmedQ:"magnesium PMS premenstrual syndrome", pubmedFbs:["magnesium PMS women","magnesium menstrual cramps"] },
+  { id:"f08", title:"Anti-Cramp Ginger Tea", category:"nutrition", difficulty:"Beginner", duration:"10 min", instruction:"During menstruation: steep 5-8 slices of fresh ginger in boiling water for 10 minutes. Add honey and lemon. Drink 2-3 cups throughout the day starting the first day of cramps.", science:"Ginger inhibits prostaglandin synthesis as effectively as 250mg ibuprofen in clinical trials for primary dysmenorrhea, reducing uterine muscle cramping without gastrointestinal side effects.", pubmedQ:"ginger dysmenorrhea menstrual cramps", pubmedFbs:["ginger anti-inflammatory prostaglandins","ginger ibuprofen pain"] },
+  { id:"f09", title:"Cycle-Synced Carbohydrates", category:"nutrition", difficulty:"Intermediate", duration:"All day", instruction:"Follicular phase (days 1-14): moderate carbs, higher protein. Luteal phase (days 15-28): increase complex carbs by 15-20% - sweet potato, oats, brown rice. This matches your elevated metabolic rate.", science:"Resting metabolic rate rises by 5-10% in the luteal phase due to progesterone's thermogenic effects. Aligned carbohydrate intake maintains serotonin precursors and prevents the cravings that follow energy crashes.", pubmedQ:"menstrual cycle nutrition carbohydrate", pubmedFbs:["luteal phase metabolism women","cycle syncing diet"] },
+  { id:"f10", title:"Perimenopause Resistance Training", category:"movement", difficulty:"Intermediate", duration:"40 min", instruction:"Three times per week, lift weights heavy enough that the last 2 reps of each set are difficult. Focus on hip hinges, squats, and rows (8-10 rep sets). This is the most evidence-based intervention for perimenopause.", science:"Oestrogen loss accelerates bone density loss and muscle wasting. Resistance training 3×/week maintains bone mineral density independently of hormone therapy in perimenopausal women.", pubmedQ:"resistance training perimenopause bone density", pubmedFbs:["menopause exercise muscle","oestrogen decline strength training"] },
+  { id:"f11", title:"Spearmint Tea for Androgens", category:"nutrition", difficulty:"Beginner", duration:"5 min", instruction:"Drink 2 cups of spearmint tea daily (morning and evening). Steep 5 minutes. Particularly useful if you experience excess androgen symptoms - acne, hirsutism, or PCOS-related concerns.", science:"Spearmint contains compounds that inhibit 5α-reductase and reduce free testosterone. In double-blind trials, 2 cups daily reduced androgen levels and improved hormonal markers in women with PCOS.", pubmedQ:"spearmint tea androgen PCOS", pubmedFbs:["spearmint testosterone women","spearmint hormonal acne"] },
+  { id:"f12", title:"Oestrogen Clearance Dinner", category:"nutrition", difficulty:"Beginner", duration:"45 min", instruction:"Build dinner around cruciferous vegetables - broccoli, cauliflower, Brussels sprouts, or kale - lightly cooked. Add 1 tbsp ground flaxseed. These support the liver's Phase II oestrogen detoxification pathway.", science:"DIM from cruciferous vegetables supports hepatic oestrogen metabolism, preventing oestrogen recirculation from the gut and reducing oestrogen dominance symptoms over 4-8 weeks.", pubmedQ:"cruciferous vegetables oestrogen metabolism", pubmedFbs:["DIM estrogen detox women","liver oestrogen clearance"] },
 ];
 
 const CHALLENGES_MALE = [
-  { id:"m01", title:"✦ For Him - Morning Testosterone Window", category:"movement", difficulty:"Intermediate", duration:"30 min", label:"✦ For Him", instruction:"Between 6-10 AM when testosterone peaks: 5 sets of heavy compound movements - deadlifts, squats, or bench press at 80-90% of max. Short rest: 90 seconds between sets. Then end with a cold shower.", science:"Morning testosterone is 20-30% higher than evening. Heavy compound lifts at this window amplify the testosterone response 3-4× more than afternoon training in controlled trials.", pubmedQ:"testosterone morning exercise peak", pubmedFbs:["compound lifts testosterone","morning training hormones men"] },
-  { id:"m02", title:"✦ For Him - Creatine Daily Protocol", category:"supplements", difficulty:"Beginner", duration:"2 min", label:"✦ For Him", instruction:"Take 5g of creatine monohydrate daily with breakfast. No loading phase needed. Take every day - not just training days. Effects accumulate over 28 days of consistent use. Consult your doctor first.", science:"Creatine increases phosphocreatine resynthesis, enabling 5-15% more reps at equivalent loads and accelerating neuromuscular recovery. The most studied performance supplement with the strongest safety record.", pubmedQ:"creatine monohydrate performance", pubmedFbs:["creatine supplementation men muscle","creatine cognitive"] },
-  { id:"m03", title:"✦ For Him - Zinc-Rich Meal", category:"nutrition", difficulty:"Beginner", duration:"All day", label:"✦ For Him", instruction:"Eat oysters, red meat, or pumpkin seeds today. Add a handful of pumpkin seeds to lunch. If supplementing zinc: 25-45mg zinc bisglycinate at dinner, not morning (zinc competes with copper). Consult your doctor.", science:"Zinc is a co-factor in testosterone synthesis. Deficiency directly suppresses serum testosterone; supplementation restores levels suppressed by intense training in athletic populations.", pubmedQ:"zinc testosterone men", pubmedFbs:["zinc deficiency testosterone","zinc supplementation hormones men"] },
-  { id:"m04", title:"✦ For Him - Sprint Protocol", category:"movement", difficulty:"Advanced", duration:"20 min", label:"✦ For Him", instruction:"After a 5-minute warm-up jog: 6 rounds of 30-second flat-out sprints with 90-second walk recovery. Cool down 5 minutes. Perform on grass or a track - not a treadmill.", science:"Short maximal sprints produce the highest acute testosterone and growth hormone response of any cardiovascular exercise - superior to steady-state cardio for hormonal outcomes in men under 50.", pubmedQ:"sprint interval testosterone growth hormone", pubmedFbs:["HIIT testosterone men","sprint training GH"] },
-  { id:"m05", title:"✦ For Him - Testosterone Sleep Protocol", category:"sleep", difficulty:"Beginner", duration:"All night", label:"✦ For Him", instruction:"Tonight: bedroom below 18°C, completely dark, sleep 7.5-9 hours. No alcohol. No food within 3 hours of bed. Set a consistent wake time. The majority of daily testosterone is produced during NREM stage 3.", science:"95% of daily testosterone production occurs during sleep. Men sleeping fewer than 5 hours show testosterone levels equivalent to someone 15 years older.", pubmedQ:"testosterone sleep production men", pubmedFbs:["sleep deprivation testosterone","testosterone circadian sleep"] },
-  { id:"m06", title:"✦ For Him - Vitamin D for Testosterone", category:"supplements", difficulty:"Beginner", duration:"2 min", label:"✦ For Him", instruction:"Take 4000 IU vitamin D3 + K2 (MK-7) with your largest meal. Test 25-OH-D levels first - target 50-70 ng/mL. Consult your doctor before supplementing above 4000 IU.", science:"Vitamin D receptors are found in Leydig cells (testicular testosterone-producing cells). Men deficient in vitamin D have 65% lower testosterone than those with optimal levels.", pubmedQ:"vitamin D testosterone men", pubmedFbs:["vitamin D deficiency testosterone","D3 supplementation men"] },
-  { id:"m07", title:"✦ For Him - Post-Workout Anabolic Window", category:"nutrition", difficulty:"Beginner", duration:"30 min", label:"✦ For Him", instruction:"Within 90 minutes of any training session, eat 40-50g of protein with 50-80g of carbohydrates. Ideal: 250g chicken + rice + vegetables, or a protein shake with banana and oats.", science:"Leucine content above 3g - achievable at 40g total protein - maximises mTOR activation and muscle protein synthesis rates. The 90-minute post-exercise window is the most effective delivery time.", pubmedQ:"post-exercise protein muscle recovery", pubmedFbs:["anabolic window protein timing","mTOR leucine post workout"] },
-  { id:"m08", title:"✦ For Him - Heavy Deadlift Day", category:"movement", difficulty:"Advanced", duration:"45 min", label:"✦ For Him", instruction:"Warm up with 5 reps at 50%, 5 reps at 70%, then 3 sets of 5 at 85% of one-rep max. Rest 3-5 minutes between heavy sets. Focus on bracing, neutral spine, and full hip extension at the top.", science:"The deadlift recruits more total muscle mass than any single exercise. Large-muscle-group loading produces the greatest post-exercise testosterone and growth hormone spike in men.", pubmedQ:"deadlift testosterone muscle", pubmedFbs:["compound lift hormone response","heavy lifting GH men"] },
-  { id:"m09", title:"✦ For Him - Ashwagandha for Performance", category:"supplements", difficulty:"Beginner", duration:"2 min", label:"✦ For Him", instruction:"Take 600mg of KSM-66 ashwagandha extract with dinner tonight. Take consistently for 8-12 weeks. Consult your doctor before starting, especially if on thyroid medication or sedatives.", science:"KSM-66 ashwagandha increases testosterone by 15-17%, reduces cortisol by 27%, and increases VO2max by 6% in double-blind placebo-controlled trials in men.", pubmedQ:"ashwagandha testosterone cortisol men", pubmedFbs:["KSM-66 performance men","ashwagandha strength training"] },
-  { id:"m10", title:"✦ For Him - VO2max Interval Session", category:"movement", difficulty:"Advanced", duration:"35 min", label:"✦ For Him", instruction:"4 rounds of: 3 minutes at 90-95% max effort (running, rowing, or cycling), then 3 minutes easy recovery. Warm up 5 min, cool down 5 min. Work intervals should feel very hard.", science:"VO2max is the single strongest predictor of all-cause mortality in men - stronger than smoking status, BMI, or blood pressure. Intervals at 90%+ intensity are the most time-efficient way to raise it.", pubmedQ:"VO2max interval training mortality men", pubmedFbs:["maximal oxygen uptake exercise","aerobic capacity longevity men"] },
-  { id:"m11", title:"✦ For Him - Cortisol Management Protocol", category:"stress", difficulty:"Beginner", duration:"20 min", label:"✦ For Him", instruction:"Identify your single largest stressor. Spend 10 minutes writing what is within your control and what is not. For each controllable factor, write one concrete action. Then do 5 rounds of box breathing.", science:"Chronic elevated cortisol directly inhibits Leydig cell function, suppressing testosterone synthesis. Men with high cortisol have 30-50% lower testosterone in cross-sectional studies.", pubmedQ:"cortisol testosterone men stress", pubmedFbs:["chronic stress testosterone","cortisol Leydig cells"] },
-  { id:"m12", title:"✦ For Him - Saturated Fat for Hormones", category:"nutrition", difficulty:"Beginner", duration:"All day", label:"✦ For Him", instruction:"Include 2-3 servings of healthy saturated fats today: grass-fed beef, 4+ whole eggs, or full-fat dairy. Dietary cholesterol is the direct precursor to testosterone synthesis.", science:"Dietary cholesterol is converted to pregnenolone in adrenal and testicular cells - the precursor to testosterone, cortisol, and progesterone. Men on very low-fat diets consistently show lower total testosterone.", pubmedQ:"dietary fat testosterone men cholesterol", pubmedFbs:["low fat diet testosterone","saturated fat hormone"] },
+  { id:"m01", title:"Morning Testosterone Window", category:"movement", difficulty:"Intermediate", duration:"30 min", instruction:"Between 6-10 AM when testosterone peaks: 5 sets of heavy compound movements - deadlifts, squats, or bench press at 80-90% of max. Short rest: 90 seconds between sets. Then end with a cold shower.", science:"Morning testosterone is 20-30% higher than evening. Heavy compound lifts at this window amplify the testosterone response 3-4× more than afternoon training in controlled trials.", pubmedQ:"testosterone morning exercise peak", pubmedFbs:["compound lifts testosterone","morning training hormones men"] },
+  { id:"m02", title:"Creatine Daily Protocol", category:"supplements", difficulty:"Beginner", duration:"2 min", instruction:"Take 5g of creatine monohydrate daily with breakfast. No loading phase needed. Take every day - not just training days. Effects accumulate over 28 days of consistent use. Consult your doctor first.", science:"Creatine increases phosphocreatine resynthesis, enabling 5-15% more reps at equivalent loads and accelerating neuromuscular recovery. The most studied performance supplement with the strongest safety record.", pubmedQ:"creatine monohydrate performance", pubmedFbs:["creatine supplementation men muscle","creatine cognitive"] },
+  { id:"m03", title:"Zinc-Rich Meal", category:"nutrition", difficulty:"Beginner", duration:"All day", instruction:"Eat oysters, red meat, or pumpkin seeds today. Add a handful of pumpkin seeds to lunch. If supplementing zinc: 25-45mg zinc bisglycinate at dinner, not morning (zinc competes with copper). Consult your doctor.", science:"Zinc is a co-factor in testosterone synthesis. Deficiency directly suppresses serum testosterone; supplementation restores levels suppressed by intense training in athletic populations.", pubmedQ:"zinc testosterone men", pubmedFbs:["zinc deficiency testosterone","zinc supplementation hormones men"] },
+  { id:"m04", title:"Sprint Protocol", category:"movement", difficulty:"Advanced", duration:"20 min", instruction:"After a 5-minute warm-up jog: 6 rounds of 30-second flat-out sprints with 90-second walk recovery. Cool down 5 minutes. Perform on grass or a track - not a treadmill.", science:"Short maximal sprints produce the highest acute testosterone and growth hormone response of any cardiovascular exercise - superior to steady-state cardio for hormonal outcomes in men under 50.", pubmedQ:"sprint interval testosterone growth hormone", pubmedFbs:["HIIT testosterone men","sprint training GH"] },
+  { id:"m05", title:"Testosterone Sleep Protocol", category:"sleep", difficulty:"Beginner", duration:"All night", instruction:"Tonight: bedroom below 18°C, completely dark, sleep 7.5-9 hours. No alcohol. No food within 3 hours of bed. Set a consistent wake time. The majority of daily testosterone is produced during NREM stage 3.", science:"95% of daily testosterone production occurs during sleep. Men sleeping fewer than 5 hours show testosterone levels equivalent to someone 15 years older.", pubmedQ:"testosterone sleep production men", pubmedFbs:["sleep deprivation testosterone","testosterone circadian sleep"] },
+  { id:"m06", title:"Vitamin D for Testosterone", category:"supplements", difficulty:"Beginner", duration:"2 min", instruction:"Take 4000 IU vitamin D3 + K2 (MK-7) with your largest meal. Test 25-OH-D levels first - target 50-70 ng/mL. Consult your doctor before supplementing above 4000 IU.", science:"Vitamin D receptors are found in Leydig cells (testicular testosterone-producing cells). Men deficient in vitamin D have 65% lower testosterone than those with optimal levels.", pubmedQ:"vitamin D testosterone men", pubmedFbs:["vitamin D deficiency testosterone","D3 supplementation men"] },
+  { id:"m07", title:"Post-Workout Anabolic Window", category:"nutrition", difficulty:"Beginner", duration:"30 min", instruction:"Within 90 minutes of any training session, eat 40-50g of protein with 50-80g of carbohydrates. Ideal: 250g chicken + rice + vegetables, or a protein shake with banana and oats.", science:"Leucine content above 3g - achievable at 40g total protein - maximises mTOR activation and muscle protein synthesis rates. The 90-minute post-exercise window is the most effective delivery time.", pubmedQ:"post-exercise protein muscle recovery", pubmedFbs:["anabolic window protein timing","mTOR leucine post workout"] },
+  { id:"m08", title:"Heavy Deadlift Day", category:"movement", difficulty:"Advanced", duration:"45 min", instruction:"Warm up with 5 reps at 50%, 5 reps at 70%, then 3 sets of 5 at 85% of one-rep max. Rest 3-5 minutes between heavy sets. Focus on bracing, neutral spine, and full hip extension at the top.", science:"The deadlift recruits more total muscle mass than any single exercise. Large-muscle-group loading produces the greatest post-exercise testosterone and growth hormone spike in men.", pubmedQ:"deadlift testosterone muscle", pubmedFbs:["compound lift hormone response","heavy lifting GH men"] },
+  { id:"m09", title:"Ashwagandha for Performance", category:"supplements", difficulty:"Beginner", duration:"2 min", instruction:"Take 600mg of KSM-66 ashwagandha extract with dinner tonight. Take consistently for 8-12 weeks. Consult your doctor before starting, especially if on thyroid medication or sedatives.", science:"KSM-66 ashwagandha increases testosterone by 15-17%, reduces cortisol by 27%, and increases VO2max by 6% in double-blind placebo-controlled trials in men.", pubmedQ:"ashwagandha testosterone cortisol men", pubmedFbs:["KSM-66 performance men","ashwagandha strength training"] },
+  { id:"m10", title:"VO2max Interval Session", category:"movement", difficulty:"Advanced", duration:"35 min", instruction:"4 rounds of: 3 minutes at 90-95% max effort (running, rowing, or cycling), then 3 minutes easy recovery. Warm up 5 min, cool down 5 min. Work intervals should feel very hard.", science:"VO2max is the single strongest predictor of all-cause mortality in men - stronger than smoking status, BMI, or blood pressure. Intervals at 90%+ intensity are the most time-efficient way to raise it.", pubmedQ:"VO2max interval training mortality men", pubmedFbs:["maximal oxygen uptake exercise","aerobic capacity longevity men"] },
+  { id:"m11", title:"Cortisol Management Protocol", category:"stress", difficulty:"Beginner", duration:"20 min", instruction:"Identify your single largest stressor. Spend 10 minutes writing what is within your control and what is not. For each controllable factor, write one concrete action. Then do 5 rounds of box breathing.", science:"Chronic elevated cortisol directly inhibits Leydig cell function, suppressing testosterone synthesis. Men with high cortisol have 30-50% lower testosterone in cross-sectional studies.", pubmedQ:"cortisol testosterone men stress", pubmedFbs:["chronic stress testosterone","cortisol Leydig cells"] },
+  { id:"m12", title:"Saturated Fat for Hormones", category:"nutrition", difficulty:"Beginner", duration:"All day", instruction:"Include 2-3 servings of healthy saturated fats today: grass-fed beef, 4+ whole eggs, or full-fat dairy. Dietary cholesterol is the direct precursor to testosterone synthesis.", science:"Dietary cholesterol is converted to pregnenolone in adrenal and testicular cells - the precursor to testosterone, cortisol, and progesterone. Men on very low-fat diets consistently show lower total testosterone.", pubmedQ:"dietary fat testosterone men cholesterol", pubmedFbs:["low fat diet testosterone","saturated fat hormone"] },
 ];
+
+// Picks a stable-for-the-week variant, using the same anti-repeat rotation and storage as the
+// daily pickDailyIndex/pickDailyVariant (noraTokens) — just keyed by ISO week instead of by day.
+const pickWeeklyVariant = (poolKey, pool, weekKey) => {
+  if (typeof window === "undefined" || !pool || pool.length === 0) return pool?.[0];
+  if (pool.length === 1) return pool[0];
+  let history = {};
+  try { history = JSON.parse(localStorage.getItem("nora_tip_history") || "{}"); } catch {}
+  const entry = history[poolKey];
+  if (entry && entry.date === weekKey && pool[entry.idx]) return pool[entry.idx];
+  const recent = entry?.recent || [];
+  const candidates = pool.map((_, i) => i).filter(i => !recent.includes(i));
+  const pickFrom = candidates.length > 0 ? candidates : pool.map((_, i) => i);
+  const idx = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+  history[poolKey] = { date: weekKey, idx, recent: [idx, ...recent].slice(0, Math.min(3, pool.length - 1)) };
+  try { localStorage.setItem("nora_tip_history", JSON.stringify(history)); } catch {}
+  return pool[idx];
+};
+
+// Nora's voice, by how the week went — warm at every level, never guilt-tripping the quiet weeks.
+const WEEKLY_REPORT_MESSAGES = {
+  low: [
+    "A quieter week — that's alright. Tomorrow is a fresh page, not a deadline.",
+    "Some weeks ask more of us than others. What matters is that you're still here.",
+    "A slow week isn't a lost one. Small returns count as much as big ones.",
+    "You don't owe this week an explanation. Pick one thing to return to, and start there.",
+    "Consistency isn't unbroken — it's what you come back to. This week, come back gently.",
+  ],
+  medium: [
+    "A steady week — more days met than missed. That's the shape real habits take.",
+    "You showed up more often than not this week. That's worth noticing.",
+    "Good rhythm this week, even with a few gaps. Gaps are normal; the pattern is what counts.",
+    "You're building something here — not perfect, but persistent. That's the harder, better thing.",
+    "A solid week overall. The days that didn't go to plan don't undo the ones that did.",
+  ],
+  high: [
+    "A strong week — most days met, across the board. Well built.",
+    "This is what consistency looks like when it's working. Notice how it felt.",
+    "A full week, nearly end to end. That's not luck — that's a pattern you made.",
+    "You held the line all week. Let that be evidence for the weeks that feel harder.",
+    "A quietly excellent week. Nothing flashy — just shown up, day after day.",
+  ],
+};
 
 const EXPLORE_QUERIES = {
   sleep:       { q:"sleep quality",              fbs:["sleep health adults","sleep duration outcomes"] },
@@ -185,46 +226,58 @@ const BOOK_GROUPS = [
   { category:"Ancestral Health",books:[{ id:"an1", title:"Primal Blueprint",         author:"Mark Sisson",          desc:"Reprogram your genes for effortless weight loss, vibrant health, and boundless energy.",                                  colSpan:1 },{ id:"an2", title:"The Paleo Solution",      author:"Robb Wolf",            desc:"The original human diet - lose fat, regain health, and build real strength.",                                            colSpan:1 }]},
 ];
 
-// ─── SCORE SYSTEM ────────────────────────────────────────────────────────────
-const getDailyScores = () => {
-  const d = new Date();
-  const n = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-  const rng = s => { const x = Math.abs(Math.sin(n * 127.1 + s * 311.7) * 43758.5); return x - Math.floor(x); };
-  return {
-    sleep:      Math.round(48 + rng(1) * 44),
-    hydration:  Math.round(52 + rng(2) * 43),
-    movement:   Math.round(38 + rng(3) * 52),
-    nutrition:  Math.round(46 + rng(4) * 48),
-    breathwork: Math.round(56 + rng(5) * 39),
-    cold:       Math.round(28 + rng(6) * 57),
-    sauna:      Math.round(32 + rng(7) * 53),
-  };
-};
-const DAILY_SCORES = getDailyScores();
-const scoreColor = s => s >= 80 ? "#00C896" : s >= 65 ? "#27AE82" : s >= 50 ? "#F59E0B" : "#EF5350";
-const scoreLabel = s => s >= 80 ? "Optimal" : s >= 65 ? "Good" : s >= 50 ? "Fair" : "Needs work";
-
-const FOCUS_CAT_MAP = {
-  "sleep optimization":"sleep","afternoon energy":"movement","evening wind-down":"sleep",
-  "workout recovery":"movement","stress management":"breathwork","gut health":"nutrition",
-  "breathwork":"breathwork","cold exposure":"cold","fasting":"nutrition",
-  "supplement timing":"nutrition","mindfulness":"breathwork","hydration":"hydration",
-};
-
-const FOCUS_META = {
-  sleep:      { emoji:"\uD83D\uDE34", title:"Sleep",         insight:"Consistent wake time anchors your circadian rhythm more powerfully than any supplement. Cool, dark room plus no screens 90 min before bed have the highest leverage on sleep quality and depth." },
-  hydration:  { emoji:"\uD83D\uDCA7", title:"Hydration",     insight:"On waking, 500ml with a pinch of sea salt replenishes electrolytes lost overnight. Plain water alone can dilute intracellular sodium - the body needs minerals to transport fluid across cell membranes." },
-  movement:   { emoji:"\uD83D\uDCAA", title:"Movement",      insight:"Zone 2 cardio builds mitochondrial density and fat-oxidation capacity. Paired with resistance training 2-3x weekly, it represents the highest-leverage combination for longevity and metabolic health." },
-  nutrition:  { emoji:"\uD83E\uDD57", title:"Nutrition",     insight:"Target 30 different plant varieties this week. This single metric is the strongest predictor of microbiome diversity found in large population studies - and diversity predicts mood, immunity, and metabolic health." },
-  breathwork: { emoji:"\uD83C\uDF2C\uFE0F", title:"Breathwork",   insight:"Four rounds of box breathing - 4 counts in, hold, out, hold - activates the parasympathetic nervous system within 2 minutes. No equipment, no cost, and measurable reductions in cortisol within a single session." },
-  cold:       { emoji:"\u2744\uFE0F",  title:"Cold Exposure",insight:"Ending your shower with 30-60 seconds of cold water triggers a 200-300% norepinephrine spike. The dopamine elevation that follows outlasts the cold stimulus by 2-4 hours - longer than any pre-workout." },
-  sauna:      { emoji:"\uD83D\uDD25", title:"Sauna",         insight:"Three 20-minute sessions at 80-100°C weekly activate heat shock proteins that repair damaged cellular proteins. Finnish longitudinal data links this frequency to 40% lower all-cause mortality." },
-};
-
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const getSeason = () => { const m = new Date().getMonth(); if(m>=2&&m<=4)return"spring"; if(m>=5&&m<=7)return"summer"; if(m>=8&&m<=10)return"autumn"; return"winter"; };
-const getWeekIndex = () => { const key = getWeekKey(); const n = parseInt(key.split("W")[1])||1; return (n-1) % WEEKLY_THEMES.length; };
+
+const DEFAULT_LOCATION = { city: "Bucharest", lat: 44.4268, lng: 26.1025 };
+
+// Local sunrise/sunset calculation (NOAA solar position formula) — no external API, no key.
+// Returns the same shape CircadianTimeline already expects: sunrise/sunset/solar_noon as "H:MM AM/PM".
+const calcSunTimes = (lat, lng, date) => {
+  const toJulian = d => d.getTime() / 86400000 + 2440587.5;
+  const fromJulian = jd => new Date((jd - 2440587.5) * 86400000);
+  const J = toJulian(date);
+  const n = Math.floor(J - 2451545.0 + 0.0008);
+  const Jstar = n - lng / 360;
+  const M = (357.5291 + 0.98560028 * Jstar) % 360;
+  const Mrad = M * Math.PI / 180;
+  const Ceq = 1.9148*Math.sin(Mrad) + 0.0200*Math.sin(2*Mrad) + 0.0003*Math.sin(3*Mrad);
+  const lambda = (M + Ceq + 180 + 102.9372) % 360;
+  const lambdaRad = lambda * Math.PI / 180;
+  const Jtransit = 2451545.0 + Jstar + 0.0053*Math.sin(Mrad) - 0.0069*Math.sin(2*lambdaRad);
+  const sinDelta = Math.sin(lambdaRad) * Math.sin(23.4397*Math.PI/180);
+  const delta = Math.asin(sinDelta);
+  const latRad = lat * Math.PI / 180;
+  const cosOmega = (Math.sin(-0.83*Math.PI/180) - Math.sin(latRad)*Math.sin(delta)) / (Math.cos(latRad)*Math.cos(delta));
+  const omega = Math.acos(Math.max(-1, Math.min(1, cosOmega))) * 180 / Math.PI;
+  const Jset  = 2451545.0 + (omega/360 + Jstar) + 0.0053*Math.sin(Mrad) - 0.0069*Math.sin(2*lambdaRad);
+  const Jrise = Jtransit - (Jset - Jtransit);
+
+  const fmt = jd => fromJulian(jd).toLocaleTimeString("en-US", { hour:"numeric", minute:"2-digit" });
+  return { sunrise: fmt(Jrise), sunset: fmt(Jset), solar_noon: fmt(Jtransit) };
+};
+
+// City name from GPS coords — free, keyless, built for client-side calls (unlike Nominatim, which
+// asks apps to proxy through a server). Coordinates are rounded to ~city precision before sending.
+const reverseGeocodeCity = async (lat, lng) => {
+  const rLat = Math.round(lat * 100) / 100;
+  const rLng = Math.round(lng * 100) / 100;
+  // Calling api-bdc.io directly (not api.bigdatacloud.net) — that domain 307-redirects here,
+  // and skipping the redirect avoids any browser/network quirks with following it.
+  const url = `https://api-bdc.io/data/reverse-geocode-client?latitude=${rLat}&longitude=${rLng}&localityLanguage=en`;
+  try {
+    const res = await fetch(url);
+    console.log("[Nora][location DEBUG] reverse geocode HTTP status:", res.status);
+    if (!res.ok) return null;
+    const data = await res.json();
+    console.log("[Nora][location DEBUG] reverse geocode response:", data);
+    return data.city || data.locality || data.principalSubdivision || null;
+  } catch (e) {
+    console.log("[Nora][location DEBUG] reverse geocode threw:", e?.name, e?.message);
+    return null;
+  }
+};
 
 const callClaude = async (sys, user) => {
   const res = await fetch("/api/chat", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ model:"claude-haiku-4-5-20251001", max_tokens:400, system:sys, messages:[{ role:"user", content:user }] }) });
@@ -292,15 +345,6 @@ function CategoryIcon({ id, size=22, color="#1F2E26" }) {
     case "longevity":   return <svg {...s}><path d="M9 3Q12 6 9 9Q6 12 9 15Q12 18 9 21" {...p} strokeWidth="1.2"/><path d="M15 3Q12 6 15 9Q18 12 15 15Q12 18 15 21" {...p} strokeWidth="1.2"/><line x1="9" y1="6" x2="15" y2="6" {...p} strokeWidth="0.9"/><line x1="9" y1="12" x2="15" y2="12" {...p} strokeWidth="0.9"/><line x1="9" y1="18" x2="15" y2="18" {...p} strokeWidth="0.9"/></svg>;
     default: return null;
   }
-}
-
-// ─── SECTION LABEL ───────────────────────────────────────────────────────────
-function SL({ children, first }) {
-  return (
-    <p style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.1em", margin:`${first?0:8}px 0 6px 1px`, fontFamily:sans }}>
-      {children}
-    </p>
-  );
 }
 
 // ─── EXPLORE GRID ────────────────────────────────────────────────────────────
@@ -859,9 +903,8 @@ function SavedModal({ saved, activeIds, onClose, onRemove, onStart }) {
             </div>
           ) : saved.map((c, i) => (
             <div key={c.id} style={{ paddingTop:18, paddingBottom:18, borderBottom: i < saved.length-1 ? `1px solid #E2DAD0` : "none" }}>
-              {c.label && <p style={{ fontSize:9, fontWeight:600, color:C.muted, margin:"0 0 4px", fontFamily:sans, letterSpacing:"0.06em" }}>{c.label}</p>}
               <p style={{ fontFamily:serif, fontSize:16, fontWeight:700, color:C.green, margin:"0 0 6px", lineHeight:1.3 }}>
-                {(c.title || "").replace(/^✦ For Her - |^✦ For Him - /, "")}
+                {c.title}
               </p>
               <div style={{ display:"flex", gap:5, marginBottom:8, flexWrap:"wrap" }}>
                 {c.difficulty && (
@@ -906,7 +949,7 @@ function StartModal({ challenge, onStart, onClose }) {
       <div style={{ width:"100%", backgroundColor:"#FDFAF5", borderRadius:"20px 20px 0 0", padding:"20px 24px 44px", animation:"slideUp 0.28s ease" }} onClick={e => e.stopPropagation()}>
         <div style={{ width:40, height:3, backgroundColor:"#E2DAD0", borderRadius:2, margin:"0 auto 20px" }}/>
         <p style={{ fontFamily:serif, fontSize:19, fontWeight:700, color:C.green, margin:"0 0 4px" }}>Start Challenge</p>
-        <p style={{ fontSize:13, color:C.muted, margin:"0 0 20px", fontFamily:sans }}>{(challenge.title || "").replace(/^✦ For Her - |^✦ For Him - /, "")}</p>
+        <p style={{ fontSize:13, color:C.muted, margin:"0 0 20px", fontFamily:sans }}>{challenge.title}</p>
         <p style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.09em", margin:"0 0 10px", fontFamily:sans }}>Choose your commitment</p>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:18 }}>
           {options.map(d => {
@@ -980,7 +1023,7 @@ function TLMoonIcon({ size = 13, col }) {
     </svg>
   );
 }
-function CircadianTimeline({ sun, geoError, entries }) {
+function CircadianTimeline({ sun, geoError, entries, locationLabel, onRetryLocation }) {
   const now  = new Date();
   const nowH = now.getHours() + now.getMinutes() / 60;
   const srH  = parseHour(sun?.sunrise)    ?? 6.5;
@@ -1074,20 +1117,6 @@ function CircadianTimeline({ sun, geoError, entries }) {
 
   return (
     <div onClick={dismiss} style={{ padding:"0 18px 18px" }}>
-      {/* Phase status card */}
-      <div style={{ backgroundColor:C.bg, borderLeft:`3px solid ${C.green}`, borderRadius:"0 12px 12px 0", border:`1px solid ${C.border}`, padding:"12px 16px 11px", marginBottom:20 }}>
-        <p style={{ fontFamily:serif, fontSize:14, fontWeight:600, color:C.green, margin:"0 0 3px", letterSpacing:"-0.01em" }}>{phase.label}</p>
-        <p style={{ fontSize:12, color:C.amber, margin:0, lineHeight:1.6, fontFamily:sans }}>{phase.sub}</p>
-        {sun && (
-          <div style={{ display:"flex", gap:16, marginTop:9, flexWrap:"wrap" }}>
-            <span style={{ fontSize:11, color:C.muted, fontFamily:sans, display:"flex", alignItems:"center", gap:4 }}><TLSunIcon size={11}/> Sunrise {fmtHour(srH)}</span>
-            <span style={{ fontSize:11, color:C.muted, fontFamily:sans, display:"flex", alignItems:"center", gap:4 }}><TLMoonIcon size={10}/> Sunset {fmtHour(ssH)}</span>
-            <span style={{ fontSize:11, color:C.muted, fontFamily:sans }}>◇ Solar noon {fmtHour(snH)}</span>
-          </div>
-        )}
-        {geoError && <p style={{ fontSize:10, color:C.muted, margin:"7px 0 0", fontStyle:"italic", fontFamily:sans, lineHeight:1.5 }}>Using estimated times — enable location for accuracy.</p>}
-      </div>
-
       {/* Timeline */}
       <div style={{ position:"relative", paddingTop:22, paddingBottom:36 }}>
         {/* (i) button — top-right corner */}
@@ -1191,12 +1220,39 @@ function CircadianTimeline({ sun, geoError, entries }) {
           </div>
         ))}
       </div>
+
+      {/* Phase status card — explanatory detail, below the timeline */}
+      <div style={{ backgroundColor:C.bg, borderLeft:`3px solid ${C.green}`, borderRadius:"0 12px 12px 0", border:`1px solid ${C.border}`, padding:"12px 16px 11px", marginTop:16 }}>
+        <p style={{ fontFamily:serif, fontSize:14, fontWeight:600, color:C.green, margin:"0 0 3px", letterSpacing:"-0.01em" }}>{phase.label}</p>
+        <p style={{ fontSize:12, color:C.amber, margin:0, lineHeight:1.6, fontFamily:sans }}>{phase.sub}</p>
+        {sun && (
+          <div style={{ display:"flex", gap:16, marginTop:9, flexWrap:"wrap" }}>
+            <span style={{ fontSize:11, color:C.muted, fontFamily:sans, display:"flex", alignItems:"center", gap:4 }}><TLSunIcon size={11}/> Sunrise {fmtHour(srH)}</span>
+            <span style={{ fontSize:11, color:C.muted, fontFamily:sans, display:"flex", alignItems:"center", gap:4 }}><TLMoonIcon size={10}/> Sunset {fmtHour(ssH)}</span>
+            <span style={{ fontSize:11, color:C.muted, fontFamily:sans }}>◇ Solar noon {fmtHour(snH)}</span>
+          </div>
+        )}
+        {locationLabel && (
+          <p style={{ fontSize:10, color:C.muted, margin:"7px 0 0", fontFamily:sans, letterSpacing:"0.02em" }}>
+            {locationLabel}
+            {geoError && (
+              <>
+                {" · "}
+                <button onClick={e => { e.stopPropagation(); onRetryLocation?.(); }} style={{ fontSize:10, color:C.green, background:"none", border:"none", padding:0, cursor:"pointer", fontFamily:sans, textDecoration:"underline", fontWeight:600 }}>
+                  Enable location
+                </button>
+                {" for your exact times"}
+              </>
+            )}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
-export default function Ritual({ profile, targets, entries, waterMl, cyclePhase, periodLogs, activeChallenges, startChallenge, checkInChallenge, abandonChallenge, ritualStreak, markChallengeDone }) {
+export default function Ritual({ profile, targets, entries, waterMl, cyclePhase, periodLogs, activeChallenges, startChallenge, checkInChallenge, uncheckInChallenge, abandonChallenge, ritualStreak, markChallengeDone, locationCity, locationLat, locationLng, weekMeals, weekWaterLogs, completionDates, fastingStart, fastingEnd }) {
   const [biohack,        setBiohack]        = useState(null);
   const [loading,        setLoading]        = useState(false);
   const [loadingStatus,  setLoadingStatus]  = useState("");
@@ -1206,38 +1262,122 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
   const [savedOpen,      setSavedOpen]      = useState(false);
   const [startModal,     setStartModal]     = useState(null);
   const [libraryOpen,    setLibraryOpen]    = useState(false);
-  const [open,           setOpen]           = useState({ cycle:true, male:true, circadian:true });
-  const [history,        setHistory]        = useState({});
+  const [open,           setOpen]           = useState({ cycle:true, male:true, circadian:true, active: activeChallenges.length>0 });
   const [sun,            setSun]            = useState(null);
   const [geoError,       setGeoError]       = useState(false);
+  const [locationLabel,  setLocationLabel]  = useState(null);
 
   const tog = k => setOpen(p => ({ ...p, [k]: !p[k] }));
 
   const localCyclePhase = cyclePhase || ((profile?.sex==="female" && profile?.biologicalTrackingEnabled && profile?.biologicalContext==="cycle") ? getCyclePhase(periodLogs, profile?.cycleLength||28) : null);
-  const weekTheme  = WEEKLY_THEMES[getWeekIndex()];
-  const dn = new Date();
-  const dayOfYear = Math.floor((dn - new Date(dn.getFullYear(),0,0)) / 86400000);
-  const todayDailyCat = DAILY_CATEGORIES[dayOfYear % DAILY_CATEGORIES.length];
-  const focusKey   = FOCUS_CAT_MAP[todayDailyCat] || "sleep";
-  const focusMeta  = FOCUS_META[focusKey];
-  const focusScore = DAILY_SCORES[focusKey] || 70;
 
-  // Journey: history + sun
-  useEffect(() => {
-    try { const h = localStorage.getItem("nora_history"); setHistory(h ? JSON.parse(h) : {}); } catch {}
-  }, []);
+  // Weekly Biohack Report — Monday-reset consistency grid (food/water/challenge) + numbers + message.
+  // Structured as a `rows` array so a 4th row (movement/smartwatch) is just another entry, later.
+  const weekKey = getWeekKey();
+  const weekDateStrs = (() => {
+    const now = new Date();
+    const dow = now.getDay();
+    const diffToMonday = dow === 0 ? 6 : dow - 1;
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday); d.setDate(d.getDate() + i);
+      return localDateStr(d);
+    });
+  })();
 
-  useEffect(() => {
-    if (!navigator.geolocation) { setGeoError(true); return; }
+  const [fsH, fsM] = (fastingStart || "09:00").split(":").map(Number);
+  const [feH, feM] = (fastingEnd || "21:00").split(":").map(Number);
+  const eatWinStart = fsH + fsM / 60, eatWinEnd = feH + feM / 60;
+
+  const foodDone = weekDateStrs.map(ds => (weekMeals || []).some(m => {
+    const d = new Date(m.logged_at);
+    if (localDateStr(d) !== ds) return false;
+    const h = d.getHours() + d.getMinutes() / 60;
+    return eatWinStart <= eatWinEnd ? (h >= eatWinStart && h < eatWinEnd) : (h >= eatWinStart || h < eatWinEnd);
+  }));
+
+  const weekWaterTarget = targets?.water_ml || 2500;
+  const waterDone = weekDateStrs.map(ds => {
+    const total = (weekWaterLogs || []).filter(w => localDateStr(new Date(w.logged_at)) === ds).reduce((s, w) => s + (w.amount_ml || 0), 0);
+    return total >= weekWaterTarget;
+  });
+
+  const challengeDateSet = new Set(completionDates || []);
+  const challengeDone = weekDateStrs.map(ds => challengeDateSet.has(ds));
+
+  const weekRows = [
+    { key: "food",      label: "Food",      data: foodDone },
+    { key: "water",     label: "Water",     data: waterDone },
+    { key: "challenge", label: "Challenge", data: challengeDone },
+  ];
+
+  const todayIdx = Math.max(0, weekDateStrs.indexOf(localDateStr()));
+  const weekRangeLabel = (() => {
+    const monday = new Date(weekDateStrs[0] + "T00:00:00");
+    const sunday = new Date(weekDateStrs[6] + "T00:00:00");
+    return monday.getMonth() === sunday.getMonth()
+      ? `${monday.toLocaleDateString("en-US", { month:"long" })} ${monday.getDate()} – ${sunday.getDate()}`
+      : `${monday.toLocaleDateString("en-US", { month:"short" })} ${monday.getDate()} – ${sunday.toLocaleDateString("en-US", { month:"short" })} ${sunday.getDate()}`;
+  })();
+
+  const challengeDaysThisWeek = challengeDone.filter(Boolean).length;
+  const weekTicks = foodDone.filter(Boolean).length + waterDone.filter(Boolean).length + challengeDaysThisWeek;
+  const weekRatio = weekTicks / 21;
+  const weekTier = weekRatio < 0.34 ? "low" : weekRatio < 0.67 ? "medium" : "high";
+  const weeklyMessage = pickWeeklyVariant(`weekly_report_msg_${weekTier}`, WEEKLY_REPORT_MESSAGES[weekTier], weekKey);
+  // Weekly goals now live inside the normal Daily Challenge pool (see CHALLENGES_GENERAL) — this
+  // slot just reflects real Active Challenges, or disappears entirely when there are none.
+  const activeSorted = [...activeChallenges].sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""));
+
+  // Circadian clock: real sunrise/sunset from device location, computed locally (NOAA solar formula,
+  // no external API). Falls back to a manual city (set in Me) or a default if geolocation is denied.
+  // Raw GPS coordinates are cached locally for the day only, never sent to Supabase.
+  const resolveLocation = (skipCache = false) => {
+    const today = todayStr();
+    const useCoords = (lat, lng, label, source, persist = true) => {
+      const times = calcSunTimes(lat, lng, new Date());
+      setSun(times);
+      setLocationLabel(label);
+      if (persist) {
+        try { localStorage.setItem("nora_ritual_location", JSON.stringify({ date: today, lat, lng, label, source })); } catch {}
+      } else {
+        console.log("[Nora][location DEBUG] not caching — city lookup failed, will retry next session");
+      }
+    };
+
+    if (!skipCache) {
+      let cached = null;
+      try { const c = localStorage.getItem("nora_ritual_location"); if (c) { const d = JSON.parse(c); if (d.date === today) cached = d; } } catch {}
+      if (cached) { console.log("[Nora][location DEBUG] using today's cache:", cached); useCoords(cached.lat, cached.lng, cached.label, cached.source); return; }
+    }
+
+    if (!navigator.geolocation) {
+      console.log("[Nora][location DEBUG] navigator.geolocation is unavailable (insecure context or unsupported browser)");
+      setGeoError(true);
+      if (locationLat && locationLng) useCoords(locationLat, locationLng, locationCity || "Your location", "manual");
+      else useCoords(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, `${DEFAULT_LOCATION.city} (default)`, "default");
+      return;
+    }
+    console.log("[Nora][location DEBUG] calling navigator.geolocation.getCurrentPosition…");
     navigator.geolocation.getCurrentPosition(
-      pos => {
+      async pos => {
         const { latitude:lat, longitude:lng } = pos.coords;
-        fetch(`https://api.sunrisesunset.io/json?lat=${lat}&lng=${lng}&timezone=auto&date=today`)
-          .then(r => r.json()).then(d => { if(d.status==="OK") setSun(d.results); }).catch(() => {});
+        console.log("[Nora][location DEBUG] geolocation success:", lat, lng);
+        const city = await reverseGeocodeCity(lat, lng);
+        console.log("[Nora][location DEBUG] reverse geocode result:", city);
+        setGeoError(false);
+        useCoords(lat, lng, city || "Your location", "gps", !!city);
       },
-      () => { setGeoError(true); }
+      err => {
+        console.log("[Nora][location DEBUG] geolocation error:", err.code, err.message);
+        setGeoError(true);
+        if (locationLat && locationLng) useCoords(locationLat, locationLng, locationCity || "Your location", "manual");
+        else useCoords(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, `${DEFAULT_LOCATION.city} (default)`, "default");
+      }
     );
-  }, []);
+  };
+
+  useEffect(() => { resolveLocation(false); }, []);
 
   // Biohack challenge init
   useEffect(() => {
@@ -1360,10 +1500,6 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
     return streak;
   };
 
-  let journeyStreak=0; const todayKey=localDateStr();
-  for(let i=0;i<60;i++){ const d=new Date(); d.setDate(d.getDate()-i); const key=localDateStr(d); const hasData=key===todayKey?entries.length>0:!!history[key]; if(hasData)journeyStreak++; else break; }
-  const motivMsg=MOTIVATIONAL[dayOfYear%MOTIVATIONAL.length];
-
   return (
     <div style={{ padding:"24px 20px 100px", display:"flex", flexDirection:"column", gap:16, backgroundColor:C.bg, minHeight:"100vh" }}>
       <style>{`
@@ -1402,60 +1538,35 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
           <NoraAvatar size={36}/>
           <div style={{ flex:1 }}>
             <h2 style={{ fontFamily:serif, fontSize:21, color:"#FDFAF5", fontWeight:700, margin:0, lineHeight:1.2, letterSpacing:"-0.01em" }}>Ritual</h2>
-            <p style={{ fontSize:11, color:"rgba(253,250,245,0.55)", margin:0, fontFamily:sans }}>Biohacking {"\u00B7"} Circadian {"\u00B7"} Protocols</p>
+            <p style={{ fontSize:11, color:"rgba(253,250,245,0.55)", margin:0, fontFamily:sans }}>Biohacking · Circadian · Protocols</p>
           </div>
         </div>
       </div>
 
-      <div style={{ display:"flex", justifyContent:"flex-end", marginTop:-8, marginBottom:8 }}>
-        <button onClick={() => setLibraryOpen(true)}
-          style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 14px",
-            backgroundColor:"transparent", border:`1px solid ${C.green}40`, borderRadius:20,
-            cursor:"pointer", fontFamily:serif, fontSize:12, fontWeight:600, color:C.green }}>
-          {"\u2726"} Library
-        </button>
+      {/* ─── 1. CIRCADIAN CLOCK — hero, top of tab ──────────────────────────────── */}
+      <div style={{ ...card }}>
+        <SectionHeader
+          title="Circadian Rhythm"
+          sub="24-hour sun & UV timeline"
+          open={open.circadian}
+          onToggle={() => tog("circadian")}
+          accent
+        />
+        <Collapsible open={open.circadian}>
+          <CircadianTimeline sun={sun} geoError={geoError} entries={entries} locationLabel={locationLabel} onRetryLocation={() => resolveLocation(true)}/>
+        </Collapsible>
       </div>
 
-      {/* ─── 1. DAILY BIOHACK CHALLENGE ──────────────────────────────────────── */}
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <p style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.1em", margin:0, fontFamily:sans }}>Daily Challenge</p>
-        <button onClick={() => setSavedOpen(true)}
-          style={{ display:"flex", alignItems:"center", gap:5, padding:"5px 12px", backgroundColor: savedChallenges.length > 0 ? C.greenLight : "transparent", border:`1px solid ${savedChallenges.length > 0 ? C.green : C.border}`, borderRadius:20, cursor:"pointer", transition:"background 0.15s" }}>
-          <svg width="11" height="11" viewBox="0 0 16 16" fill={savedChallenges.length > 0 ? C.green : "none"}>
-            <path d="M3 2h10a1 1 0 0 1 1 1v11l-6-3-6 3V3a1 1 0 0 1 1-1z" stroke={savedChallenges.length > 0 ? C.green : C.muted} strokeWidth="1.4" strokeLinejoin="round"/>
-          </svg>
-          <span style={{ fontSize:11, fontWeight:600, color: savedChallenges.length > 0 ? C.green : C.muted, fontFamily:sans }}>
-            Saved{savedChallenges.length > 0 ? ` (${savedChallenges.length})` : ""}
-          </span>
-        </button>
-      </div>
 
-      {/* Today's Focus banner */}
-      <div style={{ background:`linear-gradient(145deg,${C.green} 0%,${C.greenDark} 100%)`, borderRadius:16, padding:"18px 20px 16px", position:"relative", overflow:"hidden" }}>
-        <div style={{ position:"absolute", top:-8, right:-8, opacity:0.1, pointerEvents:"none" }}><BotanicalBranch width={110}/></div>
-        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
-          <span style={{ fontSize:24, lineHeight:1 }}>{focusMeta.emoji}</span>
-          <div style={{ flex:1 }}>
-            <p style={{ fontFamily:serif, fontSize:17, fontWeight:700, color:"#FDFAF5", margin:0, lineHeight:1.1 }}>Today's Focus: {focusMeta.title}</p>
-            <p style={{ fontSize:10, color:"rgba(253,250,245,0.55)", margin:0, fontFamily:sans, letterSpacing:"0.06em", textTransform:"uppercase" }}>{weekTheme}</p>
-          </div>
-          <div style={{ textAlign:"right" }}>
-            <p style={{ fontFamily:serif, fontSize:22, fontWeight:700, color:C.gold, margin:0, lineHeight:1 }}>{focusScore}</p>
-            <p style={{ fontSize:9, color:"rgba(253,250,245,0.45)", margin:0, fontFamily:sans }}>{scoreLabel(focusScore)}</p>
-          </div>
-        </div>
-        <p style={{ fontSize:12, color:"rgba(253,250,245,0.7)", lineHeight:1.7, margin:"0 0 12px", fontFamily:sans }}>{focusMeta.insight}</p>
-        <div style={{ height:3, backgroundColor:"rgba(255,255,255,0.12)", borderRadius:2 }}>
-          <div style={{ height:3, width:`${focusScore}%`, background:`linear-gradient(90deg,${C.gold},#E2C07A)`, borderRadius:2 }}/>
-        </div>
-      </div>
-
-      {/* Biohack Challenge Card */}
+      {/* ─── 2. DAILY CHALLENGE — unified (was: Today's Focus banner + separate card) ── */}
       <div style={{ backgroundColor:"#FDFAF5", borderRadius:16, border:`1px solid ${C.border}`, borderTop:`1px solid ${C.muted}`, boxShadow:"0 2px 20px rgba(45,74,62,0.08)", overflow:"hidden", position:"relative" }}>
         <div style={{ position:"absolute", top:0, right:0, opacity:0.13, pointerEvents:"none" }}><BotanicalBranch width={100} flip/></div>
         <div style={{ padding:"14px 20px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:`1px solid ${C.border}` }}>
-          <span style={{ fontSize:9, fontWeight:700, color:C.green, textTransform:"uppercase", letterSpacing:"0.12em", fontFamily:sans }}>Daily Challenge</span>
-          {ritualStreak > 0 && <span style={{ fontSize:11, color:C.muted, fontFamily:sans }}>{ritualStreak}-day streak {ritualStreak>=7?"\uD83D\uDD25":"\u26A1"}</span>}
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:9, fontWeight:700, color:C.green, textTransform:"uppercase", letterSpacing:"0.12em", fontFamily:sans }}>Daily Challenge</span>
+            {biohack?.category && <span style={{ fontSize:9, fontWeight:600, color:C.muted, backgroundColor:C.bg, border:`1px solid ${C.border}`, borderRadius:20, padding:"2px 8px", textTransform:"capitalize" }}>{biohack.category}</span>}
+          </div>
+          {ritualStreak > 0 && <span style={{ fontSize:11, color:C.muted, fontFamily:sans }}>{ritualStreak}-day streak {ritualStreak>=7?"🔥":"⚡"}</span>}
         </div>
         {loading ? (
           <div style={{ padding:"20px 20px 22px" }}>
@@ -1468,7 +1579,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
 
             {/* Title */}
             <p style={{ fontFamily:serif, fontSize:20, fontWeight:700, color:C.green, margin:"0 0 8px", lineHeight:1.25, letterSpacing:"-0.01em" }}>
-              {(biohack.title || biohack.name || "").replace(/^✦ For Her - |^✦ For Him - /, "")}
+              {biohack.title || biohack.name}
             </p>
 
             {/* Difficulty + Duration chips */}
@@ -1482,7 +1593,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
               )}
               {biohack.duration && (
                 <span style={{ fontSize:10, fontWeight:500, padding:"3px 10px", borderRadius:20, fontFamily:sans, backgroundColor:C.bg, color:C.muted, border:`1px solid ${C.border}` }}>
-                  {"\u23F1"} {biohack.duration}
+                  ⏱ {biohack.duration}
                 </span>
               )}
             </div>
@@ -1516,8 +1627,8 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
                             style={{ display:"block", textDecoration:"none", marginBottom:i<biohack.studies.length-1?8:0 }}>
                             <p style={{ fontSize:11, color:C.text, margin:"0 0 2px", lineHeight:1.45, fontFamily:sans }}>{i+1}. {s.title}</p>
                             <p style={{ fontSize:10, color:C.muted, margin:0, fontFamily:sans }}>
-                              {[s.authors,s.journal,s.year].filter(Boolean).join(" \u00B7 ")}
-                              <span style={{ color:C.green, marginLeft:5, fontWeight:500 }}>{"\u2197"} PubMed</span>
+                              {[s.authors,s.journal,s.year].filter(Boolean).join(" · ")}
+                              <span style={{ color:C.green, marginLeft:5, fontWeight:500 }}>↗ PubMed</span>
                             </p>
                           </a>
                         ))}
@@ -1525,7 +1636,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
                     )}
                   </>
                 ) : (
-                  <p style={{ fontSize:11, color:C.green, margin:0, fontStyle:"italic", fontFamily:serif, letterSpacing:"0.02em" }}>{"\u2726"} Based on established clinical research {"\u00B7"} Always consult your healthcare provider</p>
+                  <p style={{ fontSize:11, color:C.green, margin:0, fontStyle:"italic", fontFamily:serif, letterSpacing:"0.02em" }}>✦ Based on established clinical research · Always consult your healthcare provider</p>
                 )}
               </div>
             )}
@@ -1540,7 +1651,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
                 ) : (
                   <button onClick={() => setStartModal(biohack)}
                     style={{ flex:1, padding:"13px 0", backgroundColor:C.green, color:"#FDFAF5", border:"none", borderRadius:12, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:serif }}>
-                    Start Challenge {"\u2192"}
+                    Start Challenge →
                   </button>
                 )}
                 <button onClick={notForMe}
@@ -1559,120 +1670,147 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
         ) : null}
       </div>
 
-      {/* ─── 2. ACTIVE CHALLENGES ─────────────────────────────────────────────── */}
-      {activeChallenges.length > 0 && (
-        <>
-          <SL>Active Challenges</SL>
-          {activeChallenges.map(ac => {
-            const today      = todayStr();
-            const checkedIn  = ac.checkIns.includes(today);
-            const completed  = ac.checkIns.length >= ac.targetDays;
-            const pct        = Math.min(ac.checkIns.length / ac.targetDays, 1);
-            const acStreak   = getAcStreak(ac);
-            const streakMsg  = completed
-              ? "All done - outstanding commitment."
-              : acStreak >= 14 ? `${acStreak} days in a row - exceptional`
-              : acStreak >= 7  ? `${acStreak}-day streak - you're building a real habit`
-              : acStreak >= 3  ? `${acStreak} days in - keep the momentum`
-              : checkedIn      ? "Checked in today - well done"
-              : acStreak === 1 ? "1-day start - check in tomorrow to build your streak"
-              : "Check in each day to build your streak";
-            return (
-              <div key={ac.instanceId} style={{ ...card, padding:"16px 18px", borderTop: `1px solid ${C.muted}` }}>
-                {completed ? (
-                  <div style={{ textAlign:"center", padding:"10px 0 6px" }}>
-                    <div style={{ fontSize:30, marginBottom:8 }}>{"\uD83C\uDFC6"}</div>
-                    <p style={{ fontFamily:serif, fontSize:17, fontWeight:700, color:C.gold, margin:"0 0 3px" }}>Challenge Complete!</p>
-                    <p style={{ fontSize:12, color:C.muted, margin:"0 0 16px", fontFamily:sans }}>
-                      {ac.title.replace(/^✦ For Her - |^✦ For Him - /, "")} {"\u00B7"} {ac.targetDays} days
-                    </p>
-                    <button onClick={() => abandonChallenge(ac.instanceId)}
-                      style={{ padding:"8px 22px", backgroundColor:"transparent", color:C.muted, border:`1px solid ${C.border}`, borderRadius:10, fontSize:11, cursor:"pointer", fontFamily:sans }}>
-                      Dismiss
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:10 }}>
-                      <div style={{ flex:1 }}>
-                        {ac.label && <p style={{ fontSize:9, fontWeight:600, color:C.muted, margin:"0 0 3px", fontFamily:sans, letterSpacing:"0.06em" }}>{ac.label}</p>}
-                        <p style={{ fontFamily:serif, fontSize:15, fontWeight:700, color:C.green, margin:"0 0 2px", lineHeight:1.3 }}>
-                          {ac.title.replace(/^✦ For Her - |^✦ For Him - /, "")}
-                        </p>
-                        <p style={{ fontSize:11, color:C.muted, margin:0, fontFamily:sans }}>
-                          Day {ac.checkIns.length} of {ac.targetDays} {"\u00B7"} started {ac.startDate}
-                        </p>
-                      </div>
-                      <button onClick={() => abandonChallenge(ac.instanceId)} title="Abandon"
-                        style={{ background:"none", border:"none", color:C.muted, fontSize:18, cursor:"pointer", padding:"0 2px", flexShrink:0, lineHeight:1 }}>{"\u00D7"}</button>
-                    </div>
-
-                    {/* Progress bar */}
-                    <div style={{ height:6, backgroundColor:C.track, borderRadius:3, marginBottom:6, overflow:"hidden" }}>
-                      <div style={{ height:6, width:`${pct*100}%`, background:`linear-gradient(90deg,${C.green},${C.gold})`, borderRadius:3, transition:"width 0.5s ease" }}/>
-                    </div>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:10 }}>
-                      <span style={{ fontSize:10, color: acStreak >= 3 ? C.green : C.muted, fontFamily:sans, fontStyle: acStreak === 0 && !checkedIn ? "italic" : "normal" }}>{streakMsg}</span>
-                      <span style={{ fontSize:10, color:C.muted, fontFamily:sans }}>{Math.round(pct*100)}%</span>
-                    </div>
-
-                    {checkedIn ? (
-                      <div style={{ padding:"10px 14px", backgroundColor:C.greenLight, borderRadius:10, border:`1px solid ${C.green}30`, textAlign:"center" }}>
-                        <p style={{ fontSize:12, fontWeight:600, color:C.green, margin:0, fontFamily:serif }}>{"\u2713"} Checked in today</p>
-                      </div>
-                    ) : (
-                      <button onClick={() => checkInChallenge(ac.instanceId)}
-                        style={{ width:"100%", padding:"12px 0", backgroundColor:C.green, color:"#FDFAF5", border:"none", borderRadius:11, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:serif }}>
-                        Check in today
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </>
-      )}
-
-      {/* ─── 3. CIRCADIAN RHYTHM ──────────────────────────────────────────────── */}
-      <SL>Circadian Rhythm</SL>
+      {/* ─── 3. ACTIVE CHALLENGES — collapsible, compact ────────────────────────── */}
       <div style={{ ...card }}>
-        <SectionHeader
-          title="Circadian Rhythm"
-          sub="24-hour sun & UV timeline"
-          open={open.circadian}
-          onToggle={() => tog("circadian")}
-          accent
-        />
-        <Collapsible open={open.circadian}>
-          <CircadianTimeline sun={sun} geoError={geoError} entries={entries}/>
+        <SectionHeader title="Active Challenges" sub={activeChallenges.length>0 ? `${activeChallenges.length} in progress` : "None yet — start one above"} open={open.active} onToggle={() => tog("active")} accent/>
+        <Collapsible open={open.active}>
+          <div style={{ padding:"0 18px 18px", display:"flex", flexDirection:"column", gap:8 }}>
+            {activeChallenges.length===0 ? (
+              <p style={{ fontSize:12, color:C.muted, fontFamily:sans, margin:0 }}>Start today's challenge above to begin tracking a streak here.</p>
+            ) : activeChallenges.map(ac => {
+              const today      = todayStr();
+              const checkedIn  = ac.checkIns.includes(today);
+              const completed  = ac.checkIns.length >= ac.targetDays;
+              const pct        = Math.min(ac.checkIns.length / ac.targetDays, 1);
+              const acStreak   = getAcStreak(ac);
+              const streakMsg  = completed
+                ? "All done - outstanding commitment."
+                : acStreak >= 14 ? `${acStreak} days in a row - exceptional`
+                : acStreak >= 7  ? `${acStreak}-day streak - you're building a real habit`
+                : acStreak >= 3  ? `${acStreak} days in - keep the momentum`
+                : checkedIn      ? "Checked in today - well done"
+                : acStreak === 1 ? "1-day start - check in tomorrow to build your streak"
+                : "Check in each day to build your streak";
+              return (
+                <div key={ac.instanceId} style={{ backgroundColor:C.bg, borderRadius:12, border:`1px solid ${C.border}`, padding:"12px 14px" }}>
+                  {completed ? (
+                    <div style={{ textAlign:"center", padding:"6px 0 4px" }}>
+                      <div style={{ fontSize:26, marginBottom:6 }}>🏆</div>
+                      <p style={{ fontFamily:serif, fontSize:15, fontWeight:700, color:C.gold, margin:"0 0 2px" }}>Challenge Complete!</p>
+                      <p style={{ fontSize:11, color:C.muted, margin:"0 0 12px", fontFamily:sans }}>
+                        {ac.title} · {ac.targetDays} days
+                      </p>
+                      <button onClick={() => abandonChallenge(ac.instanceId)}
+                        style={{ padding:"7px 18px", backgroundColor:"transparent", color:C.muted, border:`1px solid ${C.border}`, borderRadius:9, fontSize:11, cursor:"pointer", fontFamily:sans }}>
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:8 }}>
+                        <div style={{ flex:1 }}>
+                          <p style={{ fontFamily:serif, fontSize:14, fontWeight:700, color:C.green, margin:"0 0 2px", lineHeight:1.3 }}>
+                            {ac.title}
+                          </p>
+                          <p style={{ fontSize:10, color:C.muted, margin:0, fontFamily:sans }}>
+                            Day {ac.checkIns.length} of {ac.targetDays} · started {ac.startDate}
+                          </p>
+                        </div>
+                        <button onClick={() => abandonChallenge(ac.instanceId)} title="Abandon"
+                          style={{ background:"none", border:"none", color:C.muted, fontSize:16, cursor:"pointer", padding:"0 2px", flexShrink:0, lineHeight:1 }}>×</button>
+                      </div>
+
+                      <div style={{ height:5, backgroundColor:C.track, borderRadius:3, marginBottom:5, overflow:"hidden" }}>
+                        <div style={{ height:5, width:`${pct*100}%`, background:`linear-gradient(90deg,${C.green},${C.gold})`, borderRadius:3, transition:"width 0.5s ease" }}/>
+                      </div>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                        <span style={{ fontSize:9, color: acStreak >= 3 ? C.green : C.muted, fontFamily:sans, fontStyle: acStreak === 0 && !checkedIn ? "italic" : "normal" }}>{streakMsg}</span>
+                        <span style={{ fontSize:9, color:C.muted, fontFamily:sans }}>{Math.round(pct*100)}%</span>
+                      </div>
+
+                      {checkedIn ? (
+                        <button onClick={() => uncheckInChallenge(ac.instanceId)} title="Tap to undo"
+                          style={{ width:"100%", padding:"8px 12px", backgroundColor:C.greenLight, borderRadius:9, border:`1px solid ${C.green}30`, textAlign:"center", cursor:"pointer" }}>
+                          <p style={{ fontSize:11, fontWeight:600, color:C.green, margin:0, fontFamily:serif }}>✓ Checked in today <span style={{ fontWeight:400, color:C.muted, fontFamily:sans }}>· tap to undo</span></p>
+                        </button>
+                      ) : (
+                        <button onClick={() => checkInChallenge(ac.instanceId)}
+                          style={{ width:"100%", padding:"10px 0", backgroundColor:C.green, color:"#FDFAF5", border:"none", borderRadius:10, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:serif }}>
+                          Check in today
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </Collapsible>
       </div>
 
-      {/* ─── 3. JOURNEY TRACKING ──────────────────────────────────────────────── */}
-      <SL>Your Journey</SL>
+      {/* ─── 4. WEEKLY BIOHACK REPORT ───────────────────────────────────────────── */}
+      <div style={{ ...card, padding:"24px 22px 26px" }}>
+        {/* Header — editorial, matches the Circadian Rhythm title language */}
+        <p style={{ fontFamily:serif, fontSize:19, fontWeight:600, color:C.text, margin:"0 0 4px", lineHeight:1.2 }}>Weekly Report</p>
+        <p style={{ fontSize:9, color:C.muted, margin:"0 0 26px", fontFamily:sans, textTransform:"uppercase", letterSpacing:"0.14em" }}>{weekRangeLabel}</p>
 
-      {/* Streak */}
-      <div style={{ ...card, padding:"20px 20px 18px" }}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-          <div>
-            <p style={{ fontSize:11, color:C.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 4px", fontWeight:600 }}>Current Streak</p>
-            <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
-              <span style={{ fontFamily:serif, fontSize:38, color:C.green, fontWeight:700, lineHeight:1 }}>{journeyStreak}</span>
-              <span style={{ fontSize:14, color:C.muted }}>{journeyStreak===1?"day":"days"}</span>
-            </div>
+        {/* Grid — dots, generous air, today marked with a thin gold underline (the card's one gold accent) */}
+        <div style={{ display:"flex", flexDirection:"column", gap:15, marginBottom:28 }}>
+          <div style={{ display:"flex", alignItems:"center" }}>
+            <div style={{ width:60 }}/>
+            {["M","T","W","T","F","S","S"].map((d, i) => (
+              <div key={i} style={{ flex:1, textAlign:"center", opacity: i > todayIdx ? 0.35 : 1 }}>
+                <span style={{ fontSize:9, color:C.muted, fontFamily:sans, letterSpacing:"0.03em" }}>{d}</span>
+                <div style={{ height:1.5, width:12, backgroundColor: i === todayIdx ? C.gold : "transparent", margin:"4px auto 0", borderRadius:1 }}/>
+              </div>
+            ))}
           </div>
-          <div style={{ width:54, height:54, borderRadius:"50%", backgroundColor:C.goldLight, border:`2px solid ${C.gold}40`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24 }}>
-            {journeyStreak>=14?"\uD83C\uDFC6":journeyStreak>=7?"\uD83C\uDF1F":journeyStreak>=3?"\u2728":"\uD83C\uDF31"}
+          {weekRows.map(row => (
+            <div key={row.key} style={{ display:"flex", alignItems:"center" }}>
+              <div style={{ width:60, fontSize:9, color:C.muted, textTransform:"uppercase", letterSpacing:"0.06em", fontFamily:sans }}>{row.label}</div>
+              {row.data.map((done, i) => (
+                <div key={i} style={{ flex:1, display:"flex", justifyContent:"center", opacity: i > todayIdx ? 0.3 : 1 }}>
+                  <div style={{ width: done ? 7 : 4, height: done ? 7 : 4, borderRadius:"50%", backgroundColor: done ? C.green : C.border, border:"none", opacity: done ? 1 : 0.55 }}/>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Numbers — typographic row, no card boxes, no fractions (what was done, not what's owed) */}
+        <div style={{ display:"flex", alignItems:"stretch", marginBottom:26 }}>
+          <div style={{ flex:1, textAlign:"center" }}>
+            <p style={{ fontFamily:serif, fontSize:27, fontWeight:600, color:C.text, margin:0, lineHeight:1 }}>{challengeDaysThisWeek}</p>
+            <p style={{ fontSize:9, color:C.muted, margin:"7px 0 0", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:sans }}>Days shaped</p>
+          </div>
+          <div style={{ width:1, backgroundColor:C.border }}/>
+          <div style={{ flex:1, textAlign:"center" }}>
+            <p style={{ fontFamily:serif, fontSize:27, fontWeight:600, color:C.text, margin:0, lineHeight:1 }}>{ritualStreak}</p>
+            <p style={{ fontSize:9, color:C.muted, margin:"7px 0 0", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:sans }}>Day streak</p>
           </div>
         </div>
-        <p style={{ fontSize:13, color:C.muted, lineHeight:1.65, margin:0, fontStyle:"italic", borderLeft:`3px solid ${C.green}`, paddingLeft:12 }}>"{motivMsg}"</p>
+
+        {/* Active challenges — every one in progress, not just the latest; nothing shown if none */}
+        {activeSorted.length > 0 && (
+          <div style={{ margin:"-10px 0 26px", display:"flex", flexDirection:"column", gap:6 }}>
+            {activeSorted.map(ac => (
+              <p key={ac.instanceId} style={{ fontSize:11, color:C.muted, margin:0, textAlign:"center", fontFamily:sans, lineHeight:1.6 }}>
+                <span style={{ color:C.text, fontWeight:600 }}>{ac.title}</span> — day {ac.checkIns.length} of {ac.targetDays}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {/* Nora's message — the emotional close */}
+        <p style={{ fontFamily:serif, fontSize:15, fontStyle:"italic", color:C.text, lineHeight:1.8, margin:0, borderLeft:`3px solid ${C.green}`, paddingLeft:16 }}>
+          {weeklyMessage}
+        </p>
       </div>
 
-      {/* Female: cycle phase */}
+      {/* ─── 5. CYCLE PHASE / HORMONAL RHYTHM — opt-in, mutually exclusive by sex ── */}
       {profile?.sex==="female" && localCyclePhase && (
         <div style={{ ...card }}>
-          <SectionHeader title="Cycle Phase Insights" sub={`${localCyclePhase.label} phase \u00B7 Day ${localCyclePhase.day}${localCyclePhase.periodLengthEstimated||localCyclePhase.cycleLengthEstimated?" (estimated)":""}`} open={open.cycle} onToggle={() => tog("cycle")} accent/>
+          <SectionHeader title="Cycle Phase Insights" sub={`${localCyclePhase.label} phase · Day ${localCyclePhase.day}${localCyclePhase.periodLengthEstimated||localCyclePhase.cycleLengthEstimated?" (estimated)":""}`} open={open.cycle} onToggle={() => tog("cycle")} accent/>
           <Collapsible open={open.cycle}>
             <div style={{ padding:"0 18px 18px" }}>
               <div style={{ borderLeft:`3px solid ${localCyclePhase.color}`, paddingLeft:12, marginBottom:16 }}>
@@ -1695,7 +1833,6 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
         </div>
       )}
 
-      {/* Male: hormonal rhythm — opt-in, mirrors Cycle Phase Insights */}
       {profile?.sex==="male" && profile?.biologicalTrackingEnabled && (() => {
         const maleTip = getMaleTip("long");
         return (
@@ -1712,7 +1849,20 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
         );
       })()}
 
+      {/* ─── 6. LIBRARY + SAVED ─────────────────────────────────────────────────── */}
+      <div style={{ display:"flex", gap:8 }}>
+        <button onClick={() => setLibraryOpen(true)}
+          style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"11px 0", backgroundColor:"transparent", border:`1px solid ${C.green}40`, borderRadius:12, cursor:"pointer", fontFamily:serif, fontSize:13, fontWeight:600, color:C.green }}>
+          ✦ Library
+        </button>
+        <button onClick={() => setSavedOpen(true)}
+          style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"11px 0", backgroundColor: savedChallenges.length > 0 ? C.greenLight : "transparent", border:`1px solid ${savedChallenges.length > 0 ? C.green : C.border}`, borderRadius:12, cursor:"pointer", fontFamily:serif, fontSize:13, fontWeight:600, color: savedChallenges.length > 0 ? C.green : C.muted }}>
+          Saved{savedChallenges.length > 0 ? ` (${savedChallenges.length})` : ""}
+        </button>
+      </div>
+
     </div>
+
   );
 }
 

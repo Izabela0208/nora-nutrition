@@ -94,7 +94,7 @@ const fmtRemaining = (ms) => {
   return `${m}m`;
 };
 
-export default function MyDay({ profile, targets, entries, logMeal, updateMeal, deleteMeal, clearTodayMeals, waterMl, setWaterMl, cyclePhase, activeChallenges, checkInChallenge, setActiveTab, fastingEnabled, fastingStart, fastingEnd, fastingMode, fastingExtendedStartAt, fastingExtendedHours }) {
+export default function MyDay({ profile, targets, entries, logMeal, updateMeal, deleteMeal, clearTodayMeals, waterMl, setWaterMl, cyclePhase, activeChallenges, checkInChallenge, setActiveTab, fastingEnabled, fastingStart, fastingEnd, fastingMode, fastingExtendedStartAt, fastingExtendedHours, logWaterEntry }) {
   const [greeting,          setGreeting]          = useState("");
   const [greetingLoad,      setGreetingLoad]      = useState(false);
   const [greetingDone,      setGreetingDone]      = useState(false);
@@ -404,6 +404,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
     setWaterMl(w=>Math.min(w+ml,(targets?.water_ml||3000)*2));
     setWaterToast(`+${ml>=1000?(ml/1000).toFixed(1)+"L":ml+"ml"} added`);
     setTimeout(()=>setWaterToast(""),2800);
+    logWaterEntry?.(ml);
   };
 
   const handleLogText=async()=>{

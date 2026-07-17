@@ -89,6 +89,16 @@ const todayRangeISO = () => {
   return { start: start.toISOString(), end: end.toISOString() };
 };
 
+// Current week, Monday-reset — used by the Weekly Biohack Report (Ritual).
+const weekRangeISO = () => {
+  const now = new Date();
+  const dow = now.getDay(); // 0=Sun..6=Sat
+  const diffToMonday = dow === 0 ? 6 : dow - 1;
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
+  const end = new Date(monday.getTime() + 7 * 86400000);
+  return { start: monday.toISOString(), end: end.toISOString() };
+};
+
 // entry (JS, camelCase, used by Eat/MyDay) ⇄ meals row (Supabase, snake_case)
 const entryToRow = (e, userId) => ({
   user_id: userId,
@@ -146,6 +156,8 @@ export default function NutritionApp() {
   const [activeChallenges, setActiveChallenges] = useState([]);
   const [completionDates, setCompletionDates] = useState([]);
   const [periodLogs, setPeriodLogs] = useState([]);
+  const [weekMeals, setWeekMeals] = useState([]);
+  const [weekWaterLogs, setWeekWaterLogs] = useState([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [fastingEnabled, setFastingEnabled] = useState(false);
   const [fastingStart,   setFastingStart]   = useState("09:00");
@@ -153,6 +165,9 @@ export default function NutritionApp() {
   const [fastingMode,             setFastingMode]             = useState("recurring");
   const [fastingExtendedStartAt,  setFastingExtendedStartAt]  = useState(null);
   const [fastingExtendedHours,    setFastingExtendedHours]    = useState(null);
+  const [locationCity, setLocationCity] = useState(null);
+  const [locationLat,  setLocationLat]  = useState(null);
+  const [locationLng,  setLocationLng]  = useState(null);
   const [waterMl,    setWaterMl]    = useState(0);
   const [history,    setHistory]    = useState({});
   const [profileLoading,  setProfileLoading]  = useState(true);
@@ -186,6 +201,12 @@ export default function NutritionApp() {
         const { data: mealRows } = await supabase.from("meals").select("*").eq("user_id", session.user.id).gte("logged_at", start).lt("logged_at", end).order("logged_at", { ascending: true });
         if(!cancelled) setEntries((mealRows || []).map(rowToEntry));
 
+        const { start: weekStart, end: weekEnd } = weekRangeISO();
+        const { data: weekMealRows } = await supabase.from("meals").select("type, logged_at").eq("user_id", session.user.id).eq("type", "food").gte("logged_at", weekStart).lt("logged_at", weekEnd);
+        if(!cancelled) setWeekMeals(weekMealRows || []);
+        const { data: weekWaterRows } = await supabase.from("water_logs").select("amount_ml, logged_at").eq("user_id", session.user.id).gte("logged_at", weekStart).lt("logged_at", weekEnd);
+        if(!cancelled) setWeekWaterLogs(weekWaterRows || []);
+
         const { data: acRows } = await supabase.from("active_challenges").select("*").eq("user_id", session.user.id);
         const { data: ccRows } = await supabase.from("challenge_completions").select("challenge_id, completed_date").eq("user_id", session.user.id);
         if(!cancelled){
@@ -200,7 +221,7 @@ export default function NutritionApp() {
         const { data: plRows } = await supabase.from("period_logs").select("id, start_date, end_date").eq("user_id", session.user.id).order("start_date", { ascending: false }).limit(12);
         if(!cancelled) setPeriodLogs(plRows || []);
 
-        const { data: settingsRow } = await supabase.from("user_settings").select("notifications_enabled, fasting_enabled, fasting_start, fasting_end, fasting_mode, fasting_extended_start_at, fasting_extended_hours").eq("user_id", session.user.id).maybeSingle();
+        const { data: settingsRow } = await supabase.from("user_settings").select("notifications_enabled, fasting_enabled, fasting_start, fasting_end, fasting_mode, fasting_extended_start_at, fasting_extended_hours, location_city, location_lat, location_lng").eq("user_id", session.user.id).maybeSingle();
         if(!cancelled){
           setNotificationsEnabled(settingsRow ? settingsRow.notifications_enabled : true);
           setFastingEnabled(settingsRow?.fasting_enabled || false);
@@ -209,6 +230,9 @@ export default function NutritionApp() {
           setFastingMode(settingsRow?.fasting_mode || "recurring");
           setFastingExtendedStartAt(settingsRow?.fasting_extended_start_at || null);
           setFastingExtendedHours(settingsRow?.fasting_extended_hours || null);
+          setLocationCity(settingsRow?.location_city || null);
+          setLocationLat(settingsRow?.location_lat || null);
+          setLocationLng(settingsRow?.location_lng || null);
         }
 
         setPhase("app");
@@ -261,6 +285,13 @@ export default function NutritionApp() {
     const row = entryToRow(entry, session.user.id);
     const { data } = await supabase.from("meals").insert(row).select().single();
     if(data) setEntries(prev => prev.map(e => e.id === tempId ? rowToEntry(data) : e));
+  };
+
+  // Side-effect only — local waterMl state is updated directly in MyDay's addWater.
+  // Persists history for the Weekly Biohack Report (Ritual); doesn't affect today's live total.
+  const logWaterEntry = async (ml) => {
+    if(!session?.user?.id) return;
+    await supabase.from("water_logs").insert({ user_id: session.user.id, amount_ml: ml });
   };
 
   const updateMeal = async (id, patch) => {
@@ -322,6 +353,18 @@ export default function NutritionApp() {
     );
   };
 
+  const uncheckInChallenge = async (instanceId) => {
+    const ac = activeChallenges.find(a => a.instanceId === instanceId);
+    if(!ac || !session?.user?.id) return;
+    const today = localDateStr();
+    if(!ac.checkIns.includes(today)) return;
+    setActiveChallenges(prev => prev.map(a => a.instanceId === instanceId ? { ...a, checkIns: a.checkIns.filter(d => d !== today) } : a));
+    await supabase.from("challenge_completions").delete()
+      .eq("user_id", session.user.id).eq("challenge_id", ac.id).eq("completed_date", today);
+    const { data: remaining } = await supabase.from("challenge_completions").select("id").eq("user_id", session.user.id).eq("completed_date", today).limit(1);
+    if(!remaining || remaining.length === 0) setCompletionDates(prev => prev.filter(d => d !== today));
+  };
+
   const markChallengeDone = async (challenge) => {
     if(!session?.user?.id || !challenge) return;
     const today = localDateStr();
@@ -378,6 +421,12 @@ export default function NutritionApp() {
     await saveFastingWindow(fastingEnabled, fastingStart, fastingEnd);
   };
 
+  const saveLocation = async (city, lat, lng) => {
+    setLocationCity(city); setLocationLat(lat); setLocationLng(lng);
+    if(!session?.user?.id) return;
+    await supabase.from("user_settings").upsert({ user_id: session.user.id, location_city: city, location_lat: lat, location_lng: lng, updated_at: new Date().toISOString() });
+  };
+
   const deleteAccount = async () => {
     if(!session?.access_token) return { ok: false, error: "No active session." };
     try {
@@ -428,7 +477,7 @@ export default function NutritionApp() {
 
   const resetProfile=()=>{
     ["nora_today_water","nora_today_entries","nora_sleep","nora_history","nora_supps_list","nora_supps_taken","nora_boost_recs","nora_smoothie","nora_evening_reflection"].forEach(k=>{try{localStorage.removeItem(k);}catch{}});
-    setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setActiveChallenges([]);setCompletionDates([]);setPeriodLogs([]);setNotificationsEnabled(true);setFastingEnabled(false);setFastingStart("09:00");setFastingEnd("21:00");setFastingMode("recurring");setFastingExtendedStartAt(null);setFastingExtendedHours(null);setWaterMl(0);setHistory({});setPhase("onboarding");
+    setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setActiveChallenges([]);setCompletionDates([]);setPeriodLogs([]);setNotificationsEnabled(true);setFastingEnabled(false);setFastingStart("09:00");setFastingEnd("21:00");setFastingMode("recurring");setFastingExtendedStartAt(null);setFastingExtendedHours(null);setLocationCity(null);setLocationLat(null);setLocationLng(null);setWaterMl(0);setHistory({});setPhase("onboarding");
   };
 
   // Cycle phase — only when the user opted in and chose "Menstruation" as context
@@ -495,17 +544,17 @@ export default function NutritionApp() {
   );
 
   // ── Main app ────────────────────────────────────────────────────
-  const sharedProps = { profile, targets, entries, logMeal, updateMeal, deleteMeal, clearTodayMeals, waterMl, setWaterMl, cyclePhase };
+  const sharedProps = { profile, targets, entries, logMeal, updateMeal, deleteMeal, clearTodayMeals, waterMl, setWaterMl, cyclePhase, logWaterEntry };
 
   const ritualStreak = calcRitualStreak(completionDates);
 
   const tabContent = {
     myday:   <MyDay {...sharedProps} activeChallenges={activeChallenges} checkInChallenge={checkInChallenge} setActiveTab={setActiveTab} fastingEnabled={fastingEnabled} fastingStart={fastingStart} fastingEnd={fastingEnd} fastingMode={fastingMode} fastingExtendedStartAt={fastingExtendedStartAt} fastingExtendedHours={fastingExtendedHours}/>,
     eat:     <Eat     profile={profile} targets={targets} entries={entries} logMeal={logMeal} cyclePhase={cyclePhase}/>,
-    ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} periodLogs={periodLogs} activeChallenges={activeChallenges} startChallenge={startChallenge} checkInChallenge={checkInChallenge} abandonChallenge={abandonChallenge} ritualStreak={ritualStreak} markChallengeDone={markChallengeDone}/>,
+    ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} periodLogs={periodLogs} activeChallenges={activeChallenges} startChallenge={startChallenge} checkInChallenge={checkInChallenge} uncheckInChallenge={uncheckInChallenge} abandonChallenge={abandonChallenge} ritualStreak={ritualStreak} markChallengeDone={markChallengeDone} locationCity={locationCity} locationLat={locationLat} locationLng={locationLng} weekMeals={weekMeals} weekWaterLogs={weekWaterLogs} completionDates={completionDates} fastingStart={fastingStart} fastingEnd={fastingEnd}/>,
     boost:   <Boost   profile={profile} targets={targets} entries={entries} cyclePhase={cyclePhase}/>,
     asknora: <AskNora profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase}/>,
-    me:      <Me      profile={profile} saveProfile={saveProfile} targets={targets} resetProfile={resetProfile} signOut={signOut} notificationsEnabled={notificationsEnabled} saveNotifications={saveNotifications} deleteAccount={deleteAccount} fastingEnabled={fastingEnabled} fastingStart={fastingStart} fastingEnd={fastingEnd} saveFastingWindow={saveFastingWindow} fastingMode={fastingMode} fastingExtendedStartAt={fastingExtendedStartAt} fastingExtendedHours={fastingExtendedHours} saveExtendedFast={saveExtendedFast} stopExtendedFast={stopExtendedFast} periodLogs={periodLogs} cyclePhase={cyclePhase} logPeriodStart={logPeriodStart} logPeriodEnd={logPeriodEnd} deletePeriodLog={deletePeriodLog}/>,
+    me:      <Me      profile={profile} saveProfile={saveProfile} targets={targets} resetProfile={resetProfile} signOut={signOut} notificationsEnabled={notificationsEnabled} saveNotifications={saveNotifications} deleteAccount={deleteAccount} fastingEnabled={fastingEnabled} fastingStart={fastingStart} fastingEnd={fastingEnd} saveFastingWindow={saveFastingWindow} fastingMode={fastingMode} fastingExtendedStartAt={fastingExtendedStartAt} fastingExtendedHours={fastingExtendedHours} saveExtendedFast={saveExtendedFast} stopExtendedFast={stopExtendedFast} periodLogs={periodLogs} cyclePhase={cyclePhase} logPeriodStart={logPeriodStart} logPeriodEnd={logPeriodEnd} deletePeriodLog={deletePeriodLog} locationCity={locationCity} locationLat={locationLat} locationLng={locationLng} saveLocation={saveLocation}/>,
   };
 
   return (
