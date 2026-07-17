@@ -1531,9 +1531,6 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
       {libraryOpen && <LibraryModal onClose={() => setLibraryOpen(false)} />}
 
       <div style={{ background:`linear-gradient(160deg,${C.greenDark} 0%,${C.green} 100%)`, padding:"20px 20px 18px", margin:"-24px -20px 18px", position:"relative", overflow:"hidden" }}>
-        <div style={{ position:"absolute", top:-8, right:-8, opacity:0.12, pointerEvents:"none" }}>
-          <BotanicalBranch width={110}/>
-        </div>
         <div style={{ display:"flex", alignItems:"center", gap:12, flex:1 }}>
           <NoraAvatar size={36}/>
           <div style={{ flex:1 }}>
@@ -1560,7 +1557,6 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
 
       {/* ─── 2. DAILY CHALLENGE — unified (was: Today's Focus banner + separate card) ── */}
       <div style={{ backgroundColor:"#FDFAF5", borderRadius:16, border:`1px solid ${C.border}`, borderTop:`1px solid ${C.muted}`, boxShadow:"0 2px 20px rgba(45,74,62,0.08)", overflow:"hidden", position:"relative" }}>
-        <div style={{ position:"absolute", top:0, right:0, opacity:0.13, pointerEvents:"none" }}><BotanicalBranch width={100} flip/></div>
         <div style={{ padding:"14px 20px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:`1px solid ${C.border}` }}>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
             <span style={{ fontSize:9, fontWeight:700, color:C.green, textTransform:"uppercase", letterSpacing:"0.12em", fontFamily:sans }}>Daily Challenge</span>

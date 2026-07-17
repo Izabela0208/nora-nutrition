@@ -246,9 +246,16 @@ export const getCyclePhase = (periodLogs, fallbackCycleLength = 28) => {
 
   const completed = logs.filter(l => l.end_date).slice(0, 6);
   const periodLengthEstimated = completed.length === 0;
-  const periodLength = periodLengthEstimated
+  const avgPeriodLength = periodLengthEstimated
     ? 5
     : Math.round(completed.reduce((s, l) => s + (daysBetween(l.end_date, l.start_date) + 1), 0) / completed.length);
+
+  // If the current/most recent period already has a logged end_date, that's ground truth for
+  // where its menstrual phase actually ended — use it instead of the historical average so the
+  // phase updates the moment the user logs the end, regardless of past cycle lengths.
+  const actualCurrentPeriodLength = mostRecent.end_date ? daysBetween(mostRecent.end_date, mostRecent.start_date) + 1 : null;
+  const periodLength = actualCurrentPeriodLength ?? avgPeriodLength;
+  const periodLengthEstimated_final = actualCurrentPeriodLength != null ? false : periodLengthEstimated;
 
   const gaps = [];
   for (let i = 0; i < logs.length - 1 && i < 6; i++) gaps.push(daysBetween(logs[i].start_date, logs[i + 1].start_date));
@@ -275,7 +282,7 @@ export const getCyclePhase = (periodLogs, fallbackCycleLength = 28) => {
   return {
     phase, day, label: meta.label, color: meta.color,
     tip: getCycleTip(phase, "short"),
-    periodLength, periodLengthEstimated,
+    periodLength, periodLengthEstimated: periodLengthEstimated_final,
     cycleLength, cycleLengthEstimated,
     predictedNextStart,
     currentLogId: mostRecent.id,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { C, card, serif, sans, inp, localDateStr } from "../noraTokens";
-import { NoraAvatar, BotanicalBranch, CheckIcon, HeartIcon, MoonIcon } from "../NoraIcons";
+import { NoraAvatar, CheckIcon, HeartIcon, MoonIcon } from "../NoraIcons";
 import { SectionHeader, Collapsible } from "../NoraUI";
 
 const LOCATION_CITIES = [
@@ -214,9 +214,6 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
 
       {/* ── Header ───────────────────────────────────────── */}
       <div style={{ background:`linear-gradient(160deg,${C.greenDark} 0%,${C.green} 100%)`, padding:"20px 20px 18px", margin:"-24px -20px 18px", position:"relative", overflow:"hidden" }}>
-        <div style={{ position:"absolute", top:-8, right:-8, opacity:0.12, pointerEvents:"none" }}>
-          <BotanicalBranch width={110}/>
-        </div>
         <div style={{ display:"flex", alignItems:"center", gap:12, flex:1 }}>
           <NoraAvatar size={36}/>
           <div style={{ flex:1 }}>

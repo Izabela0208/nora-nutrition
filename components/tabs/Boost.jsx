@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { C, card, serif, sans, localDateStr } from "../noraTokens";
-import { PlusIcon, CheckIcon, BotanicalBranch, NoraAvatar } from "../NoraIcons";
+import { PlusIcon, CheckIcon, NoraAvatar } from "../NoraIcons";
 
 const SUPP_KEY  = "nora_supps_list";
 const TAKEN_KEY = "nora_supps_taken";
@@ -42,6 +42,20 @@ function parseJSON(text) {
   return null;
 }
 
+const IRON_CAUTION = "Don't supplement iron without a blood test first — excess iron can be harmful. Ask a doctor.";
+
+// Safety net independent of the model's compliance: cap list sizes and force the iron
+// caution onto any iron-related item, even if the model omitted or reworded it.
+function capRecs(parsed) {
+  const withIronCaution = (item) => (/iron/i.test(item.name || "") ? { ...item, caution: IRON_CAUTION } : item);
+  return {
+    ...parsed,
+    deficiencies: (parsed.deficiencies || []).slice(0, 2).map(withIronCaution),
+    supplements: (parsed.supplements || []).map(withIronCaution),
+    food_alts: (parsed.food_alts || []).slice(0, 6),
+  };
+}
+
 export default function Boost({ profile, targets, entries, cyclePhase }) {
   const [supps,       setSupps]       = useState([]);
   const [taken,       setTaken]       = useState({});
@@ -69,7 +83,7 @@ export default function Boost({ profile, targets, entries, cyclePhase }) {
     } catch {}
     try {
       const r = localStorage.getItem(RECS_KEY);
-      if (r) { const p = JSON.parse(r); if (p.date === localDateStr() && p.recs) { setRecs(p.recs); loadCitations(p.recs); } }
+      if (r) { const p = JSON.parse(r); if (p.date === localDateStr() && p.recs && !p.recs._error) { const capped = capRecs(p.recs); setRecs(capped); loadCitations(capped); } }
     } catch {}
   }, []);
 
@@ -87,32 +101,33 @@ export default function Boost({ profile, targets, entries, cyclePhase }) {
     const suppList = supps.map(s => s.name).join(", ") || "none";
     const cyc      = cyclePhase ? `Cycle phase: ${cyclePhase.label}, day ${cyclePhase.day}.` : "";
 
-    const sys = `You are a clinical nutritionist. Return a 3-section JSON assessment — no markdown, no extra text.
+    const sys = `You are a clinical nutritionist. Nora's philosophy is food first: whole foods are always the primary recommendation, supplements are a secondary, cautious mention. Return a 3-section JSON assessment — no markdown, no extra text.
 
 Return ONLY this JSON structure:
 {
   "deficiencies": [
-    {"name":"Iron","emoji":"🩸","reason":"No red meat, lentils or leafy greens in today's meals"}
-  ],
-  "universal": [
-    {"name":"Vitamin D3","dose":"2000 IU","timing":"morning","emoji":"☀️","reason":"Most adults are deficient year-round; essential for immunity, mood and bone health"},
-    {"name":"Magnesium Glycinate","dose":"300 mg","timing":"evening","emoji":"🌙","reason":"Supports deep sleep, muscle relaxation and 300+ enzymatic reactions"},
-    {"name":"Omega-3 (EPA/DHA)","dose":"1000 mg","timing":"evening","emoji":"🐟","reason":"Reduces inflammation, supports cardiovascular and brain health — difficult to obtain from diet alone"}
+    {"name":"Iron","emoji":"🩸","reason":"Few iron-rich foods today","caution":"Don't supplement iron without a blood test first — excess iron can be harmful. Ask a doctor."}
   ],
   "food_alts": [
-    {"for":"Iron","food":"30g cooked chicken liver","emoji":"🥩","note":"Pan-fry with olive oil for 5 min — covers 60% of daily iron needs"},
-    {"for":"Vitamin D3","food":"2 eggs + 15 min morning sun","emoji":"🥚","note":"Eggs provide dietary D3; skin synthesises up to 10,000 IU with direct sunlight"}
+    {"for":"Iron","food":"Lentils, spinach, red meat","emoji":"🥩","note":"Pair with vitamin C to absorb better"},
+    {"for":"Vitamin D3","food":"Eggs, fatty fish, 15 min sun","emoji":"🥚"},
+    {"for":"Magnesium","food":"Pumpkin seeds, leafy greens, dark chocolate","emoji":"🌰"},
+    {"for":"Omega-3","food":"Salmon, walnuts, flaxseed","emoji":"🐟"}
+  ],
+  "supplements": [
+    {"name":"Vitamin D3","range":"1000–2000 IU","timing":"morning","emoji":"☀️","reason":"Most adults get little from diet or sun"},
+    {"name":"Magnesium Glycinate","range":"200–300 mg","timing":"evening","emoji":"🌙","reason":"Supports sleep and muscle relaxation","caution":"Ask a doctor first if you have kidney disease"},
+    {"name":"Omega-3 (EPA/DHA)","range":"500–1000 mg","timing":"evening","emoji":"🐟","reason":"Supports heart and brain health","caution":"Ask a doctor first if you take blood thinners"}
   ]
 }
 
-SECTION 1 — deficiencies: Analyse today's food log for likely micronutrient gaps. Focus on Iron, Zinc, B12, Calcium, Folate, Vitamin C, Potassium, Fibre. Max 4 items. If no gaps: empty array [].
+SECTION 1 — deficiencies: Analyse today's food log for likely micronutrient gaps. Focus on Iron, Zinc, B12, Calcium, Folate, Vitamin C, Potassium, Fibre. Max 2 items, only the most relevant one or two. Reason: one short clause, under 8 words, no dosage or supplement suggestion — food gaps only. If a gap is Iron, you MUST include the exact "caution" text shown above, verbatim. If no gaps: empty array [].
 
-SECTION 2 — universal: ALWAYS include exactly these three regardless of diet: Vitamin D3 (morning), Magnesium Glycinate (evening), Omega-3 EPA/DHA (evening). These are universally beneficial. Do not omit or replace them.
-Timing rules: morning = Vitamin D3, B12, Iron, Zinc, B Complex. Evening = Magnesium, Omega-3, Calcium.
+SECTION 2 — food_alts: Nora's PRIMARY recommendation, food first. Provide one whole-food entry for EVERY item in deficiencies AND for all three fixed supplements below (normally 3-5 total) — real foods (can list a few options comma-separated), one short absorption/prep tip under 8 words if useful. Never a pill.
 
-SECTION 3 — food_alts: For EVERY item in deficiencies AND every item in universal, provide one whole food alternative with exact quantity and brief preparation note. The "for" field must exactly match the name from the other sections. Max 8 total.
+SECTION 3 — supplements: ALWAYS include exactly these three fixed items, in this order, with the exact ranges, timings and cautions shown above — do not invent different numbers or drop the cautions. This is a secondary, optional mention. Frame "range" as a general reference, never a fixed instruction.
 
-Never recommend anything the user is already taking: ${suppList}.`;
+Never recommend anything the user is already taking: ${suppList}. Never phrase any dose as a fixed prescription — always a range framed as general information, not personalised medical advice. Never suggest supplementing iron directly, food sources only.`;
 
     const user = `Profile: ${profile?.name}, ${profile?.age}y, ${profile?.sex}${profile?.perimenopause ? " (perimenopausal)" : ""}.
 Goals: ${(profile?.goals || []).join(", ")}.
@@ -127,10 +142,11 @@ ${foodLog}`;
     try {
       const text   = await callClaude(sys, user, 1200);
       const parsed = parseJSON(text);
-      if (parsed && Array.isArray(parsed.universal)) {
-        setRecs(parsed);
-        try { localStorage.setItem(RECS_KEY, JSON.stringify({ date: localDateStr(), recs: parsed })); } catch {}
-        loadCitations(parsed);
+      if (parsed && Array.isArray(parsed.supplements)) {
+        const capped = capRecs(parsed);
+        setRecs(capped);
+        try { localStorage.setItem(RECS_KEY, JSON.stringify({ date: localDateStr(), recs: capped })); } catch {}
+        loadCitations(capped);
       } else {
         setRecs({ _error: true });
       }
@@ -147,7 +163,7 @@ ${foodLog}`;
         q: d.name,
         fbs: [`${d.name} deficiency`, `${d.name} nutrition health`],
       })),
-      ...(recsData.universal || []).map(u => ({
+      ...(recsData.supplements || []).map(u => ({
         name: u.name,
         q: u.name.split(" (")[0],
         fbs: [`${u.name.split(" ")[0]} supplement`, `${u.name.split(" ")[0]} health benefits`],
@@ -172,16 +188,13 @@ ${foodLog}`;
   };
 
   const takenCount    = supps.filter(s => taken[s.id]).length;
-  const univMorning   = recs?.universal?.filter(r => r.timing === "morning") || [];
-  const univEvening   = recs?.universal?.filter(r => r.timing === "evening") || [];
+  const suppMorning   = recs?.supplements?.filter(r => r.timing === "morning") || [];
+  const suppEvening   = recs?.supplements?.filter(r => r.timing === "evening") || [];
 
   return (
     <div style={{ padding: "24px 20px 100px", display: "flex", flexDirection: "column", gap: 16 }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} details summary{list-style:none} details summary::-webkit-details-marker{display:none} .boost-chev{display:inline-block;transition:transform 0.2s} details[open] .boost-chev{transform:rotate(90deg)}`}</style>
       <div style={{ background:`linear-gradient(160deg,${C.greenDark} 0%,${C.green} 100%)`, padding:"20px 20px 18px", margin:"-24px -20px 18px", position:"relative", overflow:"hidden" }}>
-        <div style={{ position:"absolute", top:-8, right:-8, opacity:0.12, pointerEvents:"none" }}>
-          <BotanicalBranch width={110}/>
-        </div>
         <div style={{ display:"flex", alignItems:"center", gap:12, flex:1 }}>
           <NoraAvatar size={36}/>
           <div style={{ flex:1 }}>
@@ -246,7 +259,7 @@ ${foodLog}`;
           <div>
             <div style={{ width:20, height:2, backgroundColor:C.muted, borderRadius:2, marginBottom:6 }}/>
             <p style={{ fontFamily:serif, fontSize:16, fontWeight:600, color:C.text, margin:0 }}>Nora's Analysis</p>
-            <p style={{ fontSize:11, color:C.muted, margin:"3px 0 0" }}>Deficiencies · essential supplements · food alternatives</p>
+            <p style={{ fontSize:11, color:C.muted, margin:"3px 0 0" }}>Nutritional gaps · food sources · supplements (optional)</p>
           </div>
           {recs && !recs._error && !recsLoading && (
             <button onClick={handleRefresh} style={{ fontSize:11, color:C.green, background:"none", border:`1px solid ${C.green}`, borderRadius:20, padding:"5px 10px", cursor:"pointer", whiteSpace:"nowrap" }}>Refresh</button>
@@ -263,7 +276,7 @@ ${foodLog}`;
             <p style={{ fontSize:13, color:C.muted, lineHeight:1.65, margin:"0 0 18px" }}>
               {foodEntries.length > 0
                 ? `${foodEntries.length} meal${foodEntries.length !== 1 ? "s" : ""} logged${distinctMeals > 0 ? ` across ${distinctMeals} meal groups` : ""}`
-                : "No meals logged yet — Nora will provide universal recommendations"}
+                : "No meals logged yet — Nora will suggest food-first picks"}
             </p>
             <button onClick={loadRecs} style={{ width:"100%", padding:"14px", backgroundColor:C.green, color:C.bg, border:"none", borderRadius:12, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:sans, letterSpacing:"0.02em" }}>
               Generate analysis
@@ -301,43 +314,52 @@ ${foodLog}`;
               </div>
             )}
 
-            {/* SECTION 2 — Universal supplements */}
-            <SectionLabel icon="💊" top>Essential Daily Supplements</SectionLabel>
-            <p style={{ fontSize:11, color:C.muted, margin:"-4px 0 10px", lineHeight:1.55, fontFamily:sans }}>Beneficial regardless of diet — recommended for most adults.</p>
-            {univMorning.length > 0 && (
-              <>
-                <TimingChip timing="morning"/>
-                {univMorning.map((r, i) => (
-                  <SuppCard key={i} rec={r} studies={citations[r.name] || []} onAdd={() => addToList(r.name)} alreadyAdded={supps.some(s => s.name.toLowerCase() === r.name.toLowerCase())}/>
-                ))}
-              </>
-            )}
-            {univEvening.length > 0 && (
-              <>
-                <TimingChip timing="evening"/>
-                {univEvening.map((r, i) => (
-                  <SuppCard key={i} rec={r} studies={citations[r.name] || []} onAdd={() => addToList(r.name)} alreadyAdded={supps.some(s => s.name.toLowerCase() === r.name.toLowerCase())}/>
-                ))}
-              </>
-            )}
-
-            {/* SECTION 3 — Food alternatives */}
+            {/* SECTION 2 — Food sources (Nora's primary recommendation) */}
             {recs.food_alts?.length > 0 && (
               <>
-                <SectionLabel icon="🥗" top>Whole Food Alternatives</SectionLabel>
-                <p style={{ fontSize:11, color:C.muted, margin:"-4px 0 10px", lineHeight:1.55, fontFamily:sans }}>Get the same nutrients from whole foods instead.</p>
+                <SectionLabel icon="🥗" top>Food Sources</SectionLabel>
+                <p style={{ fontSize:11, color:C.muted, margin:"-4px 0 10px", lineHeight:1.55, fontFamily:sans }}>Nora's first recommendation — food before pills.</p>
                 {recs.food_alts.map((a, i) => <FoodAltCard key={i} alt={a}/>)}
                 <p style={{ fontSize:11, color:C.muted, fontStyle:"italic", margin:"8px 0 0", lineHeight:1.6, fontFamily:serif, borderLeft:`2px solid ${C.gold}`, paddingLeft:10 }}>
                   ✦ Whole foods provide nutrients in their most bioavailable form alongside co-factors that aid absorption
                 </p>
               </>
             )}
+
+            {/* SECTION 3 — Supplements, secondary and collapsed by default */}
+            {recs.supplements?.length > 0 && (
+              <div style={{ marginTop:14 }}>
+                <SectionLabel icon="💊">Supplements — optional</SectionLabel>
+                <p style={{ fontSize:11, color:C.muted, margin:"-4px 0 8px", lineHeight:1.55, fontFamily:sans }}>Only worth it if food falls short. General reference, not a prescription.</p>
+                <details>
+                  <summary style={{ display:"flex", alignItems:"center", gap:5, cursor:"pointer", fontSize:12, color:C.green, fontFamily:sans, fontWeight:500, padding:"2px 0 10px" }}>
+                    <span className="boost-chev" style={{ fontSize:10 }}>▸</span> View reference ranges
+                  </summary>
+                  {suppMorning.length > 0 && (
+                    <>
+                      <TimingChip timing="morning"/>
+                      {suppMorning.map((r, i) => (
+                        <SuppCard key={i} rec={r} studies={citations[r.name] || []} onAdd={() => addToList(r.name)} alreadyAdded={supps.some(s => s.name.toLowerCase() === r.name.toLowerCase())}/>
+                      ))}
+                    </>
+                  )}
+                  {suppEvening.length > 0 && (
+                    <>
+                      <TimingChip timing="evening"/>
+                      {suppEvening.map((r, i) => (
+                        <SuppCard key={i} rec={r} studies={citations[r.name] || []} onAdd={() => addToList(r.name)} alreadyAdded={supps.some(s => s.name.toLowerCase() === r.name.toLowerCase())}/>
+                      ))}
+                    </>
+                  )}
+                </details>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       <p style={{ fontSize:11, color:C.muted, textAlign:"center", lineHeight:1.6, padding:"0 16px" }}>
-        For informational purposes only. Consult a healthcare professional before starting any supplement.
+        Informational only, not medical advice. Talk to your doctor or pharmacist before starting any supplement, especially if you take medication or have a health condition.
       </p>
     </div>
   );
@@ -357,7 +379,7 @@ function TimingChip({ timing }) {
     <div style={{ display:"inline-flex", alignItems:"center", gap:5, backgroundColor: morning ? "#FBF3E3" : "#EEF3EF", borderRadius:20, padding:"3px 10px", marginBottom:8 }}>
       <span style={{ fontSize:11 }}>{morning ? "☀️" : "🌙"}</span>
       <span style={{ fontSize:10, fontWeight:700, color: morning ? C.amber : C.green, fontFamily:sans, textTransform:"uppercase", letterSpacing:"0.06em" }}>
-        {morning ? "Take tomorrow morning" : "You can take tonight"}
+        {morning ? "Often taken in the morning" : "Often taken in the evening"}
       </span>
     </div>
   );
@@ -392,6 +414,13 @@ function StudyCitations({ studies }) {
   );
 }
 
+function CautionNote({ text }) {
+  if (!text) return null;
+  return (
+    <p style={{ fontSize:11, color:C.muted, fontStyle:"italic", margin:"6px 0 0", lineHeight:1.5, borderLeft:`2px solid ${C.border}`, paddingLeft:8 }}>{text}</p>
+  );
+}
+
 function SuppCard({ rec, studies, onAdd, alreadyAdded }) {
   return (
     <div style={{ backgroundColor:C.bg, borderRadius:12, padding:"13px 14px", marginBottom:8, border:`1px solid ${C.border}` }}>
@@ -402,9 +431,10 @@ function SuppCard({ rec, studies, onAdd, alreadyAdded }) {
             <p style={{ fontSize:14, fontWeight:600, color:C.text, margin:0 }}>{rec.name}</p>
           </div>
           <p style={{ fontSize:12, color:C.muted, margin:"0 0 5px", lineHeight:1.5 }}>{rec.reason}</p>
-          {rec.dose && (
-            <span style={{ fontSize:11, fontWeight:700, color:C.sage, backgroundColor:C.greenLight, borderRadius:20, padding:"2px 8px" }}>{rec.dose}</span>
+          {rec.range && (
+            <span style={{ fontSize:11, fontWeight:500, color:C.muted, backgroundColor:C.track, borderRadius:20, padding:"2px 8px" }}>Typical range: {rec.range}</span>
           )}
+          <CautionNote text={rec.caution}/>
           <StudyCitations studies={studies}/>
         </div>
         <button onClick={onAdd} disabled={alreadyAdded} style={{ flexShrink:0, padding:"7px 11px", backgroundColor:alreadyAdded?C.greenLight:C.green, color:alreadyAdded?C.sage:C.bg, border:"none", borderRadius:8, fontSize:11, cursor:alreadyAdded?"default":"pointer", fontFamily:sans, fontWeight:600, whiteSpace:"nowrap" }}>
@@ -423,6 +453,7 @@ function DefCard({ def, studies }) {
         <div style={{ flex:1 }}>
           <p style={{ fontSize:14, fontWeight:600, color:C.text, margin:"0 0 3px" }}>{def.name}</p>
           <p style={{ fontSize:12, color:C.muted, margin:0, lineHeight:1.5 }}>{def.reason}</p>
+          <CautionNote text={def.caution}/>
           <StudyCitations studies={studies}/>
         </div>
       </div>

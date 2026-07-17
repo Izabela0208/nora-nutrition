@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { C, card, serif, sans, inp, localDateStr, pickDailyVariant, getMaleTip, getDailyFact } from "../noraTokens";
-import { BotanicalBranch, LeafDecor, DropIcon, CheckIcon, SparkleIcon, CameraIcon, EditIcon } from "../NoraIcons";
+import { LeafDecor, DropIcon, CheckIcon, SparkleIcon, CameraIcon, EditIcon } from "../NoraIcons";
 
 const MovementIcon = ({ size = 15, color = C.sage }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
@@ -114,6 +114,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   const [barcodeOpen,       setBarcodeOpen]       = useState(false);
   const [barcodeLoad,       setBarcodeLoad]       = useState(false);
   const [barcodeResult,     setBarcodeResult]     = useState(null);
+  const [barcodeGrams,      setBarcodeGrams]      = useState("100");
   const [barcodeError,      setBarcodeError]      = useState("");
   const [manualBarcode,     setManualBarcode]     = useState("");
   const [cameraActive,      setCameraActive]      = useState(false);
@@ -261,7 +262,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   };
 
   const lookupBarcode = async (code) => {
-    setBarcodeLoad(true); setBarcodeError(""); setBarcodeResult(null);
+    setBarcodeLoad(true); setBarcodeError(""); setBarcodeResult(null); setBarcodeGrams("100");
     stopBarcodeCamera();
     // Try Open Food Facts first (free, no key)
     try {
@@ -349,23 +350,27 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
 
   const closeBarcodeModal = () => {
     stopBarcodeCamera();
-    setBarcodeOpen(false); setBarcodeResult(null); setBarcodeError(""); setManualBarcode(""); setBarcodeLoad(false);
+    setBarcodeOpen(false); setBarcodeResult(null); setBarcodeGrams("100"); setBarcodeError(""); setManualBarcode(""); setBarcodeLoad(false);
   };
 
   const logBarcodeProduct = () => {
     if (!barcodeResult) return;
+    const grams  = Math.max(1, parseFloat(barcodeGrams) || 100);
+    const factor = grams / 100;
     const hh = new Date().getHours();
     const mg = hh < 11 ? "Morning" : hh < 15 ? "Midday" : hh < 18 ? "Snacks" : "Evening";
     const entry = {
       id: Date.now(), type: "food", source: "barcode",
       name: barcodeResult.name + (barcodeResult.brand ? ` (${barcodeResult.brand})` : ""),
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      mealGroup: mg, calories: barcodeResult.kcal,
-      protein_g: barcodeResult.protein, carbs_g: barcodeResult.carbs, fat_g: barcodeResult.fat,
-      fiber_g: 0, notes: "100g · barcode scan", estimated: false,
+      mealGroup: mg, calories: Math.round(barcodeResult.kcal * factor),
+      protein_g: Math.round(barcodeResult.protein * factor * 10) / 10,
+      carbs_g:   Math.round(barcodeResult.carbs   * factor * 10) / 10,
+      fat_g:     Math.round(barcodeResult.fat     * factor * 10) / 10,
+      fiber_g: 0, notes: `${grams}g · barcode scan`, estimated: false,
     };
     logMeal(entry);
-    setLogToast({ entry, msg: `${barcodeResult.name} (~${barcodeResult.kcal} kcal) · tap to adjust` });
+    setLogToast({ entry, msg: `${barcodeResult.name} (~${entry.calories} kcal) · tap to adjust` });
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setLogToast(null), 6000);
     closeBarcodeModal();
@@ -466,7 +471,6 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
 
       {/* Greeting card — Nora message identity: pine card, no avatar */}
       <div style={{position:"relative",borderRadius:18,overflow:"hidden",backgroundColor:C.green,boxShadow:"0 4px 20px rgba(31,46,38,0.20)",padding:"20px 20px 22px"}}>
-        <div style={{position:"absolute",right:-12,top:-10,opacity:0.09,pointerEvents:"none"}}><BotanicalBranch width={100} opacity={1} flip={true}/></div>
         <div style={{position:"relative"}}>
           <p style={{fontSize:9,fontWeight:700,color:"rgba(168,178,169,0.85)",textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 6px"}}>{h<12?"Morning":h<17?"Afternoon":"Evening"} · {profile?.name}</p>
           {greetingLoad
@@ -494,8 +498,6 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
       {/* Today's Progress */}
       {targets&&(
         <div style={{position:"relative",borderRadius:18,overflow:"hidden",backgroundColor:"#F5F0E8",boxShadow:"0 4px 20px rgba(27,58,45,0.10)",border:"1px solid rgba(155,123,42,0.18)"}}>
-          <div style={{position:"absolute",right:-14,top:-12,opacity:0.07,pointerEvents:"none"}}><BotanicalBranch width={130} opacity={1} flip={true}/></div>
-          <div style={{position:"absolute",left:-10,bottom:-8,opacity:0.05,pointerEvents:"none"}}><BotanicalBranch width={100} opacity={1}/></div>
           <div style={{position:"relative",padding:"22px 20px 20px"}}>
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:22}}>
               <div>
@@ -974,7 +976,10 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
               )}
 
               {/* Product result */}
-              {barcodeResult && !barcodeLoad && (
+              {barcodeResult && !barcodeLoad && (() => {
+                const gramsNum = Math.max(1, parseFloat(barcodeGrams) || 100);
+                const factor   = gramsNum / 100;
+                return (
                 <div style={{animation:"fadeIn 0.25s ease"}}>
                   {barcodeResult.image && (
                     <div style={{width:"100%",height:180,borderRadius:14,overflow:"hidden",marginBottom:14}}>
@@ -999,13 +1004,21 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                         );
                       })()}
                     </div>
-                    {/* Macros */}
+                    {/* Amount consumed */}
+                    <div style={{marginBottom:12}}>
+                      <p style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.05em",margin:"0 0 6px"}}>Amount consumed</p>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <input type="number" value={barcodeGrams} onChange={e=>setBarcodeGrams(e.target.value)} style={{...inp,width:90,flexShrink:0}}/>
+                        <span style={{fontSize:13,color:C.muted}}>grams</span>
+                      </div>
+                    </div>
+                    {/* Macros — scaled to amount consumed */}
                     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:12}}>
                       {[
-                        {label:"Calories",value:barcodeResult.kcal,unit:"kcal",color:C.green},
-                        {label:"Protein", value:barcodeResult.protein,unit:"g", color:C.gold},
-                        {label:"Carbs",   value:barcodeResult.carbs,unit:"g",   color:C.amber},
-                        {label:"Fat",     value:barcodeResult.fat,unit:"g",     color:C.sage},
+                        {label:"Calories",value:Math.round(barcodeResult.kcal*factor),unit:"kcal",color:C.green},
+                        {label:"Protein", value:Math.round(barcodeResult.protein*factor*10)/10,unit:"g", color:C.gold},
+                        {label:"Carbs",   value:Math.round(barcodeResult.carbs*factor*10)/10,unit:"g",   color:C.amber},
+                        {label:"Fat",     value:Math.round(barcodeResult.fat*factor*10)/10,unit:"g",     color:C.sage},
                       ].map(m=>(
                         <div key={m.label} style={{backgroundColor:C.bg,borderRadius:10,padding:"9px 4px",textAlign:"center",border:`1px solid ${C.border}`}}>
                           <p style={{fontSize:15,fontWeight:700,color:m.color,margin:0,lineHeight:1}}>{m.value}</p>
@@ -1026,11 +1039,12 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                       Add to today's log
                     </button>
                   </div>
-                  <button onClick={()=>{setBarcodeResult(null);setBarcodeError("");setManualBarcode("");startBarcodeCamera();}} style={{width:"100%",padding:"12px",backgroundColor:"transparent",color:C.green,border:`1.5px solid ${C.green}`,borderRadius:12,fontSize:13,fontWeight:500,cursor:"pointer"}}>
+                  <button onClick={()=>{setBarcodeResult(null);setBarcodeGrams("100");setBarcodeError("");setManualBarcode("");startBarcodeCamera();}} style={{width:"100%",padding:"12px",backgroundColor:"transparent",color:C.green,border:`1.5px solid ${C.green}`,borderRadius:12,fontSize:13,fontWeight:500,cursor:"pointer"}}>
                     Scan another product
                   </button>
                 </div>
-              )}
+                );
+              })()}
             </div>
           </div>
         </div>

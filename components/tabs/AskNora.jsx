@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { C, card, serif, sans } from "../noraTokens";
-import { NoraAvatar, BotanicalBranch } from "../NoraIcons";
+import { NoraAvatar } from "../NoraIcons";
 
 async function callClaude(msgs, sys, maxTokens = 1000) {
   const res = await fetch("/api/chat", {
@@ -192,9 +192,6 @@ RESPONSE STYLE:
 
         {/* Header */}
         <div style={{ background: `linear-gradient(160deg,${C.greenDark} 0%,${C.green} 100%)`, padding: "20px 20px 18px", position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", top: -8, right: -8, opacity: 0.12, pointerEvents: "none" }}>
-            <BotanicalBranch width={110}/>
-          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
             <NoraAvatar size={36}/>
             <div style={{ flex: 1 }}>
@@ -216,9 +213,6 @@ RESPONSE STYLE:
           {showSuggestions && (
             <div style={{ animation: "fadeUp 0.4s ease" }}>
               <div style={{ backgroundColor: "#FDFAF5", borderRadius: 16, border: `1px solid ${C.border}`, borderTop: `1px solid ${C.muted}`, padding: "22px 20px 20px", textAlign: "center", marginBottom: 14, position: "relative", overflow: "hidden" }}>
-                <div style={{ position: "absolute", top: 0, right: 0, opacity: 0.1, pointerEvents: "none" }}>
-                  <BotanicalBranch width={90} flip/>
-                </div>
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
                   <NoraAvatar size={48}/>
                 </div>

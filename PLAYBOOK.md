@@ -201,6 +201,12 @@ Mesaj către 2-3 colege + postare în 2 grupuri (FB wellness RO / Reddit): "Am c
 ## G1 — Fasting ca stare globală
 Notat 13.07, de implementat după validarea cu cei 5 testeri: toată aplicația ține cont de fereastra de fasting/eating, la fel cum ține cont de faza ciclului menstrual. Abordare: un helper central (ex. `getFastingState()`) folosit de meal suggestions, Ask Nora, Boost/Ritual și circadian timeline, fără logică duplicată în tab-uri. Fasting-ul propriu-zis (fereastră recurentă + post extins custom) e deja construit în Me + My Day (13.07) — acest item e despre EXTINDEREA lui ca sursă de context pentru restul aplicației, nu despre feature-ul de bază.
 
+## G2 — Library: conținut extins, fără numărătoare
+Notat 17.07, de implementat după validarea cu cei 5 testeri: extinderea conținutului per tab din Library (books/podcasts/concepts) și eliminarea numărătorii de articole ("35 articles") de pe ecran — fără numărătoare, colecția pare mai bogată.
+
+## G3 — Barcode: scanare live și pe iPhone/Safari
+Notat 17.07, **de făcut ÎNAINTE de lansarea testului cu cei 5 utilizatori** (nu doar post-lansare) — mulți testeri vor fi pe iPhone. Problemă actuală: scanarea live prin cameră (My Day → barcode) folosește API-ul nativ `BarcodeDetector`, care NU e suportat pe Safari/iOS — pe iPhone camera live nu detectează automat niciun cod, userul poate doar introduce codul manual. Soluție: înlocuiește sau completează `BarcodeDetector` cu o librărie JS cross-browser (ex. ZXing sau QuaggaJS) care rulează peste imaginea video și funcționează și pe Safari. Necesită `npm install` — de discutat înainte care librărie, din motive de mărime bundle și licență.
+
 ---
 
 # ORDINEA ELEMENTELOR PE FIECARE TAB (referință permanentă)

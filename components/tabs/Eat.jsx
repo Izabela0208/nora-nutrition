@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { C, card, serif, sans, inp, localDateStr } from "../noraTokens";
-import { LeafDecor, NoraAvatar, BotanicalBranch, SparkleIcon, CheckIcon, HeartIcon } from "../NoraIcons";
+import { LeafDecor, NoraAvatar, SparkleIcon, CheckIcon, HeartIcon } from "../NoraIcons";
 import { SectionHeader, Collapsible } from "../NoraUI";
 import juicesData from "../../data/juices.json";
 import dessertsData from "../../data/desserts.json";
@@ -1208,10 +1208,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
       })()}
 
       {/* Header */}
-      <div style={{ background:`linear-gradient(160deg,${G.forest} 0%,${G.forestMid} 100%)`, padding:"20px 20px 18px", position:"relative", overflow:"hidden" }}>
-        <div style={{ position:"absolute", top:-8, right:-8, opacity:0.12, pointerEvents:"none" }}>
-          <BotanicalBranch width={110}/>
-        </div>
+      <div style={{ background:`linear-gradient(160deg,${C.greenDark} 0%,${C.green} 100%)`, padding:"20px 20px 18px", position:"relative", overflow:"hidden" }}>
         <div style={{ display:"flex", alignItems:"center", gap:12, flex:1 }}>
           <NoraAvatar size={36}/>
           <div style={{ flex:1 }}>
