@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { C, card, serif, sans, inp, localDateStr, pickDailyVariant, getMaleTip, getDailyFact } from "../noraTokens";
 import { LeafDecor, DropIcon, CheckIcon, SparkleIcon, CameraIcon, EditIcon } from "../NoraIcons";
+import AtmosphereBackground from "../AtmosphereBackground";
 
 const MovementIcon = ({ size = 15, color = C.sage }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
@@ -468,11 +469,14 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   return (
     <div style={{padding:"16px 16px 100px",display:"flex",flexDirection:"column",gap:12}}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes dotPulse{0%,80%,100%{opacity:0.3;transform:scale(0.8)}40%{opacity:1;transform:scale(1)}}@keyframes scanLine{0%,100%{top:0}50%{top:calc(100% - 2px)}}`}</style>
+      <AtmosphereBackground/>
 
       {/* Greeting card — Nora message identity: pine card, no avatar */}
       <div style={{position:"relative",borderRadius:18,overflow:"hidden",backgroundColor:C.green,boxShadow:"0 4px 20px rgba(31,46,38,0.20)",padding:"20px 20px 22px"}}>
         <div style={{position:"relative"}}>
-          <p style={{fontSize:9,fontWeight:700,color:"rgba(168,178,169,0.85)",textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 6px"}}>{h<12?"Morning":h<17?"Afternoon":"Evening"} · {profile?.name}</p>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:6}}>
+            <p style={{fontSize:9,fontWeight:700,color:"rgba(168,178,169,0.85)",textTransform:"uppercase",letterSpacing:"0.12em",margin:0}}>{h<12?"Morning":h<17?"Afternoon":"Evening"} · {profile?.name}</p>
+          </div>
           {greetingLoad
             ? <div style={{display:"flex",gap:5,paddingTop:2}}>{[0,1,2].map(j=><span key={j} style={{width:5,height:5,borderRadius:"50%",backgroundColor:"rgba(244,242,237,0.4)",display:"inline-block",animation:`dotPulse 1.2s ease ${j*0.2}s infinite`}}/>)}</div>
             : <p style={{fontFamily:serif,fontSize:15,fontWeight:500,color:C.ivory,lineHeight:1.65,margin:0,fontStyle:"italic"}}>{greeting||`Good ${h<12?"morning":h<17?"afternoon":"evening"}, ${profile?.name}.`}</p>
@@ -497,7 +501,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
 
       {/* Today's Progress */}
       {targets&&(
-        <div style={{position:"relative",borderRadius:18,overflow:"hidden",backgroundColor:"#F5F0E8",boxShadow:"0 4px 20px rgba(27,58,45,0.10)",border:"1px solid rgba(155,123,42,0.18)"}}>
+        <div style={{position:"relative",borderRadius:18,overflow:"hidden",backgroundColor:C.card,boxShadow:"0 4px 20px rgba(27,58,45,0.10)",border:"1px solid rgba(155,123,42,0.18)"}}>
           <div style={{position:"relative",padding:"22px 20px 20px"}}>
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:22}}>
               <div>
@@ -769,31 +773,39 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
 
         {/* Biological insight — opt-in only, one per user: cycle, perimenopause or male rhythm */}
         {isFemale&&cyclePhase&&(
-          <div style={{...card,padding:"16px 18px",borderLeft:`3px solid ${cyclePhase.color}`,background:`linear-gradient(135deg,${C.card} 0%,${cyclePhase.color}08 100%)`}}>
+          <div style={{...card,padding:"16px 18px",borderLeft:`3px solid ${cyclePhase.color}`}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
               <p style={{fontFamily:serif,fontSize:13,fontWeight:600,color:cyclePhase.color,margin:0}}>{cyclePhase.label} Phase</p>
               <span style={{fontSize:10,color:cyclePhase.color,backgroundColor:`${cyclePhase.color}18`,padding:"2px 9px",borderRadius:20,fontWeight:600,letterSpacing:"0.04em"}}>Day {cyclePhase.day}{(cyclePhase.periodLengthEstimated||cyclePhase.cycleLengthEstimated)&&" (est.)"}</span>
             </div>
-            <p style={{fontSize:9,fontWeight:700,color:cyclePhase.color,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 4px"}}>✦ Cycle Insight</p>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:4}}>
+              <p style={{fontSize:9,fontWeight:700,color:cyclePhase.color,textTransform:"uppercase",letterSpacing:"0.08em",margin:0}}>✦ Cycle Insight</p>
+            </div>
             <p style={{fontFamily:serif,fontSize:12,color:C.text,margin:0,lineHeight:1.6}}>{cyclePhase.tip}</p>
           </div>
         )}
         {isFemale&&isPeri&&(
           <div style={{...card,padding:"10px 14px",borderLeft:`2px solid ${C.muted}`}}>
-            <p style={{fontSize:10,fontWeight:700,color:C.amber,textTransform:"uppercase",letterSpacing:"0.05em",margin:"0 0 3px"}}>Hormonal balance</p>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:3}}>
+              <p style={{fontSize:10,fontWeight:700,color:C.amber,textTransform:"uppercase",letterSpacing:"0.05em",margin:0}}>Hormonal balance</p>
+            </div>
             <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{pickDailyVariant("perimenopause_tip",HORMONAL_TIPS).tip}</p>
           </div>
         )}
         {isMale&&maleTip&&(
           <div style={{...card,padding:"10px 14px",borderLeft:`2px solid ${C.muted}`}}>
-            <p style={{fontSize:10,fontWeight:700,color:C.green,textTransform:"uppercase",letterSpacing:"0.05em",margin:"0 0 3px"}}>{maleTip.icon} {maleTip.title}</p>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:3}}>
+              <p style={{fontSize:10,fontWeight:700,color:C.green,textTransform:"uppercase",letterSpacing:"0.05em",margin:0}}>{maleTip.icon} {maleTip.title}</p>
+            </div>
             <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{maleTip.tip}</p>
           </div>
         )}
 
         {/* Today's Tip — general life/health, for everyone, independent of Biological personalisation */}
         <div style={{...card,padding:"10px 14px",borderLeft:`2px solid ${C.gold}60`}}>
-          <p style={{fontSize:9,fontWeight:700,color:C.gold,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 3px"}}>✦ Today's Tip</p>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:3}}>
+            <p style={{fontSize:9,fontWeight:700,color:C.gold,textTransform:"uppercase",letterSpacing:"0.08em",margin:0}}>✦ Today's Tip</p>
+          </div>
           <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{getDailyFact()}</p>
         </div>
 
@@ -807,7 +819,9 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         )}
         {isEvening&&eveningSummary&&(
           <div style={{...card,padding:"20px 22px",animation:"fadeIn 0.4s ease",backgroundColor:C.green,border:"none",boxShadow:"0 4px 20px rgba(31,46,38,0.20)"}}>
-            <p style={{fontSize:9,fontWeight:700,color:"rgba(168,178,169,0.85)",textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 10px"}}>Evening Reflection</p>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:10}}>
+              <p style={{fontSize:9,fontWeight:700,color:"rgba(168,178,169,0.85)",textTransform:"uppercase",letterSpacing:"0.12em",margin:0}}>Evening Reflection</p>
+            </div>
             <p style={{fontFamily:serif,fontSize:15,fontWeight:500,color:C.ivory,lineHeight:1.75,margin:0,fontStyle:"italic"}}>{eveningSummary}</p>
           </div>
         )}
@@ -815,7 +829,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
       {/* ── Plate analysis modal ── */}
       {plateMode&&(
         <div style={{position:"fixed",inset:0,backgroundColor:"rgba(0,0,0,0.72)",zIndex:300,display:"flex",flexDirection:"column"}}>
-          <div style={{marginTop:56,flex:1,display:"flex",flexDirection:"column",backgroundColor:C.bg,borderRadius:"22px 22px 0 0",overflow:"hidden"}}>
+          <div style={{marginTop:56,flex:1,display:"flex",flexDirection:"column",backgroundColor:C.card,borderRadius:"22px 22px 0 0",overflow:"hidden"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 18px 12px",borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
               <div>
                 <p style={{fontSize:16,fontWeight:700,color:C.text,margin:0,fontFamily:serif}}>Plate Analysis</p>
@@ -909,7 +923,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
       {/* ── Barcode scanner modal ── */}
       {barcodeOpen && (
         <div style={{position:"fixed",inset:0,backgroundColor:"rgba(0,0,0,0.72)",zIndex:300,display:"flex",flexDirection:"column"}} onClick={closeBarcodeModal}>
-          <div onClick={e=>e.stopPropagation()} style={{marginTop:56,flex:1,display:"flex",flexDirection:"column",backgroundColor:C.bg,borderRadius:"22px 22px 0 0",overflow:"hidden"}}>
+          <div onClick={e=>e.stopPropagation()} style={{marginTop:56,flex:1,display:"flex",flexDirection:"column",backgroundColor:C.card,borderRadius:"22px 22px 0 0",overflow:"hidden"}}>
             {/* Header */}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 18px 12px",borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
               <div>

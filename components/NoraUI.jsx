@@ -56,8 +56,7 @@ export const Collapsible = ({ open, children }) => (
   <div style={{
     maxHeight: open ? 9000 : 0,
     overflow:"hidden",
-    transition:"max-height 0.38s cubic-bezier(0.4,0,0.2,1), opacity 0.28s ease",
-    opacity: open ? 1 : 0,
+    transition:"max-height 0.38s cubic-bezier(0.4,0,0.2,1)",
   }}>
     {children}
   </div>

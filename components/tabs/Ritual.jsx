@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from "react";
+import Image from "next/image";
 import { C, card, serif, sans, localDateStr, getCyclePhase, getCycleTip, getMaleTip, getWeekKey } from "../noraTokens";
 import { SectionHeader, Collapsible } from "../NoraUI";
 import { BotanicalBranch } from "../NoraIcons";
@@ -648,7 +649,7 @@ function LibraryModal({ onClose }) {
 
   return (
     <div style={{position:"fixed",inset:0,backgroundColor:"rgba(14,28,20,0.88)",zIndex:400,display:"flex",flexDirection:"column"}}>
-      <div style={{flex:1,backgroundColor:"#FDFAF5",display:"flex",flexDirection:"column",animation:"slideUp 0.28s ease",overflowY:"hidden"}}>
+      <div style={{flex:1,backgroundColor:C.card,display:"flex",flexDirection:"column",animation:"slideUp 0.28s ease",overflowY:"hidden"}}>
         <div style={{padding:"18px 20px 0",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
             <div>
@@ -885,7 +886,7 @@ function LibraryModal({ onClose }) {
 function SavedModal({ saved, activeIds, onClose, onRemove, onStart }) {
   return (
     <div style={{ position:"fixed", inset:0, backgroundColor:"rgba(45,74,62,0.55)", zIndex:300, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-      <div style={{ width:"100%", maxHeight:"88vh", backgroundColor:"#FDFAF5", borderRadius:"20px 20px 0 0", display:"flex", flexDirection:"column", animation:"slideUp 0.28s ease" }} onClick={e => e.stopPropagation()}>
+      <div style={{ width:"100%", maxHeight:"88vh", backgroundColor:C.card, borderRadius:"20px 20px 0 0", display:"flex", flexDirection:"column", animation:"slideUp 0.28s ease" }} onClick={e => e.stopPropagation()}>
         <div style={{ padding:"14px 20px 0", flexShrink:0 }}>
           <div style={{ width:40, height:3, backgroundColor:"#E2DAD0", borderRadius:2, margin:"0 auto 16px" }}/>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
@@ -946,7 +947,7 @@ function StartModal({ challenge, onStart, onClose }) {
   const options   = [7, 14, 21, 30];
   return (
     <div style={{ position:"fixed", inset:0, backgroundColor:"rgba(45,74,62,0.55)", zIndex:300, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
-      <div style={{ width:"100%", backgroundColor:"#FDFAF5", borderRadius:"20px 20px 0 0", padding:"20px 24px 44px", animation:"slideUp 0.28s ease" }} onClick={e => e.stopPropagation()}>
+      <div style={{ width:"100%", backgroundColor:C.card, borderRadius:"20px 20px 0 0", padding:"20px 24px 44px", animation:"slideUp 0.28s ease" }} onClick={e => e.stopPropagation()}>
         <div style={{ width:40, height:3, backgroundColor:"#E2DAD0", borderRadius:2, margin:"0 auto 20px" }}/>
         <p style={{ fontFamily:serif, fontSize:19, fontWeight:700, color:C.green, margin:"0 0 4px" }}>Start Challenge</p>
         <p style={{ fontSize:13, color:C.muted, margin:"0 0 20px", fontFamily:sans }}>{challenge.title}</p>
@@ -1129,7 +1130,7 @@ function CircadianTimeline({ sun, geoError, entries, locationLabel, onRetryLocat
 
         {/* Info tooltip card (first-use or re-opened) */}
         {showInfo && (
-          <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:0, left:0, right:22, backgroundColor:"#FDFAF5", border:`1px solid ${C.border}`, borderRadius:9, padding:"10px 13px", zIndex:15, boxShadow:"0 4px 16px rgba(27,58,45,0.12)" }}>
+          <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:0, left:0, right:22, backgroundColor:C.card, border:`1px solid ${C.border}`, borderRadius:9, padding:"10px 13px", zIndex:15, boxShadow:"0 4px 16px rgba(27,58,45,0.12)" }}>
             <p style={{ fontSize:11, color:C.text, margin:"0 0 7px", lineHeight:1.7, fontFamily:sans }}>
               The <b>green zones</b> show safe outdoor time — morning and afternoon. The <b>gold midday band</b> marks peak UV, best kept brief.
             </p>
@@ -1266,6 +1267,16 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
   const [sun,            setSun]            = useState(null);
   const [geoError,       setGeoError]       = useState(false);
   const [locationLabel,  setLocationLabel]  = useState(null);
+  const [isNarrowBg,     setIsNarrowBg]     = useState(false);
+
+  // Alege varianta portret/landscape a imaginii de fundal atmosferic, dupa latimea ecranului.
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    setIsNarrowBg(mq.matches);
+    const handler = (e) => setIsNarrowBg(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   const tog = k => setOpen(p => ({ ...p, [k]: !p[k] }));
 
@@ -1501,11 +1512,32 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
   };
 
   return (
-    <div style={{ padding:"24px 20px 100px", display:"flex", flexDirection:"column", gap:16, backgroundColor:C.bg, minHeight:"100vh" }}>
+    <div style={{ padding:"24px 20px 100px", display:"flex", flexDirection:"column", gap:16, minHeight:"100vh" }}>
       <style>{`
         @keyframes fadeIn  { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
         @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+
       `}</style>
+
+      {/* Fundal atmosferic fix, in spatele cardurilor — intensitate finala aleasa (fosta "varianta C").
+          zIndex:-1 (nu 0!) — altfel, fiind element pozitionat, s-ar picta DUPA cardurile fara
+          position proprie (position:static implicit), aparand DEASUPRA lor. Cu -1 picteaza inaintea
+          oricarui continut al paginii, indiferent daca acel continut are sau nu position setat. */}
+      <div style={{ position:"fixed", inset:0, zIndex:-1, pointerEvents:"none" }}>
+        <Image
+          src={isNarrowBg ? "/images/atmosphere/fog-1-portrait.jpg" : "/images/atmosphere/fog-1.jpg"}
+          alt=""
+          fill
+          unoptimized
+          sizes="100vw"
+          style={{
+            objectFit: "cover",
+            objectPosition: isNarrowBg ? "50% 50%" : "50% 75%",
+            filter: "blur(3px) saturate(0.95) brightness(1.3)",
+            opacity: 0.42,
+          }}
+        />
+      </div>
 
       {/* Saved challenges modal */}
       {savedOpen && (
@@ -1555,7 +1587,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
 
 
       {/* ─── 2. DAILY CHALLENGE — unified (was: Today's Focus banner + separate card) ── */}
-      <div style={{ backgroundColor:"#FDFAF5", borderRadius:16, border:`1px solid ${C.border}`, borderTop:`1px solid ${C.muted}`, boxShadow:"0 2px 20px rgba(45,74,62,0.08)", overflow:"hidden", position:"relative" }}>
+      <div style={{ backgroundColor:C.card, borderRadius:16, border:`1px solid ${C.border}`, borderTop:`1px solid ${C.muted}`, boxShadow:"0 2px 20px rgba(45,74,62,0.08)", overflow:"hidden", position:"relative" }}>
         <div style={{ padding:"14px 20px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:`1px solid ${C.border}` }}>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
             <span style={{ fontSize:9, fontWeight:700, color:C.green, textTransform:"uppercase", letterSpacing:"0.12em", fontFamily:sans }}>Daily Challenge</span>
@@ -1687,7 +1719,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
                 : acStreak === 1 ? "1-day start - check in tomorrow to build your streak"
                 : "Check in each day to build your streak";
               return (
-                <div key={ac.instanceId} style={{ backgroundColor:C.bg, borderRadius:12, border:`1px solid ${C.border}`, padding:"12px 14px" }}>
+                <div key={ac.instanceId} style={{ backgroundColor:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:"12px 14px" }}>
                   {completed ? (
                     <div style={{ textAlign:"center", padding:"6px 0 4px" }}>
                       <div style={{ fontSize:26, marginBottom:6 }}>🏆</div>
@@ -1847,11 +1879,11 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
       {/* ─── 6. LIBRARY + SAVED ─────────────────────────────────────────────────── */}
       <div style={{ display:"flex", gap:8 }}>
         <button onClick={() => setLibraryOpen(true)}
-          style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"11px 0", backgroundColor:"transparent", border:`1px solid ${C.green}40`, borderRadius:12, cursor:"pointer", fontFamily:serif, fontSize:13, fontWeight:600, color:C.green }}>
+          style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"11px 0", backgroundColor:C.card, border:`1px solid ${C.green}40`, borderRadius:12, cursor:"pointer", fontFamily:serif, fontSize:13, fontWeight:600, color:C.green }}>
           ✦ Library
         </button>
         <button onClick={() => setSavedOpen(true)}
-          style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"11px 0", backgroundColor: savedChallenges.length > 0 ? C.greenLight : "transparent", border:`1px solid ${savedChallenges.length > 0 ? C.green : C.border}`, borderRadius:12, cursor:"pointer", fontFamily:serif, fontSize:13, fontWeight:600, color: savedChallenges.length > 0 ? C.green : C.muted }}>
+          style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"11px 0", backgroundColor: savedChallenges.length > 0 ? C.greenLight : C.card, border:`1px solid ${savedChallenges.length > 0 ? C.green : C.border}`, borderRadius:12, cursor:"pointer", fontFamily:serif, fontSize:13, fontWeight:600, color: savedChallenges.length > 0 ? C.green : C.muted }}>
           Saved{savedChallenges.length > 0 ? ` (${savedChallenges.length})` : ""}
         </button>
       </div>

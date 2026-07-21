@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { C, card, serif, sans, inp, localDateStr } from "../noraTokens";
 import { NoraAvatar, CheckIcon, HeartIcon, MoonIcon } from "../NoraIcons";
 import { SectionHeader, Collapsible } from "../NoraUI";
+import AtmosphereBackground from "../AtmosphereBackground";
 
 const LOCATION_CITIES = [
   { city: "Bucharest",  lat: 44.4268, lng: 26.1025 },
@@ -211,6 +212,7 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
 
   return (
     <div style={{ padding: "24px 20px 100px", display: "flex", flexDirection: "column", gap: 14 }}>
+      <AtmosphereBackground/>
 
       {/* ── Header ───────────────────────────────────────── */}
       <div style={{ background:`linear-gradient(160deg,${C.greenDark} 0%,${C.green} 100%)`, padding:"20px 20px 18px", margin:"-24px -20px 18px", position:"relative", overflow:"hidden" }}>
@@ -725,7 +727,7 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
                             const isExpanded = favRecipe === item.id;
                             if (type === "meal") {
                               return (
-                                <div key={item.id} style={{ backgroundColor: C.bg, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+                                <div key={item.id} style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
                                   <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
                                     <HeartIcon size={16} color="#C8847A" filled/>
                                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -780,7 +782,7 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
                               );
                             }
                             return (
-                              <div key={item.id} style={{ backgroundColor: C.bg, borderRadius: 10, padding: "12px 14px", border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 10 }}>
+                              <div key={item.id} style={{ backgroundColor: C.card, borderRadius: 10, padding: "12px 14px", border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 10 }}>
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <p style={{ fontSize: 13, fontWeight: 600, color: C.text, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                     {item.label || (item.plan ? `Plan — ${item.date}` : item.date)}

@@ -16,6 +16,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Culoarea de fundal a tuturor cardurilor din aplicatie — un singur punct de control. */
+:root { --nora-card-bg: #FDFAF5; }
+
 .focus-gold:focus {
   outline: none;
   border-color: #B99A5B !important;

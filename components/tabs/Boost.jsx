@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { C, card, serif, sans, localDateStr } from "../noraTokens";
 import { PlusIcon, CheckIcon } from "../NoraIcons";
+import AtmosphereBackground from "../AtmosphereBackground";
 
 const SUPP_KEY  = "nora_supps_list";
 const TAKEN_KEY = "nora_supps_taken";
@@ -194,6 +195,7 @@ ${foodLog}`;
   return (
     <div style={{ padding: "24px 20px 100px", display: "flex", flexDirection: "column", gap: 16 }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} details summary{list-style:none} details summary::-webkit-details-marker{display:none} .boost-chev{display:inline-block;transition:transform 0.2s} details[open] .boost-chev{transform:rotate(90deg)}`}</style>
+      <AtmosphereBackground/>
       <div style={{ background:`linear-gradient(160deg,${C.greenDark} 0%,${C.green} 100%)`, padding:"20px 20px 18px", margin:"-24px -20px 18px", position:"relative", overflow:"hidden" }}>
         <div style={{ display:"flex", alignItems:"center", gap:12, flex:1 }}>
           <div style={{ flex:1 }}>
@@ -422,7 +424,7 @@ function CautionNote({ text }) {
 
 function SuppCard({ rec, studies, onAdd, alreadyAdded }) {
   return (
-    <div style={{ backgroundColor:C.bg, borderRadius:12, padding:"13px 14px", marginBottom:8, border:`1px solid ${C.border}` }}>
+    <div style={{ backgroundColor:C.card, borderRadius:12, padding:"13px 14px", marginBottom:8, border:`1px solid ${C.border}` }}>
       <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:10 }}>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:4 }}>
@@ -446,7 +448,7 @@ function SuppCard({ rec, studies, onAdd, alreadyAdded }) {
 
 function DefCard({ def, studies }) {
   return (
-    <div style={{ backgroundColor:C.bg, borderRadius:12, padding:"13px 14px", marginBottom:8, border:`1px solid ${C.border}` }}>
+    <div style={{ backgroundColor:C.card, borderRadius:12, padding:"13px 14px", marginBottom:8, border:`1px solid ${C.border}` }}>
       <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
         <span style={{ fontSize:20, flexShrink:0, lineHeight:1.3, marginTop:1 }}>{def.emoji || "⚠️"}</span>
         <div style={{ flex:1 }}>
@@ -462,7 +464,7 @@ function DefCard({ def, studies }) {
 
 function FoodAltCard({ alt }) {
   return (
-    <div style={{ backgroundColor:C.bg, borderRadius:12, padding:"13px 14px", marginBottom:8, border:`1px solid ${C.border}`, borderLeft:`3px solid ${C.muted}` }}>
+    <div style={{ backgroundColor:C.card, borderRadius:12, padding:"13px 14px", marginBottom:8, border:`1px solid ${C.border}`, borderLeft:`3px solid ${C.muted}` }}>
       <p style={{ fontSize:10, fontWeight:700, color:C.green, textTransform:"uppercase", letterSpacing:"0.08em", margin:"0 0 6px", fontFamily:sans }}>Instead of {alt.for}</p>
       <div style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
         <span style={{ fontSize:20, flexShrink:0, lineHeight:1.3, marginTop:1 }}>{alt.emoji || "🥗"}</span>

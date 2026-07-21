@@ -1,7 +1,7 @@
 // ── Design tokens — "Fog & Pine" ──────────────────────────────────────────────
 export const C = {
   bg:         "#F4F2ED", // ivory
-  card:       "#EDEAE2", // ivory-2
+  card:       "var(--nora-card-bg, #FDFAF5)", // ivory-card — mai deschis decat bg, ca sa "ridice" cardul deasupra fundalului/ceatii
   green:      "#1F2E26", // pine
   greenDark:  "#1E3429",
   greenLight: "#EBF0ED",

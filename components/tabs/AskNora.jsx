@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { C, card, serif, sans } from "../noraTokens";
 import { NoraAvatar } from "../NoraIcons";
+import AtmosphereBackground from "../AtmosphereBackground";
 
 async function callClaude(msgs, sys, maxTokens = 1000) {
   const res = await fetch("/api/chat", {
@@ -261,6 +262,7 @@ RESPONSE STYLE:
         @keyframes bounce { 0%,80%,100%{transform:translateY(0);opacity:.3} 40%{transform:translateY(-6px);opacity:1} }
         @keyframes fadeUp  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
+      <AtmosphereBackground/>
 
       {/* Scrollable content — bottom padding clears fixed input + tab bar */}
       <div style={{ paddingBottom: 152 }}>
@@ -286,7 +288,7 @@ RESPONSE STYLE:
           {/* Welcome + suggestions */}
           {showSuggestions && (
             <div style={{ animation: "fadeUp 0.4s ease" }}>
-              <div style={{ backgroundColor: "#FDFAF5", borderRadius: 16, border: `1px solid ${C.border}`, borderTop: `1px solid ${C.muted}`, padding: "22px 20px 20px", textAlign: "center", marginBottom: 14, position: "relative", overflow: "hidden" }}>
+              <div style={{ backgroundColor: C.card, borderRadius: 16, border: `1px solid ${C.border}`, borderTop: `1px solid ${C.muted}`, padding: "22px 20px 20px", textAlign: "center", marginBottom: 14, position: "relative", overflow: "hidden" }}>
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
                   <NoraAvatar size={48}/>
                 </div>
@@ -302,7 +304,7 @@ RESPONSE STYLE:
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {suggestions.map((s, i) => (
                   <button key={i} onClick={() => send(s.q)}
-                    style={{ width: "100%", padding: "12px 15px", backgroundColor: "#FDFAF5", border: `1px solid ${C.border}`, borderRadius: 12, fontSize: 13, color: C.text, cursor: "pointer", textAlign: "left", fontFamily: sans, display: "flex", alignItems: "center", gap: 10 }}>
+                    style={{ width: "100%", padding: "12px 15px", backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 12, fontSize: 13, color: C.text, cursor: "pointer", textAlign: "left", fontFamily: sans, display: "flex", alignItems: "center", gap: 10 }}>
                     <span style={{ fontSize: 17, flexShrink: 0 }}>{s.icon}</span>
                     <span>{s.q}</span>
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginLeft:"auto", flexShrink:0 }}>
@@ -324,7 +326,7 @@ RESPONSE STYLE:
                 maxWidth: "85%",
                 padding: msg.role === "user" ? "12px 15px" : "14px 16px",
                 borderRadius: msg.role === "user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-                backgroundColor: msg.role === "user" ? C.green : "#FDFAF5",
+                backgroundColor: msg.role === "user" ? C.green : C.card,
                 border: msg.role === "assistant" ? `1px solid ${C.border}` : "none",
                 borderLeft: msg.role === "assistant" ? `2px solid ${C.muted}` : undefined,
                 fontSize: 13,
@@ -344,7 +346,7 @@ RESPONSE STYLE:
           {loading && (
             <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
               <NoraAvatar size={26}/>
-              <div style={{ padding: "14px 18px", backgroundColor: "#FDFAF5", border: `1px solid ${C.border}`, borderLeft: `2px solid ${C.muted}`, borderRadius: "18px 18px 18px 4px" }}>
+              <div style={{ padding: "14px 18px", backgroundColor: C.card, border: `1px solid ${C.border}`, borderLeft: `2px solid ${C.muted}`, borderRadius: "18px 18px 18px 4px" }}>
                 <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                   {[0, 1, 2].map(j => (
                     <div key={j} style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: C.muted, animation: `bounce 1.3s ease-in-out ${j * 0.22}s infinite` }}/>

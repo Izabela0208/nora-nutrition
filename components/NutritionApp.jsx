@@ -577,7 +577,7 @@ export default function NutritionApp() {
   };
 
   return (
-    <div style={{minHeight:"100vh",backgroundColor:C.bg,maxWidth:480,margin:"0 auto",position:"relative",fontFamily:sans}}>
+    <div style={{minHeight:"100vh",maxWidth:480,margin:"0 auto",position:"relative",fontFamily:sans}}>
       {tabContent[activeTab]}
       {/* Tab bar */}
       <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,backgroundColor:"rgba(250,250,247,0.96)",borderTop:`1px solid ${C.border}`,padding:"6px 0 10px",display:"flex",justifyContent:"space-around",zIndex:10,backdropFilter:"blur(8px)"}}>
