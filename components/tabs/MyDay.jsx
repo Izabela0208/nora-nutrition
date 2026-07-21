@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { C, card, serif, sans, inp, localDateStr, pickDailyVariant, getMaleTip, getDailyFact } from "../noraTokens";
 import { LeafDecor, DropIcon, CheckIcon, SparkleIcon, CameraIcon, EditIcon } from "../NoraIcons";
 import AtmosphereBackground from "../AtmosphereBackground";
+import { BrowserMultiFormatReader, BarcodeFormat } from "@zxing/browser";
 
 const MovementIcon = ({ size = 15, color = C.sage }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
@@ -133,7 +134,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   const toastTimer      = useRef();
   const videoRef        = useRef(null);
   const streamRef       = useRef(null);
-  const scanIntervalRef = useRef(null);
+  const scanControlsRef = useRef(null);
   const plateFileRef    = useRef(null);
 
   const isFemale     = profile?.sex === "female";
@@ -269,7 +270,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   };
 
   const stopBarcodeCamera = () => {
-    if (scanIntervalRef.current) { clearInterval(scanIntervalRef.current); scanIntervalRef.current = null; }
+    if (scanControlsRef.current) { scanControlsRef.current.stop(); scanControlsRef.current = null; }
     if (streamRef.current) { streamRef.current.getTracks().forEach(t => t.stop()); streamRef.current = null; }
     setCameraActive(false);
   };
@@ -331,32 +332,50 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment", width: { ideal: 1280 } },
       });
+      console.log("[Nora][barcode DEBUG] camera stream obtained, track settings:", stream.getVideoTracks()[0]?.getSettings()); // TEMPORAR — de șters după diagnostic
+      // Best-effort: force continuous autofocus so close-up barcodes stay sharp. Supported on
+      // Chrome/Android; Safari doesn't expose this API at all, so it's silently skipped there.
+      const [videoTrack] = stream.getVideoTracks();
+      try {
+        const caps = videoTrack.getCapabilities?.();
+        if (caps?.focusMode?.includes("continuous")) {
+          await videoTrack.applyConstraints({ advanced: [{ focusMode: "continuous" }] });
+          console.log("[Nora][barcode DEBUG] applied continuous focus mode"); // TEMPORAR
+        } else {
+          console.log("[Nora][barcode DEBUG] continuous focus mode not offered by this camera:", caps?.focusMode); // TEMPORAR
+        }
+      } catch (e) {
+        console.log("[Nora][barcode DEBUG] applyConstraints(focusMode) failed:", e?.name, e?.message); // TEMPORAR
+      }
       streamRef.current = stream;
       setCameraActive(true);
-      // Two rAF ticks ensure the <video> element is in the DOM before we attach
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().catch(() => {});
-        }
-        if ("BarcodeDetector" in window) {
-          const detector = new window.BarcodeDetector({
-            formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39"],
+      // Two rAF ticks ensure the <video> element is in the DOM before we attach.
+      // ZXing (not the native BarcodeDetector) does the decoding so this works on Safari/iOS too.
+      requestAnimationFrame(() => requestAnimationFrame(async () => {
+        if (!videoRef.current) { console.log("[Nora][barcode DEBUG] videoRef not mounted, aborting"); return; } // TEMPORAR
+        const codeReader = new BrowserMultiFormatReader();
+        codeReader.possibleFormats = [
+          BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A,
+          BarcodeFormat.UPC_E, BarcodeFormat.CODE_128, BarcodeFormat.CODE_39,
+        ];
+        try {
+          scanControlsRef.current = await codeReader.decodeFromStream(stream, videoRef.current, (result, err) => {
+            if (result) {
+              console.log("[Nora][barcode DEBUG] decoded:", result.getText(), result.getBarcodeFormat?.()); // TEMPORAR
+              scanControlsRef.current?.stop();
+              scanControlsRef.current = null;
+              lookupBarcode(result.getText());
+            } else if (err && err.name !== "NotFoundException") {
+              console.log("[Nora][barcode DEBUG] decode error:", err.name, err.message); // TEMPORAR
+            }
           });
-          scanIntervalRef.current = setInterval(async () => {
-            if (!videoRef.current || videoRef.current.readyState < 2) return;
-            try {
-              const codes = await detector.detect(videoRef.current);
-              if (codes.length > 0) {
-                clearInterval(scanIntervalRef.current);
-                scanIntervalRef.current = null;
-                lookupBarcode(codes[0].rawValue);
-              }
-            } catch {}
-          }, 600);
+          console.log("[Nora][barcode DEBUG] decoder attached, video frame size:", videoRef.current.videoWidth, "x", videoRef.current.videoHeight); // TEMPORAR
+        } catch (e) {
+          console.log("[Nora][barcode DEBUG] decodeFromStream threw:", e?.name, e?.message); // TEMPORAR
         }
       }));
-    } catch {
+    } catch (e) {
+      console.log("[Nora][barcode DEBUG] getUserMedia failed:", e?.name, e?.message); // TEMPORAR
       setBarcodeError("Camera access denied. Enter the barcode number manually below.");
     }
   };
@@ -616,15 +635,6 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                 <>
                   <div onClick={()=>setShowCameraMenu(false)} style={{position:"fixed",inset:0,zIndex:98}}/>
                   <div style={{position:"absolute",bottom:"calc(100% + 8px)",right:0,backgroundColor:C.card,borderRadius:16,border:`1px solid ${C.border}`,boxShadow:"0 8px 32px rgba(27,58,45,0.18)",zIndex:99,overflow:"hidden",minWidth:210}}>
-                    <button onClick={()=>{setShowCameraMenu(false);setBarcodeOpen(true);startBarcodeCamera();}} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"13px 16px",background:"none",border:"none",borderBottom:`1px solid ${C.border}`,cursor:"pointer",textAlign:"left"}}>
-                      <div style={{width:34,height:34,borderRadius:9,backgroundColor:`${C.green}12`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                        <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke={C.green} strokeWidth="1.4" strokeLinecap="round"><path d="M1 4V2.5A1.5 1.5 0 0 1 2.5 1H4"/><path d="M13 1h.5A1.5 1.5 0 0 1 15 2.5V4"/><path d="M15 13v.5A1.5 1.5 0 0 1 13.5 15H12"/><path d="M4 15H2.5A1.5 1.5 0 0 1 1 13.5V12"/><line x1="4.5" y1="6" x2="4.5" y2="11"/><line x1="7" y1="6" x2="7" y2="11" strokeWidth="2"/><line x1="9.5" y1="6" x2="9.5" y2="11"/><line x1="11.5" y1="6" x2="11.5" y2="11" strokeWidth="0.8"/></svg>
-                      </div>
-                      <div>
-                        <p style={{fontSize:13,fontWeight:600,color:C.text,margin:0}}>Scan barcode</p>
-                        <p style={{fontSize:11,color:C.muted,margin:"1px 0 0"}}>Look up packaged product</p>
-                      </div>
-                    </button>
                     <button onClick={()=>{setShowCameraMenu(false);plateFileRef.current?.click();}} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"13px 16px",background:"none",border:"none",cursor:"pointer",textAlign:"left"}}>
                       <div style={{width:34,height:34,borderRadius:9,backgroundColor:`${C.green}12`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                         <CameraIcon size={17} color={C.amber}/>
@@ -964,10 +974,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                     </div>
                   </div>
                   <div style={{position:"absolute",bottom:10,left:0,right:0,textAlign:"center"}}>
-                    {"BarcodeDetector" in window
-                      ? <span style={{fontSize:12,color:"#fff",backgroundColor:"rgba(0,0,0,0.55)",padding:"4px 14px",borderRadius:20}}>Scanning automatically…</span>
-                      : <span style={{fontSize:12,color:"#fff",backgroundColor:"rgba(0,0,0,0.6)",padding:"4px 14px",borderRadius:20}}>Auto-scan unavailable — enter barcode below</span>
-                    }
+                    <span style={{fontSize:12,color:"#fff",backgroundColor:"rgba(0,0,0,0.55)",padding:"4px 14px",borderRadius:20}}>Scanning automatically…</span>
                   </div>
                 </div>
               )}
