@@ -120,7 +120,6 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   const [barcodeError,      setBarcodeError]      = useState("");
   const [manualBarcode,     setManualBarcode]     = useState("");
   const [cameraActive,      setCameraActive]      = useState(false);
-  const [showCameraMenu,   setShowCameraMenu]   = useState(false);
   const [plateMode,        setPlateMode]        = useState(false);
   const [platePreviewUrl,  setPlatePreviewUrl]  = useState(null);
   const [plateLoad,        setPlateLoad]        = useState(false);
@@ -636,27 +635,9 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         <div style={{...card,padding:"14px"}}>
           <div style={{display:"flex",gap:8,marginBottom:photoMode&&imageFile?10:0}}>
             <input style={{...inp,flex:1}} placeholder={logLoading?"Analysing…":"Log food, drink, or exercise…"} value={logInput} disabled={logLoading||photoMode} onChange={e=>setLogInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!logLoading)handleLogText();}}/>
-            <div style={{position:"relative",flexShrink:0}}>
-              <button onClick={()=>setShowCameraMenu(v=>!v)} style={{width:44,height:44,borderRadius:10,border:`1px solid ${showCameraMenu?C.green:C.border}`,backgroundColor:showCameraMenu?C.greenLight:C.card,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <CameraIcon size={16} color={showCameraMenu?C.amber:C.muted}/>
-              </button>
-              {showCameraMenu&&(
-                <>
-                  <div onClick={()=>setShowCameraMenu(false)} style={{position:"fixed",inset:0,zIndex:98}}/>
-                  <div style={{position:"absolute",bottom:"calc(100% + 8px)",right:0,backgroundColor:C.card,borderRadius:16,border:`1px solid ${C.border}`,boxShadow:"0 8px 32px rgba(27,58,45,0.18)",zIndex:99,overflow:"hidden",minWidth:210}}>
-                    <button onClick={()=>{setShowCameraMenu(false);plateFileRef.current?.click();}} style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"13px 16px",background:"none",border:"none",cursor:"pointer",textAlign:"left"}}>
-                      <div style={{width:34,height:34,borderRadius:9,backgroundColor:`${C.green}12`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                        <CameraIcon size={17} color={C.amber}/>
-                      </div>
-                      <div>
-                        <p style={{fontSize:13,fontWeight:600,color:C.text,margin:0}}>Analyse plate photo</p>
-                        <p style={{fontSize:11,color:C.muted,margin:"1px 0 0"}}>AI nutrition breakdown</p>
-                      </div>
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            <button onClick={()=>plateFileRef.current?.click()} title="Analyse plate photo" style={{width:44,height:44,borderRadius:10,border:`1px solid ${C.border}`,backgroundColor:C.card,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <CameraIcon size={16} color={C.muted}/>
+            </button>
             <button onClick={()=>{setBarcodeOpen(true);startBarcodeCamera();}} title="Scan barcode" style={{width:44,height:44,borderRadius:10,border:`1px solid ${barcodeOpen?C.green:C.border}`,backgroundColor:barcodeOpen?`${C.green}18`:C.card,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <path d="M2 6V3.5A1.5 1.5 0 0 1 3.5 2H6" stroke={barcodeOpen?C.green:C.muted} strokeWidth="1.5" strokeLinecap="round"/>
