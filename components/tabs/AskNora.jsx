@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { C, card, serif, sans } from "../noraTokens";
 import { NoraAvatar } from "../NoraIcons";
 
@@ -18,19 +18,81 @@ async function callClaude(msgs, sys, maxTokens = 1000) {
   return data.content?.[0]?.text || "";
 }
 
-const SUGGESTED = [
-  { q: "What should I eat today?",        icon: "🥗" },
+// Generic fallback pool — fills any pills left after context-specific candidates are applied.
+const FALLBACK_POOL = [
   { q: "How can I improve my energy?",    icon: "⚡" },
   { q: "What supplements do I need?",     icon: "💊" },
   { q: "Am I hitting my protein goals?",  icon: "💪" },
   { q: "Give me a healthy snack idea",    icon: "🍎" },
   { q: "What am I missing nutritionally?",icon: "🔍" },
+  { q: "What should I eat today?",        icon: "🥗" },
 ];
 
-const CYCLE_SUGGESTED = { q: "How is my cycle affecting nutrition?", icon: "🌙" };
+// Rotated per day so the same condition doesn't show the same sentence every time.
+const MORNING_EMPTY_LOG = [
+  { q: "What should I eat today?",        icon: "🥗" },
+  { q: "Where should I start today?",     icon: "🥗" },
+  { q: "What's a good first meal today?", icon: "🥗" },
+];
 
-export default function AskNora({ profile, targets, entries, waterMl, cyclePhase }) {
-  const [messages,  setMessages]  = useState([]);
+const EVENING_EMPTY_LOG = [
+  { q: "I haven't logged anything today — where should I start?", icon: "🥗" },
+  { q: "What should I eat for the rest of today?",                icon: "🥗" },
+  { q: "How do I catch up on today's nutrition?",                 icon: "🥗" },
+];
+
+const daySeed = () => Math.floor(Date.now() / 86400000);
+const pickRotating = (pool, seed) => pool[seed % pool.length];
+
+// Builds exactly 3 suggested pills, prioritising what's actually true right now
+// over the generic fallback pool.
+function getContextualSuggestions(ctx) {
+  const {
+    hasLoggedToday, hour, challengeTitle, cyclePhase,
+    deficiency, proteinRemainingHigh, waterBelowHalfTarget,
+  } = ctx;
+  const seed = daySeed();
+  const candidates = [];
+
+  if (challengeTitle) {
+    candidates.push({ q: `How does today's challenge — ${challengeTitle} — fit into this?`, icon: "🌿" });
+  }
+  if (cyclePhase) {
+    candidates.push({ q: "How is my cycle affecting nutrition today?", icon: "🌙" });
+  }
+  if (deficiency) {
+    candidates.push({ q: `Why is Boost flagging ${deficiency} today?`, icon: "💊" });
+  }
+  if (!hasLoggedToday && hour < 12) {
+    candidates.push(pickRotating(MORNING_EMPTY_LOG, seed));
+  } else if (!hasLoggedToday) {
+    candidates.push(pickRotating(EVENING_EMPTY_LOG, seed));
+  }
+  if (proteinRemainingHigh && hour >= 12) {
+    candidates.push({ q: "How can I hit my protein target today?", icon: "💪" });
+  }
+  if (waterBelowHalfTarget && hour >= 18) {
+    candidates.push({ q: "How does hydration affect energy this late in the day?", icon: "💧" });
+  }
+
+  const picked = candidates.slice(0, 3);
+  if (picked.length < 3) {
+    const offset = seed % FALLBACK_POOL.length;
+    const rotated = [...FALLBACK_POOL.slice(offset), ...FALLBACK_POOL.slice(0, offset)];
+    for (const item of rotated) {
+      if (picked.length >= 3) break;
+      if (!picked.some(p => p.q === item.q)) picked.push(item);
+    }
+  }
+  return picked;
+}
+
+// Messages sent to Claude as conversational context — capped so cost/latency stay
+// constant no matter how long the stored history grows. Nothing is trimmed in
+// Supabase or on screen, only what's sent on each turn.
+const CONTEXT_MESSAGE_LIMIT = 20;
+
+export default function AskNora({ profile, targets, entries, waterMl, cyclePhase, activeChallenges, messages, sendMessage, clearMessages }) {
   const [input,     setInput]     = useState("");
   const [loading,   setLoading]   = useState(false);
   const [supps,     setSupps]     = useState([]);
@@ -44,20 +106,7 @@ export default function AskNora({ profile, targets, entries, waterMl, cyclePhase
       const br = localStorage.getItem("nora_boost_recs");
       if (br) { const p = JSON.parse(br); if (p.recs) setBoostRecs(p.recs); }
     } catch {}
-    try {
-      const h = localStorage.getItem("nora_chat_history");
-      if (h) setMessages(JSON.parse(h));
-    } catch {}
   }, []);
-
-  useEffect(() => {
-    try { localStorage.setItem("nora_chat_history", JSON.stringify(messages)); } catch {}
-  }, [messages]);
-
-  const clearHistory = () => {
-    setMessages([]);
-    try { localStorage.removeItem("nora_chat_history"); } catch {}
-  };
 
   useEffect(() => {
     if (bottomRef.current) {
@@ -100,6 +149,12 @@ export default function AskNora({ profile, targets, entries, waterMl, cyclePhase
     const suppList  = supps.map(s => s.name).join(", ") || "none";
     const cycleInfo = cyclePhase ? `${cyclePhase.label} phase, day ${cyclePhase.day}. ${cyclePhase.tip}` : "Not applicable";
 
+    const challengeTitle = activeChallenges?.[0]?.title?.replace(/^✦ For Her - |^✦ For Him - /, "") || null;
+    const now = new Date();
+    const hour = now.getHours();
+    const timeOfDay = hour < 5 ? "night" : hour < 12 ? "morning" : hour < 17 ? "afternoon" : hour < 21 ? "evening" : "night";
+    const localTime = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
     const lang = (profile?.language || "English").trim();
     const langLine = lang.toLowerCase() !== "english"
       ? `\nCRITICAL: Respond entirely in ${lang}. Do not use English unless a word has absolutely no translation.`
@@ -133,6 +188,8 @@ REMAINING TO TARGET:
 • ${remCal} kcal | ${remPro}g protein | ${remCarb}g carbs | ${remFat}g fat | ${remFib}g fibre | ${Math.round(remWat / 100) / 10}L water
 ${boostSection}
 CYCLE STATUS: ${cycleInfo}
+TODAY'S CHALLENGE: ${challengeTitle || "None active"}
+LOCAL TIME: ${localTime} (${timeOfDay})
 
 ACCURACY RULES (non-negotiable):
 - Ground all nutrition claims in established science (USDA, NHS, peer-reviewed guidelines). Never fabricate specific numbers.
@@ -160,24 +217,42 @@ RESPONSE STYLE:
     setInput("");
     if (inputRef.current) inputRef.current.style.height = "auto";
 
-    const newMsgs = [...messages, { role: "user", content: userText }];
-    setMessages(newMsgs);
+    // Context sent to Claude is capped; full history still persists in Supabase.
+    const context = [...messages.slice(-CONTEXT_MESSAGE_LIMIT), { role: "user", content: userText }]
+      .map(m => ({ role: m.role, content: m.content }));
     setLoading(true);
+    await sendMessage("user", userText);
 
     try {
-      const reply = await callClaude(
-        newMsgs.map(m => ({ role: m.role, content: m.content })),
-        buildSystem(),
-        1000
-      );
-      setMessages(prev => [...prev, { role: "assistant", content: reply }]);
+      const reply = await callClaude(context, buildSystem(), 1000);
+      await sendMessage("assistant", reply);
     } catch {
-      setMessages(prev => [...prev, { role: "assistant", content: "I'm having a little trouble right now. Please try again in a moment." }]);
+      await sendMessage("assistant", "I'm having a little trouble right now. Please try again in a moment.");
     }
     setLoading(false);
   };
 
-  const suggestions = cyclePhase ? [...SUGGESTED, CYCLE_SUGGESTED] : SUGGESTED;
+  const suggestions = useMemo(() => {
+    const food = entries.filter(e => e.type === "food");
+    const totalPro = food.reduce((s, e) => s + (e.protein_g || 0), 0);
+    const tPro = targets?.protein_g || 150;
+    const tWat = targets?.water_ml  || 2000;
+    const hour = new Date().getHours();
+    const firstDeficiency = boostRecs && !boostRecs._error
+      ? (boostRecs.deficiencies || [])[0]
+      : null;
+
+    return getContextualSuggestions({
+      hasLoggedToday: food.length > 0,
+      hour,
+      challengeTitle: activeChallenges?.[0]?.title?.replace(/^✦ For Her - |^✦ For Him - /, "") || null,
+      cyclePhase,
+      deficiency: firstDeficiency?.name || null,
+      proteinRemainingHigh: (tPro - totalPro) > tPro * 0.5,
+      waterBelowHalfTarget: waterMl < tWat * 0.5,
+    });
+  }, [entries, targets, waterMl, cyclePhase, boostRecs, activeChallenges]);
+
   const showSuggestions = messages.length === 0;
 
   return (
@@ -198,7 +273,7 @@ RESPONSE STYLE:
               <p style={{ fontSize: 11, color: "rgba(253,250,245,0.55)", margin: 0, fontFamily: sans }}>Your personal nutrition companion</p>
             </div>
             {messages.length > 0 && (
-              <button onClick={clearHistory} style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", fontSize: 11, color: "rgba(253,250,245,0.8)", cursor: "pointer", fontFamily: sans, letterSpacing: "0.03em", flexShrink: 0 }}>
+              <button onClick={clearMessages} style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", fontSize: 11, color: "rgba(253,250,245,0.8)", cursor: "pointer", fontFamily: sans, letterSpacing: "0.03em", flexShrink: 0 }}>
                 Clear
               </button>
             )}
@@ -241,7 +316,7 @@ RESPONSE STYLE:
 
           {/* Message bubbles */}
           {messages.map((msg, i) => (
-            <div key={i} style={{ display: "flex", flexDirection: msg.role === "user" ? "row-reverse" : "row", gap: 8, alignItems: "flex-end", animation: "fadeUp 0.3s ease" }}>
+            <div key={msg.id ?? i} style={{ display: "flex", flexDirection: msg.role === "user" ? "row-reverse" : "row", gap: 8, alignItems: "flex-end", animation: "fadeUp 0.3s ease" }}>
               {msg.role === "assistant" && (
                 <div style={{ flexShrink: 0, marginBottom: 2 }}><NoraAvatar size={26}/></div>
               )}

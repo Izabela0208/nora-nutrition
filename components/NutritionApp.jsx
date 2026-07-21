@@ -169,6 +169,7 @@ export default function NutritionApp() {
   const [locationLat,  setLocationLat]  = useState(null);
   const [locationLng,  setLocationLng]  = useState(null);
   const [waterMl,    setWaterMl]    = useState(0);
+  const [askNoraMessages, setAskNoraMessages] = useState([]);
   const [history,    setHistory]    = useState({});
   const [profileLoading,  setProfileLoading]  = useState(true);
   const [localImportData, setLocalImportData] = useState(null);
@@ -235,6 +236,9 @@ export default function NutritionApp() {
           setLocationLng(settingsRow?.location_lng || null);
         }
 
+        const { data: chatRows } = await supabase.from("ask_nora_messages").select("id, role, content").eq("user_id", session.user.id).order("created_at", { ascending: true });
+        if(!cancelled) setAskNoraMessages((chatRows || []).map(r => ({ id: r.id, role: r.role, content: r.content })));
+
         setPhase("app");
       } else {
         try {
@@ -292,6 +296,21 @@ export default function NutritionApp() {
   const logWaterEntry = async (ml) => {
     if(!session?.user?.id) return;
     await supabase.from("water_logs").insert({ user_id: session.user.id, amount_ml: ml });
+  };
+
+  const sendAskNoraMessage = async (role, content) => {
+    const tempId = `temp-${Date.now()}-${Math.random()}`;
+    setAskNoraMessages(prev => [...prev, { id: tempId, role, content }]);
+    if(!session?.user?.id) return;
+    const { data } = await supabase.from("ask_nora_messages").insert({ user_id: session.user.id, role, content }).select("id, role, content").single();
+    if(!data) return;
+    setAskNoraMessages(prev => prev.map(m => m.id === tempId ? data : m));
+  };
+
+  const clearAskNoraMessages = async () => {
+    setAskNoraMessages([]);
+    if(!session?.user?.id) return;
+    await supabase.from("ask_nora_messages").delete().eq("user_id", session.user.id);
   };
 
   const updateMeal = async (id, patch) => {
@@ -553,7 +572,7 @@ export default function NutritionApp() {
     eat:     <Eat     profile={profile} targets={targets} entries={entries} logMeal={logMeal} cyclePhase={cyclePhase}/>,
     ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} periodLogs={periodLogs} activeChallenges={activeChallenges} startChallenge={startChallenge} checkInChallenge={checkInChallenge} uncheckInChallenge={uncheckInChallenge} abandonChallenge={abandonChallenge} ritualStreak={ritualStreak} markChallengeDone={markChallengeDone} locationCity={locationCity} locationLat={locationLat} locationLng={locationLng} weekMeals={weekMeals} weekWaterLogs={weekWaterLogs} completionDates={completionDates} fastingStart={fastingStart} fastingEnd={fastingEnd}/>,
     boost:   <Boost   profile={profile} targets={targets} entries={entries} cyclePhase={cyclePhase}/>,
-    asknora: <AskNora profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase}/>,
+    asknora: <AskNora profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} activeChallenges={activeChallenges} messages={askNoraMessages} sendMessage={sendAskNoraMessage} clearMessages={clearAskNoraMessages}/>,
     me:      <Me      profile={profile} saveProfile={saveProfile} targets={targets} resetProfile={resetProfile} signOut={signOut} notificationsEnabled={notificationsEnabled} saveNotifications={saveNotifications} deleteAccount={deleteAccount} fastingEnabled={fastingEnabled} fastingStart={fastingStart} fastingEnd={fastingEnd} saveFastingWindow={saveFastingWindow} fastingMode={fastingMode} fastingExtendedStartAt={fastingExtendedStartAt} fastingExtendedHours={fastingExtendedHours} saveExtendedFast={saveExtendedFast} stopExtendedFast={stopExtendedFast} periodLogs={periodLogs} cyclePhase={cyclePhase} logPeriodStart={logPeriodStart} logPeriodEnd={logPeriodEnd} deletePeriodLog={deletePeriodLog} locationCity={locationCity} locationLat={locationLat} locationLng={locationLng} saveLocation={saveLocation}/>,
   };
 
