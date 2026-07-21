@@ -579,7 +579,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
 
   const today = () => localDateStr();
   const goalsStr = (profile?.goals || []).join(", ");
-  const cycleCtx = cyclePhase ? `Cycle: ${cyclePhase.label}. ` : "";
+  const cycleCtx = cyclePhase ? `Cycle phase: ${cyclePhase.label} — pick ingredients that suit this phase nutritionally, but NEVER mention the phase name or word "cycle" in the "name" field. ` : "";
   const tCal = targets ? Math.round(targets.calories)  : 2000;
   const tPro = targets ? Math.round(targets.protein_g) : 150;
 

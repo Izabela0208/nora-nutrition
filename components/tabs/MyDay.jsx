@@ -127,6 +127,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   const [plateError,       setPlateError]       = useState("");
   const [editPortions,     setEditPortions]     = useState({});
   const [healthData,       setHealthData]        = useState({});
+  const [showCycleInvite,  setShowCycleInvite]   = useState(false);
 
   const fileRef         = useRef();
   const toastTimer      = useRef();
@@ -149,6 +150,17 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   const h            = new Date().getHours();
   const isEvening    = h >= 18;
   const maleTip      = (isMale && profile?.biologicalTrackingEnabled) ? getMaleTip("short") : null;
+
+  // Invitatie discreta, o singura data, pentru femei care nu au activat personalizarea
+  // biologica deloc — dupa ce se afiseaza o data, tacere completa (nu mai reapare).
+  useEffect(()=>{
+    if(!isFemale || profile?.biologicalTrackingEnabled) return;
+    try {
+      if(localStorage.getItem("nora_cycle_invite_seen")) return;
+      setShowCycleInvite(true);
+      localStorage.setItem("nora_cycle_invite_seen","1");
+    } catch {}
+  },[isFemale, profile?.biologicalTrackingEnabled]);
 
   useEffect(()=>{
     if(!isEvening) return;
@@ -798,6 +810,13 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
               <p style={{fontSize:10,fontWeight:700,color:C.green,textTransform:"uppercase",letterSpacing:"0.05em",margin:0}}>{maleTip.icon} {maleTip.title}</p>
             </div>
             <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{maleTip.tip}</p>
+          </div>
+        )}
+        {showCycleInvite&&(
+          <div style={{...card,padding:"10px 14px",borderLeft:`2px solid ${C.muted}`}}>
+            <button onClick={()=>setActiveTab("me")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",background:"none",border:"none",padding:0,cursor:"pointer",textAlign:"left"}}>
+              <span style={{fontSize:11,color:C.muted,lineHeight:1.5}}>Nora poate ține cont de ritmul tău — activează din Me →</span>
+            </button>
           </div>
         )}
 
