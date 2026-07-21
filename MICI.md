@@ -1,4 +1,5 @@
 # MICI — reparații mărunte (se fac în loturi, la ferestrele dintre capitole)
+- **De investigat 21.07, cu exemplu real când apare din nou** — pe unele produse scanate prin barcode, valorile de macro-uri afișate nu corespund exact cu eticheta reală (confirmat că nu e per 100g vs porție). Fără un produs/cod de bare concret de reprodus, cauza nu poate fi izolată (parsare greșită la noi vs. date incomplete/greșite în Open Food Facts) — nu de rezolvat pe ghicite.
 - **Rezolvat 20.07** — Lista de cumpărături din Week Prep agrega greșit ingredientele identice (plural/singular, descriptori ca "beaten" nu erau normalizați). `normIngKey()` extinsă cu singularizare + descriptori suplimentari.
 - **Verificat 20.07, nu era bug** — Butoanele de target (Lose weight/Maintain/Gain muscle) din Today's Plan/Week Prep chiar influențau generarea (`targetCalories` ajungea corect la Spoonacular, testat direct cu valori diferite → mese diferite). Confuzia venea din poziționare: butonul „New plan" era departe de selector, sub cardurile de mese — mutat acum imediat sub selector.
 - De retestat: persistența `biological_context` la refresh; onboarding nou fără întrebări cycle/perimenopauză

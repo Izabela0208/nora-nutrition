@@ -74,6 +74,25 @@ async function fetchUSDA(query) {
   return (data.foods || []).map(normalizeUSDASearch).filter(Boolean).slice(0, 10);
 }
 
+// Barcode-specific USDA lookup: only "Branded" foods carry a gtinUpc, so that's the only
+// dataType worth searching. USDA's search only matches gtinUpc on an exact digit-for-digit
+// string, so we also try the EAN-13<->UPC-A leading-zero variant before giving up.
+async function fetchUSDAByBarcode(code) {
+  const digits = code.replace(/\D/g, "");
+  const candidates = [digits];
+  if (digits.length === 13 && digits.startsWith("0")) candidates.push(digits.slice(1));
+  if (digits.length === 12) candidates.push("0" + digits);
+  for (const c of candidates) {
+    const url = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(c)}&api_key=${USDA_KEY}&pageSize=5&dataType=Branded`;
+    const r = await fetch(url);
+    if (!r.ok) continue;
+    const data = await r.json();
+    const match = (data.foods || []).find(f => (f.gtinUpc || "").replace(/\D/g, "") === c);
+    if (match) return [normalizeUSDASearch(match)].filter(Boolean);
+  }
+  return [];
+}
+
 async function fetchOpenFoodFacts(query) {
   const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&json=1&page_size=8&fields=code,product_name,brands,nutriments,image_front_url,image_url,ingredients_text`;
   const r = await fetch(url);
@@ -104,7 +123,7 @@ async function fetchOpenFoodFacts(query) {
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate");
 
-  const { query, fdcId } = req.query;
+  const { query, fdcId, barcode } = req.query;
 
   if (fdcId) {
     try {
@@ -112,6 +131,19 @@ export default async function handler(req, res) {
       if (!r.ok) throw new Error(`USDA ${r.status}`);
       const data = await r.json();
       return res.json({ detail: normalizeUSDADetail(data) });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // Barcode lookups only ever match USDA's "Branded" dataType (the only one with a gtinUpc) —
+  // skip the generic Foundation/SR Legacy/Survey search and Open Food Facts (already tried
+  // client-side by the caller) entirely, instead of wasting a round trip on categories that
+  // can never match a barcode.
+  if (barcode && typeof barcode === "string") {
+    try {
+      const results = await fetchUSDAByBarcode(barcode);
+      return res.json({ results, errors: {} });
     } catch (e) {
       return res.status(500).json({ error: e.message });
     }

@@ -276,15 +276,18 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   };
 
   const lookupBarcode = async (code) => {
+    console.log("[Nora][barcode DEBUG] lookupBarcode called with code:", code); // TEMPORAR — de șters după diagnostic
     setBarcodeLoad(true); setBarcodeError(""); setBarcodeResult(null); setBarcodeGrams("100");
     stopBarcodeCamera();
     // Try Open Food Facts first (free, no key)
     try {
       const offRes  = await fetch(`https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`);
       const offData = await offRes.json();
+      console.log("[Nora][barcode DEBUG] OFF response — status:", offData.status, "product_name:", offData.product?.product_name); // TEMPORAR
       if (offData.status === 1 && offData.product?.product_name) {
         const p   = offData.product;
         const nut = p.nutriments || {};
+        console.log("[Nora][barcode DEBUG] OFF nutriments used:", { kcal: nut["energy-kcal_100g"], protein: nut["proteins_100g"], carbs: nut["carbohydrates_100g"], fat: nut["fat_100g"], nutrition_data_per: p.nutrition_data_per, serving_size: p.serving_size }); // TEMPORAR
         setBarcodeResult({
           name:        p.product_name?.trim() || "Unknown product",
           brand:       p.brands?.split(",")[0]?.trim() || null,
@@ -300,12 +303,15 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         setBarcodeLoad(false);
         return;
       }
-    } catch {}
-    // Fallback: USDA FoodData Central
+    } catch (e) {
+      console.log("[Nora][barcode DEBUG] OFF fetch threw:", e?.name, e?.message); // TEMPORAR
+    }
+    // Fallback: USDA FoodData Central (Branded dataType only — the only one with barcodes)
     try {
-      const r    = await fetch(`/api/food-search?query=${encodeURIComponent(code)}`);
+      const r    = await fetch(`/api/food-search?barcode=${encodeURIComponent(code)}`);
       const d    = await r.json();
       const item = (d.results || []).find(x => x.source === "USDA");
+      console.log("[Nora][barcode DEBUG] USDA fallback — results:", d.results?.length || 0, "matched:", !!item, "errors:", d.errors); // TEMPORAR
       if (item) {
         const p = item.per100g || {};
         setBarcodeResult({
@@ -317,7 +323,10 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         setBarcodeLoad(false);
         return;
       }
-    } catch {}
+    } catch (e) {
+      console.log("[Nora][barcode DEBUG] USDA fallback fetch threw:", e?.name, e?.message); // TEMPORAR
+    }
+    console.log("[Nora][barcode DEBUG] not found in OFF or USDA — showing error"); // TEMPORAR
     setBarcodeError("Product not found. Try entering the barcode again or log manually.");
     setBarcodeLoad(false);
   };

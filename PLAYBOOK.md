@@ -206,6 +206,10 @@ Notat 17.07, de implementat după validarea cu cei 5 testeri: extinderea conțin
 
 ## G3 — Barcode: scanare live și pe iPhone/Safari
 Notat 17.07, **de făcut ÎNAINTE de lansarea testului cu cei 5 utilizatori** (nu doar post-lansare) — mulți testeri vor fi pe iPhone. Problemă actuală: scanarea live prin cameră (My Day → barcode) folosește API-ul nativ `BarcodeDetector`, care NU e suportat pe Safari/iOS — pe iPhone camera live nu detectează automat niciun cod, userul poate doar introduce codul manual. Soluție: înlocuiește sau completează `BarcodeDetector` cu o librărie JS cross-browser (ex. ZXing sau QuaggaJS) care rulează peste imaginea video și funcționează și pe Safari. Necesită `npm install` — de discutat înainte care librărie, din motive de mărime bundle și licență.
+Rezolvat 21.07 cu `@zxing/browser`.
+
+## G4 — Barcode fallback pentru produse negăsite (bază proprie Nora)
+Notat 21.07, backlog — NU implementa acum. Când Open Food Facts/USDA nu găsesc un cod de bare, oferă userului un formular rapid de adăugare manuală (nume, kcal, proteine, carbo, grăsime, per 100g), salvat în Supabase legat de codul de bare. Data viitoare, orice user care scanează același cod găsește produsul din baza proprie Nora, înainte de a mai interoga OFF. Construiește organic acoperire mai bună pentru produse est-europene, alimentată de useri.
 
 ---
 
