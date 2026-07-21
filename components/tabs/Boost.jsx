@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { C, card, serif, sans, localDateStr } from "../noraTokens";
-import { PlusIcon, CheckIcon } from "../NoraIcons";
+import { PlusIcon, CheckIcon, ChevronIcon } from "../NoraIcons";
 import AtmosphereBackground from "../AtmosphereBackground";
 
 const SUPP_KEY  = "nora_supps_list";
@@ -65,6 +65,7 @@ export default function Boost({ profile, targets, entries, cyclePhase }) {
   const [recs,        setRecs]        = useState(null);
   const [recsLoading, setRecsLoading] = useState(false);
   const [citations,   setCitations]   = useState({});
+  const [suppOpen,    setSuppOpen]    = useState(false);
 
   const foodEntries   = entries.filter(e => e.type === "food");
   const mealGroups    = [...new Set(foodEntries.map(e => e.mealGroup || "").filter(Boolean))];
@@ -102,7 +103,7 @@ export default function Boost({ profile, targets, entries, cyclePhase }) {
     const suppList = supps.map(s => s.name).join(", ") || "none";
     const cyc      = cyclePhase ? `Cycle phase: ${cyclePhase.label}, day ${cyclePhase.day}.` : "";
 
-    const sys = `You are a clinical nutritionist. Nora's philosophy is food first: whole foods are always the primary recommendation, supplements are a secondary, cautious mention. Return a 3-section JSON assessment — no markdown, no extra text.
+    const sys = `You are a clinical nutritionist. Nora's philosophy is food first: whole foods are always the primary recommendation, supplements are a secondary, purely informational mention — never a dosing instruction. Return a 3-section JSON assessment — no markdown, no extra text.
 
 Return ONLY this JSON structure:
 {
@@ -116,23 +117,24 @@ Return ONLY this JSON structure:
     {"for":"Omega-3","food":"Salmon, walnuts, flaxseed","emoji":"🐟"}
   ],
   "supplements": [
-    {"name":"Vitamin D3","range":"1000–2000 IU","timing":"morning","emoji":"☀️","reason":"Most adults get little from diet or sun"},
-    {"name":"Magnesium Glycinate","range":"200–300 mg","timing":"evening","emoji":"🌙","reason":"Supports sleep and muscle relaxation","caution":"Ask a doctor first if you have kidney disease"},
-    {"name":"Omega-3 (EPA/DHA)","range":"500–1000 mg","timing":"evening","emoji":"🐟","reason":"Supports heart and brain health","caution":"Ask a doctor first if you take blood thinners"}
+    {"name":"Vitamin D3","emoji":"☀️","reason":"Often low from diet or sun alone"},
+    {"name":"Magnesium Glycinate","emoji":"🌙","reason":"Commonly linked to sleep and muscle relaxation","caution":"Ask a doctor first if you have kidney disease"},
+    {"name":"Omega-3 (EPA/DHA)","emoji":"🐟","reason":"Commonly linked to heart and brain health","caution":"Ask a doctor first if you take blood thinners"}
   ]
 }
 
 SECTION 1 — deficiencies: Analyse today's food log for likely micronutrient gaps. Focus on Iron, Zinc, B12, Calcium, Folate, Vitamin C, Potassium, Fibre. Max 2 items, only the most relevant one or two. Reason: one short clause, under 8 words, no dosage or supplement suggestion — food gaps only. If a gap is Iron, you MUST include the exact "caution" text shown above, verbatim. If no gaps: empty array [].
 
-SECTION 2 — food_alts: Nora's PRIMARY recommendation, food first. Provide one whole-food entry for EVERY item in deficiencies AND for all three fixed supplements below (normally 3-5 total) — real foods (can list a few options comma-separated), one short absorption/prep tip under 8 words if useful. Never a pill.
+SECTION 2 — food_alts: Nora's PRIMARY recommendation, food first. Provide one whole-food entry for EVERY item in deficiencies AND for every item you keep in "supplements" below (normally 3-5 total) — real foods (can list a few options comma-separated), one short absorption/prep tip under 8 words if useful. Never a pill. MUST respect the user's dietary preferences (see profile below) — never suggest a food that conflicts with them. Example: if the profile says vegetarian or vegan, never suggest red meat, poultry or fish for Iron — suggest lentils, spinach, tofu, chickpeas, fortified cereals instead. If preferences are "none" or empty, no restriction applies.
 
-SECTION 3 — supplements: ALWAYS include exactly these three fixed items, in this order, with the exact ranges, timings and cautions shown above — do not invent different numbers or drop the cautions. This is a secondary, optional mention. Frame "range" as a general reference, never a fixed instruction.
+SECTION 3 — supplements: Consider exactly three candidates, in this order — Vitamin D3, Magnesium Glycinate, Omega-3 (EPA/DHA) — but this is a PERSONALISED assessment, not a fixed list. For each one, judge from THIS user's profile (age, sex, activity, goals, dietary preferences) and today's food log whether it's actually worth a brief mention. If today's log (or an obvious profile signal, e.g. daily fatty fish, very high activity, a goal that makes one nutrient irrelevant) shows a candidate is already reasonably covered or clearly not a priority for this person, OMIT it entirely from the array — do not force all three. Keep only the ones genuinely worth mentioning; it is normal and expected for this to be 1, 2 or 3 items depending on the person. For every item you DO keep: "reason" must reference something concrete and specific to this person (their age bracket, activity level, a stated goal, dietary preference, or what's missing from today's meals) — never a generic, identical-for-everyone sentence. Dietary preferences matter especially for Omega-3: a vegetarian/vegan profile typically gets little direct EPA/DHA from food, which is worth reflecting in "reason". NEVER include a numeric dose, amount, unit (IU, mg, mcg) or a specific time of day (morning/evening/etc) — not in "reason", not anywhere. "caution" is included ONLY for Magnesium (kidney disease) or Omega-3 (blood thinners), worded close to the reference example — never invent new cautions or add one to Vitamin D3.
 
-Never recommend anything the user is already taking: ${suppList}. Never phrase any dose as a fixed prescription — always a range framed as general information, not personalised medical advice. Never suggest supplementing iron directly, food sources only.`;
+Never recommend anything the user is already taking: ${suppList}. Never suggest supplementing iron directly, food sources only. Never phrase anything as a personalised medical recommendation — general information only.`;
 
     const user = `Profile: ${profile?.name}, ${profile?.age}y, ${profile?.sex}${profile?.perimenopause ? " (perimenopausal)" : ""}.
 Goals: ${(profile?.goals || []).join(", ")}.
 Activity: ${profile?.activity}.
+Dietary preferences: ${profile?.preferences || "none"}.
 ${cyc}
 
 Today's macros: ${Math.round(totalCal)}/${targets?.calories||2000} kcal · protein ${Math.round(totalPro)}/${targets?.protein_g||150}g · carbs ${Math.round(totalCarb)}g · fat ${Math.round(totalFat)}g · fibre ${Math.round(totalFibre)}g
@@ -184,17 +186,16 @@ ${foodLog}`;
   const handleRefresh = () => {
     setRecs(null);
     setCitations({});
+    setSuppOpen(false);
     try { localStorage.removeItem(RECS_KEY); } catch {}
     loadRecs();
   };
 
   const takenCount    = supps.filter(s => taken[s.id]).length;
-  const suppMorning   = recs?.supplements?.filter(r => r.timing === "morning") || [];
-  const suppEvening   = recs?.supplements?.filter(r => r.timing === "evening") || [];
 
   return (
     <div style={{ padding: "24px 20px 100px", display: "flex", flexDirection: "column", gap: 16 }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} details summary{list-style:none} details summary::-webkit-details-marker{display:none} .boost-chev{display:inline-block;transition:transform 0.2s} details[open] .boost-chev{transform:rotate(90deg)}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <AtmosphereBackground/>
       <div style={{ background:`linear-gradient(160deg,${C.greenDark} 0%,${C.green} 100%)`, padding:"20px 20px 18px", margin:"-24px -20px 18px", position:"relative", overflow:"hidden" }}>
         <div style={{ display:"flex", alignItems:"center", gap:12, flex:1 }}>
@@ -307,6 +308,7 @@ ${foodLog}`;
 
             {/* SECTION 1 — Deficiencies */}
             <SectionLabel icon="🔍">Nutritional Gaps Today</SectionLabel>
+            <p style={{ fontSize:11, color:C.muted, margin:"-4px 0 10px", lineHeight:1.55, fontFamily:sans }}>General information, not a diagnosis — talk to a doctor before starting any supplement.</p>
             {recs.deficiencies?.length > 0 ? (
               recs.deficiencies.map((d, i) => <DefCard key={i} def={d} studies={citations[d.name] || []}/>)
             ) : (
@@ -327,32 +329,28 @@ ${foodLog}`;
               </>
             )}
 
-            {/* SECTION 3 — Supplements, secondary and collapsed by default */}
+            {/* SECTION 3 — Supplements: collapsed by default, brief mention only, never a dosing instruction */}
             {recs.supplements?.length > 0 && (
               <div style={{ marginTop:14 }}>
-                <SectionLabel icon="💊">Supplements — optional</SectionLabel>
-                <p style={{ fontSize:11, color:C.muted, margin:"-4px 0 8px", lineHeight:1.55, fontFamily:sans }}>Only worth it if food falls short. General reference, not a prescription.</p>
-                <details>
-                  <summary style={{ display:"flex", alignItems:"center", gap:5, cursor:"pointer", fontSize:12, color:C.green, fontFamily:sans, fontWeight:500, padding:"2px 0 10px" }}>
-                    <span className="boost-chev" style={{ fontSize:10 }}>▸</span> View reference ranges
-                  </summary>
-                  {suppMorning.length > 0 && (
-                    <>
-                      <TimingChip timing="morning"/>
-                      {suppMorning.map((r, i) => (
-                        <SuppCard key={i} rec={r} studies={citations[r.name] || []} onAdd={() => addToList(r.name)} alreadyAdded={supps.some(s => s.name.toLowerCase() === r.name.toLowerCase())}/>
-                      ))}
-                    </>
-                  )}
-                  {suppEvening.length > 0 && (
-                    <>
-                      <TimingChip timing="evening"/>
-                      {suppEvening.map((r, i) => (
-                        <SuppCard key={i} rec={r} studies={citations[r.name] || []} onAdd={() => addToList(r.name)} alreadyAdded={supps.some(s => s.name.toLowerCase() === r.name.toLowerCase())}/>
-                      ))}
-                    </>
-                  )}
-                </details>
+                <button onClick={() => setSuppOpen(v => !v)} style={{ width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", background:"none", border:"none", padding:0, cursor:"pointer", textAlign:"left" }}>
+                  <div>
+                    <SectionLabel icon="💊">Supplements — optional</SectionLabel>
+                    {!suppOpen && (
+                      <p style={{ fontSize:11, color:C.muted, margin:"-4px 0 0", fontFamily:sans }}>
+                        {recs.supplements.length} suggestion{recs.supplements.length !== 1 ? "s" : ""} based on your day
+                      </p>
+                    )}
+                  </div>
+                  <ChevronIcon open={suppOpen} size={15} color={C.muted}/>
+                </button>
+                {suppOpen && (
+                  <div style={{ marginTop:8 }}>
+                    <p style={{ fontSize:11, color:C.muted, margin:"0 0 10px", lineHeight:1.55, fontFamily:sans }}>Only worth it if food falls short. General information, not medical advice — talk to a doctor before starting any supplement.</p>
+                    {recs.supplements.map((r, i) => (
+                      <SuppCard key={i} rec={r} studies={citations[r.name] || []} onAdd={() => addToList(r.name)} alreadyAdded={supps.some(s => s.name.toLowerCase() === r.name.toLowerCase())}/>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -371,18 +369,6 @@ function SectionLabel({ icon, children, top }) {
     <p style={{ fontSize:10, color:C.muted, textTransform:"uppercase", letterSpacing:"0.08em", fontWeight:700, margin:`${top?14:4}px 0 10px`, fontFamily:sans, display:"flex", alignItems:"center", gap:5 }}>
       <span>{icon}</span>{children}
     </p>
-  );
-}
-
-function TimingChip({ timing }) {
-  const morning = timing === "morning";
-  return (
-    <div style={{ display:"inline-flex", alignItems:"center", gap:5, backgroundColor: morning ? "#FBF3E3" : "#EEF3EF", borderRadius:20, padding:"3px 10px", marginBottom:8 }}>
-      <span style={{ fontSize:11 }}>{morning ? "☀️" : "🌙"}</span>
-      <span style={{ fontSize:10, fontWeight:700, color: morning ? C.amber : C.green, fontFamily:sans, textTransform:"uppercase", letterSpacing:"0.06em" }}>
-        {morning ? "Often taken in the morning" : "Often taken in the evening"}
-      </span>
-    </div>
   );
 }
 
@@ -432,9 +418,6 @@ function SuppCard({ rec, studies, onAdd, alreadyAdded }) {
             <p style={{ fontSize:14, fontWeight:600, color:C.text, margin:0 }}>{rec.name}</p>
           </div>
           <p style={{ fontSize:12, color:C.muted, margin:"0 0 5px", lineHeight:1.5 }}>{rec.reason}</p>
-          {rec.range && (
-            <span style={{ fontSize:11, fontWeight:500, color:C.muted, backgroundColor:C.track, borderRadius:20, padding:"2px 8px" }}>Typical range: {rec.range}</span>
-          )}
           <CautionNote text={rec.caution}/>
           <StudyCitations studies={studies}/>
         </div>

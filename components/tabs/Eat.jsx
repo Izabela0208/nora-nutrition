@@ -904,7 +904,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
       const excl = shownShots.length > 0 ? ` Not:[${shownShots.slice(-5).join(",")}].` : "";
       const t = await callClaude(
         "Return ONLY valid JSON, no markdown, no extra text.",
-        `One morning wellness shot. Goals:${goalsStr||"energy"}. ${cycleCtx}${excl}Return exactly: {"name":"str","emoji":"str","ingredients":[{"item":"str","amount":"str"}],"benefit":"str","calories":num,"protein_g":num,"carbs_g":num,"fat_g":num}`,
+        `One morning wellness shot. Goals:${goalsStr||"energy"}. Prefs:${profile?.preferences||"none"}. ${cycleCtx}${excl}Return exactly: {"name":"str","emoji":"str","ingredients":[{"item":"str","amount":"str"}],"benefit":"str","calories":num,"protein_g":num,"carbs_g":num,"fat_g":num}`,
         500
       );
       if (!t || !t.trim()) throw new Error("empty");
