@@ -1253,7 +1253,7 @@ function CircadianTimeline({ sun, geoError, entries, locationLabel, onRetryLocat
 }
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
-export default function Ritual({ profile, targets, entries, waterMl, cyclePhase, periodLogs, activeChallenges, startChallenge, checkInChallenge, uncheckInChallenge, abandonChallenge, ritualStreak, markChallengeDone, locationCity, locationLat, locationLng, weekMeals, weekWaterLogs, completionDates, fastingStart, fastingEnd }) {
+export default function Ritual({ profile, targets, entries, waterMl, cyclePhase, periodLogs, activeChallenges, startChallenge, checkInChallenge, uncheckInChallenge, abandonChallenge, ritualStreak, markChallengeDone, weekMeals, weekWaterLogs, completionDates, fastingStart, fastingEnd }) {
   const [biohack,        setBiohack]        = useState(null);
   const [loading,        setLoading]        = useState(false);
   const [loadingStatus,  setLoadingStatus]  = useState("");
@@ -1341,7 +1341,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
   const activeSorted = [...activeChallenges].sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""));
 
   // Circadian clock: real sunrise/sunset from device location, computed locally (NOAA solar formula,
-  // no external API). Falls back to a manual city (set in Me) or a default if geolocation is denied.
+  // no external API). Falls back to a default city if geolocation is denied/unavailable.
   // Raw GPS coordinates are cached locally for the day only, never sent to Supabase.
   const resolveLocation = (skipCache = false) => {
     const today = todayStr();
@@ -1365,8 +1365,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
     if (!navigator.geolocation) {
       console.log("[Nora][location DEBUG] navigator.geolocation is unavailable (insecure context or unsupported browser)");
       setGeoError(true);
-      if (locationLat && locationLng) useCoords(locationLat, locationLng, locationCity || "Your location", "manual");
-      else useCoords(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, `${DEFAULT_LOCATION.city} (default)`, "default");
+      useCoords(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, `${DEFAULT_LOCATION.city} (default)`, "default");
       return;
     }
     console.log("[Nora][location DEBUG] calling navigator.geolocation.getCurrentPosition…");
@@ -1382,8 +1381,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
       err => {
         console.log("[Nora][location DEBUG] geolocation error:", err.code, err.message);
         setGeoError(true);
-        if (locationLat && locationLng) useCoords(locationLat, locationLng, locationCity || "Your location", "manual");
-        else useCoords(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, `${DEFAULT_LOCATION.city} (default)`, "default");
+        useCoords(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, `${DEFAULT_LOCATION.city} (default)`, "default");
       }
     );
   };

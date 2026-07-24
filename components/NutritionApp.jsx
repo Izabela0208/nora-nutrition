@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import OnboardingFlow from "./OnboardingFlow";
 import AuthScreen from "./auth/AuthScreen";
 import MyDay    from "./tabs/MyDay";
@@ -146,6 +147,7 @@ const rowToEntry = (row) => ({
 });
 
 export default function NutritionApp() {
+  const router = useRouter();
   const { session, loading: authLoading, signOut } = useAuthSession();
   const [phase,      setPhase]      = useState("onboarding");
   const [profile,    setProfile]    = useState(null);
@@ -165,9 +167,8 @@ export default function NutritionApp() {
   const [fastingMode,             setFastingMode]             = useState("recurring");
   const [fastingExtendedStartAt,  setFastingExtendedStartAt]  = useState(null);
   const [fastingExtendedHours,    setFastingExtendedHours]    = useState(null);
-  const [locationCity, setLocationCity] = useState(null);
-  const [locationLat,  setLocationLat]  = useState(null);
-  const [locationLng,  setLocationLng]  = useState(null);
+  const [ouraConnected,   setOuraConnected]   = useState(false);
+  const [ouraConnectedAt, setOuraConnectedAt] = useState(null);
   const [waterMl,    setWaterMl]    = useState(0);
   const [askNoraMessages, setAskNoraMessages] = useState([]);
   const [history,    setHistory]    = useState({});
@@ -222,7 +223,7 @@ export default function NutritionApp() {
         const { data: plRows } = await supabase.from("period_logs").select("id, start_date, end_date").eq("user_id", session.user.id).order("start_date", { ascending: false }).limit(12);
         if(!cancelled) setPeriodLogs(plRows || []);
 
-        const { data: settingsRow } = await supabase.from("user_settings").select("notifications_enabled, fasting_enabled, fasting_start, fasting_end, fasting_mode, fasting_extended_start_at, fasting_extended_hours, location_city, location_lat, location_lng").eq("user_id", session.user.id).maybeSingle();
+        const { data: settingsRow } = await supabase.from("user_settings").select("notifications_enabled, fasting_enabled, fasting_start, fasting_end, fasting_mode, fasting_extended_start_at, fasting_extended_hours").eq("user_id", session.user.id).maybeSingle();
         if(!cancelled){
           setNotificationsEnabled(settingsRow ? settingsRow.notifications_enabled : true);
           setFastingEnabled(settingsRow?.fasting_enabled || false);
@@ -231,13 +232,16 @@ export default function NutritionApp() {
           setFastingMode(settingsRow?.fasting_mode || "recurring");
           setFastingExtendedStartAt(settingsRow?.fasting_extended_start_at || null);
           setFastingExtendedHours(settingsRow?.fasting_extended_hours || null);
-          setLocationCity(settingsRow?.location_city || null);
-          setLocationLat(settingsRow?.location_lat || null);
-          setLocationLng(settingsRow?.location_lng || null);
         }
 
         const { data: chatRows } = await supabase.from("ask_nora_messages").select("id, role, content").eq("user_id", session.user.id).order("created_at", { ascending: true });
         if(!cancelled) setAskNoraMessages((chatRows || []).map(r => ({ id: r.id, role: r.role, content: r.content })));
+
+        try {
+          const ouraRes = await fetch("/api/oura/status", { headers: { Authorization: `Bearer ${session.access_token}` } });
+          const ouraData = await ouraRes.json();
+          if(!cancelled){ setOuraConnected(!!ouraData.connected); setOuraConnectedAt(ouraData.connectedAt || null); }
+        } catch {}
 
         setPhase("app");
       } else {
@@ -260,6 +264,24 @@ export default function NutritionApp() {
 
     return () => { cancelled = true; };
   },[session, authLoading]);
+
+  // Landing back from the Oura OAuth redirect (/?oura=connected|error)
+  useEffect(() => {
+    if(!router.isReady) return;
+    const { oura } = router.query;
+    if(!oura) return;
+    if(oura === "connected" && session?.access_token){
+      (async () => {
+        try {
+          const res = await fetch("/api/oura/status", { headers: { Authorization: `Bearer ${session.access_token}` } });
+          const data = await res.json();
+          setOuraConnected(!!data.connected); setOuraConnectedAt(data.connectedAt || null);
+        } catch {}
+      })();
+      setActiveTab("me");
+    }
+    router.replace("/", undefined, { shallow: true });
+  }, [router.isReady, router.query, session]);
 
   // Persist water
   useEffect(()=>{
@@ -440,10 +462,17 @@ export default function NutritionApp() {
     await saveFastingWindow(fastingEnabled, fastingStart, fastingEnd);
   };
 
-  const saveLocation = async (city, lat, lng) => {
-    setLocationCity(city); setLocationLat(lat); setLocationLng(lng);
-    if(!session?.user?.id) return;
-    await supabase.from("user_settings").upsert({ user_id: session.user.id, location_city: city, location_lat: lat, location_lng: lng, updated_at: new Date().toISOString() });
+  const connectOura = () => {
+    if(!session?.access_token) return;
+    window.location.href = `/api/oura/authorize?token=${encodeURIComponent(session.access_token)}`;
+  };
+
+  const disconnectOura = async () => {
+    if(!session?.access_token) return;
+    try {
+      await fetch("/api/oura/disconnect", { method: "POST", headers: { Authorization: `Bearer ${session.access_token}` } });
+      setOuraConnected(false); setOuraConnectedAt(null);
+    } catch {}
   };
 
   const deleteAccount = async () => {
@@ -496,7 +525,7 @@ export default function NutritionApp() {
 
   const resetProfile=()=>{
     ["nora_today_water","nora_today_entries","nora_sleep","nora_history","nora_supps_list","nora_supps_taken","nora_boost_recs","nora_smoothie","nora_evening_reflection"].forEach(k=>{try{localStorage.removeItem(k);}catch{}});
-    setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setActiveChallenges([]);setCompletionDates([]);setPeriodLogs([]);setNotificationsEnabled(true);setFastingEnabled(false);setFastingStart("09:00");setFastingEnd("21:00");setFastingMode("recurring");setFastingExtendedStartAt(null);setFastingExtendedHours(null);setLocationCity(null);setLocationLat(null);setLocationLng(null);setWaterMl(0);setHistory({});setPhase("onboarding");
+    setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setActiveChallenges([]);setCompletionDates([]);setPeriodLogs([]);setNotificationsEnabled(true);setFastingEnabled(false);setFastingStart("09:00");setFastingEnd("21:00");setFastingMode("recurring");setFastingExtendedStartAt(null);setFastingExtendedHours(null);setWaterMl(0);setHistory({});setPhase("onboarding");
   };
 
   // Cycle phase — only when the user opted in and chose "Menstruation" as context
@@ -570,10 +599,10 @@ export default function NutritionApp() {
   const tabContent = {
     myday:   <MyDay {...sharedProps} activeChallenges={activeChallenges} checkInChallenge={checkInChallenge} setActiveTab={setActiveTab} fastingEnabled={fastingEnabled} fastingStart={fastingStart} fastingEnd={fastingEnd} fastingMode={fastingMode} fastingExtendedStartAt={fastingExtendedStartAt} fastingExtendedHours={fastingExtendedHours}/>,
     eat:     <Eat     profile={profile} targets={targets} entries={entries} logMeal={logMeal} cyclePhase={cyclePhase}/>,
-    ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} periodLogs={periodLogs} activeChallenges={activeChallenges} startChallenge={startChallenge} checkInChallenge={checkInChallenge} uncheckInChallenge={uncheckInChallenge} abandonChallenge={abandonChallenge} ritualStreak={ritualStreak} markChallengeDone={markChallengeDone} locationCity={locationCity} locationLat={locationLat} locationLng={locationLng} weekMeals={weekMeals} weekWaterLogs={weekWaterLogs} completionDates={completionDates} fastingStart={fastingStart} fastingEnd={fastingEnd}/>,
+    ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} periodLogs={periodLogs} activeChallenges={activeChallenges} startChallenge={startChallenge} checkInChallenge={checkInChallenge} uncheckInChallenge={uncheckInChallenge} abandonChallenge={abandonChallenge} ritualStreak={ritualStreak} markChallengeDone={markChallengeDone} weekMeals={weekMeals} weekWaterLogs={weekWaterLogs} completionDates={completionDates} fastingStart={fastingStart} fastingEnd={fastingEnd}/>,
     boost:   <Boost   profile={profile} targets={targets} entries={entries} cyclePhase={cyclePhase}/>,
     asknora: <AskNora profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} activeChallenges={activeChallenges} messages={askNoraMessages} sendMessage={sendAskNoraMessage} clearMessages={clearAskNoraMessages}/>,
-    me:      <Me      profile={profile} saveProfile={saveProfile} targets={targets} resetProfile={resetProfile} signOut={signOut} notificationsEnabled={notificationsEnabled} saveNotifications={saveNotifications} deleteAccount={deleteAccount} fastingEnabled={fastingEnabled} fastingStart={fastingStart} fastingEnd={fastingEnd} saveFastingWindow={saveFastingWindow} fastingMode={fastingMode} fastingExtendedStartAt={fastingExtendedStartAt} fastingExtendedHours={fastingExtendedHours} saveExtendedFast={saveExtendedFast} stopExtendedFast={stopExtendedFast} periodLogs={periodLogs} cyclePhase={cyclePhase} logPeriodStart={logPeriodStart} logPeriodEnd={logPeriodEnd} deletePeriodLog={deletePeriodLog} locationCity={locationCity} locationLat={locationLat} locationLng={locationLng} saveLocation={saveLocation}/>,
+    me:      <Me      profile={profile} saveProfile={saveProfile} targets={targets} resetProfile={resetProfile} signOut={signOut} notificationsEnabled={notificationsEnabled} saveNotifications={saveNotifications} deleteAccount={deleteAccount} fastingEnabled={fastingEnabled} fastingStart={fastingStart} fastingEnd={fastingEnd} saveFastingWindow={saveFastingWindow} fastingMode={fastingMode} fastingExtendedStartAt={fastingExtendedStartAt} fastingExtendedHours={fastingExtendedHours} saveExtendedFast={saveExtendedFast} stopExtendedFast={stopExtendedFast} periodLogs={periodLogs} cyclePhase={cyclePhase} logPeriodStart={logPeriodStart} logPeriodEnd={logPeriodEnd} deletePeriodLog={deletePeriodLog} ouraConnected={ouraConnected} ouraConnectedAt={ouraConnectedAt} connectOura={connectOura} disconnectOura={disconnectOura}/>,
   };
 
   return (

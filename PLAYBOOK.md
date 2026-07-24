@@ -146,6 +146,12 @@ Generează 15 rutine Move în română, vocea din lib/nora-voice.md: 5 Energie, 
 Două conexiuni, nimic altceva: (1) My Day: dacă azi nu există nimic în movement_completions, acțiunea recomandată poate fi o rutină potrivită orei. (2) Comentariul Norei după o masă bogată poate menționa OCAZIONAL o rutină Calm de după masă. Planul înainte.
 ```
 
+## D4 — Surse de conținut pentru extindere viitoare (exerciții, soundscapes, meditație)
+Notat 21.07, backlog — NU implementa acum. Pentru extinderea ulterioară a conținutului Move dincolo de cele 15 rutini text din D1:
+- **Exerciții/mișcare**: folosește free-exercise-db (GitHub, gratuit, open-source) ca sursă de conținut (nume, instrucțiuni, imagini), în loc de scriere manuală a fiecărui exercițiu.
+- **Soundscapes/white noise**: folosește Pixabay Audio sau freesound.org — verifică licența fiecărui fișier individual înainte de folosire.
+- **Meditație ghidată**: scripturile trebuie scrise original în vocea Norei (`lib/nora-voice.md`), NU preluate din alte surse (risc de drept de autor). De decis ulterior cum se generează vocea finală (text-to-speech, voce înregistrată etc.).
+
 ---
 
 # CAPITOLUL E — RAFINAMENTUL VIZUAL FINAL
@@ -210,6 +216,9 @@ Rezolvat 21.07 cu `@zxing/browser`.
 
 ## G4 — Barcode fallback pentru produse negăsite (bază proprie Nora)
 Notat 21.07, backlog — NU implementa acum. Când Open Food Facts/USDA nu găsesc un cod de bare, oferă userului un formular rapid de adăugare manuală (nume, kcal, proteine, carbo, grăsime, per 100g), salvat în Supabase legat de codul de bare. Data viitoare, orice user care scanează același cod găsește produsul din baza proprie Nora, înainte de a mai interoga OFF. Construiește organic acoperire mai bună pentru produse est-europene, alimentată de useri.
+
+## G5 — Optimizare cost Ask Nora
+Notat 21.07, backlog — NU implementa acum. Evaluează trecerea la un model mai ieftin (Haiku) pentru conversații simple, activează prompt caching pe contextul trimis (profil, mese, ținte — se repetă la fiecare mesaj din aceeași sesiune), și ia în calcul limite de mesaje/zi pentru useri gratuiți dacă apare vreodată un model freemium. De evaluat când Nora are useri reali și volum de utilizare de măsurat.
 
 ---
 

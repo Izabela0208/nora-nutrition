@@ -4,34 +4,6 @@ import { NoraAvatar, CheckIcon, HeartIcon, MoonIcon } from "../NoraIcons";
 import { SectionHeader, Collapsible } from "../NoraUI";
 import AtmosphereBackground from "../AtmosphereBackground";
 
-const LOCATION_CITIES = [
-  { city: "Bucharest",  lat: 44.4268, lng: 26.1025 },
-  { city: "Cluj-Napoca",lat: 46.7712, lng: 23.6236 },
-  { city: "Timișoara",  lat: 45.7489, lng: 21.2087 },
-  { city: "Iași",       lat: 47.1585, lng: 27.6014 },
-  { city: "Constanța",  lat: 44.1598, lng: 28.6348 },
-  { city: "Brașov",     lat: 45.6427, lng: 25.5887 },
-  { city: "Sibiu",      lat: 45.7983, lng: 24.1256 },
-  { city: "London",     lat: 51.5074, lng: -0.1278 },
-  { city: "Paris",      lat: 48.8566, lng: 2.3522 },
-  { city: "Berlin",     lat: 52.5200, lng: 13.4050 },
-  { city: "Madrid",     lat: 40.4168, lng: -3.7038 },
-  { city: "Rome",       lat: 41.9028, lng: 12.4964 },
-  { city: "Amsterdam",  lat: 52.3676, lng: 4.9041 },
-  { city: "Vienna",     lat: 48.2082, lng: 16.3738 },
-  { city: "Dublin",     lat: 53.3498, lng: -6.2603 },
-  { city: "Lisbon",     lat: 38.7223, lng: -9.1393 },
-  { city: "Warsaw",     lat: 52.2297, lng: 21.0122 },
-  { city: "Athens",     lat: 37.9838, lng: 23.7275 },
-  { city: "Stockholm",  lat: 59.3293, lng: 18.0686 },
-  { city: "New York",   lat: 40.7128, lng: -74.0060 },
-  { city: "Los Angeles",lat: 34.0522, lng: -118.2437 },
-  { city: "Chicago",    lat: 41.8781, lng: -87.6298 },
-  { city: "Toronto",    lat: 43.6532, lng: -79.3832 },
-  { city: "Dubai",      lat: 25.2048, lng: 55.2708 },
-  { city: "Sydney",     lat: -33.8688, lng: 151.2093 },
-];
-
 const GOAL_OPTIONS = [
   "Lose weight", "Build muscle", "Improve energy", "Better sleep",
   "Eat healthier", "Gut health", "Hormonal balance", "Longevity",
@@ -80,7 +52,7 @@ const BIO_CONTEXTS = [
   { id: "none",          label: "Not applicable"},
 ];
 
-export default function Me({ profile, saveProfile, targets, resetProfile, signOut, notificationsEnabled, saveNotifications, deleteAccount, fastingEnabled, fastingStart, fastingEnd, saveFastingWindow, fastingMode, fastingExtendedStartAt, fastingExtendedHours, saveExtendedFast, stopExtendedFast, periodLogs, cyclePhase, logPeriodStart, logPeriodEnd, deletePeriodLog, locationCity, locationLat, locationLng, saveLocation }) {
+export default function Me({ profile, saveProfile, targets, resetProfile, signOut, notificationsEnabled, saveNotifications, deleteAccount, fastingEnabled, fastingStart, fastingEnd, saveFastingWindow, fastingMode, fastingExtendedStartAt, fastingExtendedHours, saveExtendedFast, stopExtendedFast, periodLogs, cyclePhase, logPeriodStart, logPeriodEnd, deletePeriodLog, ouraConnected, connectOura, disconnectOura }) {
   const [form,     setForm]     = useState({ ...profile });
   const [saved,    setSaved]    = useState(false);
   const [plans,    setPlans]    = useState([]);
@@ -555,28 +527,22 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
           );
         })()}
 
-        {/* Location — fallback for Ritual's circadian clock when geolocation is denied. Raw GPS is never saved here, only this manual choice. */}
-        <div style={{ height: 1, backgroundColor: C.border, margin: "14px 0" }}/>
-        <div>
-          <p style={{ fontSize: 12, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", margin: 0 }}>Location</p>
-          <p style={{ fontSize: 11, color: C.muted, margin: "3px 0 0 0", lineHeight: 1.5 }}>Used only as a fallback for Ritual's circadian clock, if you don't allow location access in the browser.</p>
-          <select
-            value={locationCity || ""}
-            onChange={e => {
-              const found = LOCATION_CITIES.find(c => c.city === e.target.value);
-              if (found) saveLocation(found.city, found.lat, found.lng);
-            }}
-            style={{ ...inp, marginTop: 10 }}
-          >
-            <option value="" disabled>Choose a city…</option>
-            {LOCATION_CITIES.map(c => <option key={c.city} value={c.city}>{c.city}</option>)}
-          </select>
-        </div>
+      </div>
 
-        {/* Wearables placeholder */}
-        <div style={{ marginTop: 14, padding: "12px 14px", backgroundColor: C.bg, borderRadius: 10, border: `1px dashed ${C.border}`, opacity: 0.6 }}>
-          <p style={{ fontSize: 12, fontWeight: 600, color: C.muted, margin: "0 0 3px" }}>Wearables coming soon</p>
-          <p style={{ fontSize: 11, color: C.muted, margin: 0, lineHeight: 1.5 }}>Oura · WHOOP · Apple Watch · Heart rate · HRV</p>
+      {/* ── Connected apps ──────────────────────────────────────── */}
+      <div style={{ ...card, padding: "16px 18px" }}>
+        <p style={{ fontSize: 12, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 12px" }}>Connected apps</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <p style={{ fontSize: 13, color: C.text, margin: 0, fontWeight: 500 }}>Oura Ring</p>
+            <p style={{ fontSize: 11, color: C.muted, margin: "2px 0 0" }}>{ouraConnected ? "Connected" : "Sleep, activity and readiness data"}</p>
+          </div>
+          <button
+            onClick={ouraConnected ? disconnectOura : connectOura}
+            style={{ padding: "7px 14px", borderRadius: 20, border: `1px solid ${ouraConnected ? C.border : C.green}`, backgroundColor: ouraConnected ? "transparent" : C.greenLight, color: ouraConnected ? C.muted : C.green, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: sans, whiteSpace: "nowrap" }}
+          >
+            {ouraConnected ? "Disconnect" : "Connect"}
+          </button>
         </div>
       </div>
 
@@ -825,6 +791,16 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
           </div>
         </Collapsible>
       </div>
+
+      {/* ── Privacy ────────────────────────────────────────────────── */}
+      <a
+        href="/privacy"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: "block", width: "100%", boxSizing: "border-box", padding: "13px", backgroundColor: "transparent", border: `1px solid ${C.border}`, borderRadius: 12, fontSize: 13, color: C.text, cursor: "pointer", fontFamily: sans, textAlign: "center", textDecoration: "none" }}
+      >
+        Privacy
+      </a>
 
       {/* ── Restart onboarding ────────────────────────────────────── */}
       <button
