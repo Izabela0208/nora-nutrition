@@ -42,5 +42,16 @@ alter table oura_daily_data enable row level security;
 create policy "oura_daily_data_select_own" on oura_daily_data
   for select using (auth.uid() = user_id);
 
+-- Defense in depth: the sync code only ever writes via service_role (bypasses
+-- RLS entirely), so these never fire in normal operation. They exist so that
+-- if a client-side write is ever added by mistake, it can only touch the
+-- caller's own rows, never another user's.
+create policy "oura_daily_data_insert_own" on oura_daily_data
+  for insert with check (auth.uid() = user_id);
+create policy "oura_daily_data_update_own" on oura_daily_data
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "oura_daily_data_delete_own" on oura_daily_data
+  for delete using (auth.uid() = user_id);
+
 create index if not exists oura_daily_data_user_date_idx
   on oura_daily_data(user_id, date);
