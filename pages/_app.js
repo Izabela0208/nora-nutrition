@@ -128,7 +128,25 @@ export default function App({ Component, pageProps }) {
     setAuthed(ok === "1");
   }, []);
 
-  const favicon = <Head><link rel="icon" href="/favicon.svg" type="image/svg+xml"/></Head>;
+  // PWA installability only — no caching (see public/sw.js).
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
+  }, []);
+
+  // Also carries the PWA manifest + iOS "Add to Home Screen" meta tags, not just the favicon.
+  const favicon = (
+    <Head>
+      <link rel="icon" href="/favicon.svg" type="image/svg+xml"/>
+      <link rel="manifest" href="/manifest.json"/>
+      <meta name="theme-color" content="#1F2E26"/>
+      <link rel="apple-touch-icon" href="/apple-touch-icon.png"/>
+      <meta name="apple-mobile-web-app-capable" content="yes"/>
+      <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+      <meta name="apple-mobile-web-app-title" content="Nora"/>
+    </Head>
+  );
 
   if (authed === null) {
     // Avoid flash — show ivory blank while checking storage

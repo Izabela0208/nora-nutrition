@@ -1,0 +1,14 @@
+{
+  "name": "Nora",
+  "short_name": "Nora",
+  "description": "A calm nutrition and wellness companion.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F4F2ED",
+  "theme_color": "#1F2E26",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
