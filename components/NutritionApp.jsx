@@ -144,6 +144,7 @@ const rowToEntry = (row) => ({
   fiber_g: row.fiber_g || 0,
   notes: row.notes || "",
   estimated: row.estimated,
+  noraComment: row.nora_comment || "",
 });
 
 export default function NutritionApp() {
@@ -310,7 +311,32 @@ export default function NutritionApp() {
     if(!session?.user?.id) return;
     const row = entryToRow(entry, session.user.id);
     const { data } = await supabase.from("meals").insert(row).select().single();
-    if(data) setEntries(prev => prev.map(e => e.id === tempId ? rowToEntry(data) : e));
+    if(!data) return;
+    const saved = rowToEntry(data);
+    setEntries(prev => prev.map(e => e.id === tempId ? saved : e));
+    if(saved.type === "food") generateMealComment(saved);
+  };
+
+  // Fire-and-forget: Nora's one-sentence reaction after a food log. Silent on failure — no error UI.
+  const generateMealComment = async (savedEntry) => {
+    try {
+      const todayMeals = entries.filter(e => e.type === "food" && e.id !== savedEntry.id).map(e => ({ name: e.name, calories: e.calories }));
+      const res = await fetch("/api/meal-comment", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          meal: { name: savedEntry.name, calories: savedEntry.calories, protein_g: savedEntry.protein_g, carbs_g: savedEntry.carbs_g, fat_g: savedEntry.fat_g },
+          todayMeals,
+          goal: (profile?.goals || [])[0] || null,
+          cyclePhase: cyclePhase ? { label: cyclePhase.label, day: cyclePhase.day } : null,
+        }),
+      });
+      const data = await res.json();
+      if (!data.comment) return;
+      setEntries(prev => prev.map(e => e.id === savedEntry.id ? { ...e, noraComment: data.comment } : e));
+      if (session?.user?.id) {
+        await supabase.from("meals").update({ nora_comment: data.comment }).eq("id", savedEntry.id);
+      }
+    } catch {}
   };
 
   // Side-effect only — local waterMl state is updated directly in MyDay's addWater.

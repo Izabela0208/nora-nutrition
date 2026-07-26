@@ -733,6 +733,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                           <div style={{flex:1,minWidth:0}}>
                             <p style={{fontSize:13,color:C.text,fontWeight:500,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{entry.name}</p>
                             {entry.notes&&<p style={{fontSize:11,color:C.muted,margin:"1px 0 0"}}>{entry.notes}</p>}
+                            {entry.noraComment&&<p style={{fontSize:11,color:C.muted,fontStyle:"italic",margin:"4px 0 0",lineHeight:1.5}}><span style={{fontWeight:600,color:C.sage,fontStyle:"normal"}}>Nora </span>{entry.noraComment}</p>}
                           </div>
                           <span style={{fontSize:13,fontWeight:600,color:C.text,flexShrink:0}}>{Math.abs(Math.round(entry.calories))}<span style={{fontSize:11,color:C.muted,fontWeight:400}}> kcal{entry.estimated?" ~":""}</span></span>
                           <button onClick={()=>startEdit(entry)} style={{background:"none",border:"none",cursor:"pointer",padding:4,flexShrink:0}}><EditIcon size={13} color={C.muted}/></button>
