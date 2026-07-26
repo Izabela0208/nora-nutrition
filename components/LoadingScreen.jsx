@@ -7,7 +7,7 @@ export default function LoadingScreen() {
   return (
     <div className="nora-loading-screen">
       <div className="nora-loading-glow"/>
-      <p className="nora-loading-wordmark" style={{ position: "relative", fontFamily: serif, fontStyle: "italic", fontWeight: 500, fontSize: "clamp(22px, 6vw, 32px)", color: "#F4F2ED", margin: 0, letterSpacing: "0.01em", lineHeight: 1 }}>just a breath</p>
+      <p className="nora-loading-wordmark" style={{ position: "relative", fontFamily: serif, fontStyle: "italic", fontWeight: 500, fontSize: "clamp(22px, 6vw, 32px)", color: "#F4F2ED", margin: 0, letterSpacing: "0.01em", lineHeight: 1 }}>settling in</p>
       <style>{`
         .nora-loading-screen {
           position: fixed;
