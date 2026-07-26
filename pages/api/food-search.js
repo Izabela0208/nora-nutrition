@@ -98,25 +98,36 @@ async function fetchOpenFoodFacts(query) {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`OFF ${r.status}`);
   const data = await r.json();
+  // Some entries (mostly smaller/less-maintained brands) only have kJ, not kcal — convert rather
+  // than dropping them or silently showing 0. Products with no nutritional data at all (sometimes
+  // a non-food item miscategorised in OFF) are still excluded.
   return (data.products || [])
-    .filter(p => p.product_name && p.nutriments?.["energy-kcal_100g"] != null)
-    .map(p => ({
-      id: `off_${p.code}`,
-      name: p.product_name.trim(),
-      brand: p.brands?.split(",")[0]?.trim() || null,
-      source: "OpenFoodFacts",
-      image: p.image_front_url || p.image_url || null,
-      ingredients: p.ingredients_text || null,
-      per100g: {
-        kcal: Math.round(p.nutriments["energy-kcal_100g"] || 0),
-        protein: Math.round((p.nutriments["proteins_100g"] || 0) * 10) / 10,
-        carbs: Math.round((p.nutriments["carbohydrates_100g"] || 0) * 10) / 10,
-        fat: Math.round((p.nutriments["fat_100g"] || 0) * 10) / 10,
-        fiber: p.nutriments["fiber_100g"] != null ? Math.round(p.nutriments["fiber_100g"] * 10) / 10 : null,
-        sugar: p.nutriments["sugars_100g"] != null ? Math.round(p.nutriments["sugars_100g"] * 10) / 10 : null,
-        sodium: p.nutriments["sodium_100g"] != null ? Math.round(p.nutriments["sodium_100g"] * 1000) : null,
-      },
-    }))
+    .filter(p => {
+      if (!p.product_name) return false;
+      const n = p.nutriments || {};
+      return n["energy-kcal_100g"] != null || n["energy_100g"] != null || n["proteins_100g"] != null || n["carbohydrates_100g"] != null || n["fat_100g"] != null;
+    })
+    .map(p => {
+      const n = p.nutriments || {};
+      const kcalRaw = n["energy-kcal_100g"] ?? (n["energy_100g"] != null ? n["energy_100g"] / 4.184 : null);
+      return {
+        id: `off_${p.code}`,
+        name: p.product_name.trim(),
+        brand: p.brands?.split(",")[0]?.trim() || null,
+        source: "OpenFoodFacts",
+        image: p.image_front_url || p.image_url || null,
+        ingredients: p.ingredients_text || null,
+        per100g: {
+          kcal: Math.round(kcalRaw || 0),
+          protein: Math.round((n["proteins_100g"] || 0) * 10) / 10,
+          carbs: Math.round((n["carbohydrates_100g"] || 0) * 10) / 10,
+          fat: Math.round((n["fat_100g"] || 0) * 10) / 10,
+          fiber: n["fiber_100g"] != null ? Math.round(n["fiber_100g"] * 10) / 10 : null,
+          sugar: n["sugars_100g"] != null ? Math.round(n["sugars_100g"] * 10) / 10 : null,
+          sodium: n["sodium_100g"] != null ? Math.round(n["sodium_100g"] * 1000) : null,
+        },
+      };
+    })
     .slice(0, 8);
 }
 

@@ -286,21 +286,32 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
       if (offData.status === 1 && offData.product?.product_name) {
         const p   = offData.product;
         const nut = p.nutriments || {};
-        console.log("[Nora][barcode DEBUG] OFF nutriments used:", { kcal: nut["energy-kcal_100g"], protein: nut["proteins_100g"], carbs: nut["carbohydrates_100g"], fat: nut["fat_100g"], nutrition_data_per: p.nutrition_data_per, serving_size: p.serving_size }); // TEMPORAR
-        setBarcodeResult({
-          name:        p.product_name?.trim() || "Unknown product",
-          brand:       p.brands?.split(",")[0]?.trim() || null,
-          image:       p.image_front_url || p.image_url || null,
-          nutriScore:  p.nutriscore_grade?.toUpperCase() || null,
-          ingredients: p.ingredients_text || p.ingredients_text_en || null,
-          kcal:        Math.round(nut["energy-kcal_100g"] || 0),
-          protein:     Math.round((nut["proteins_100g"]        || 0) * 10) / 10,
-          carbs:       Math.round((nut["carbohydrates_100g"]   || 0) * 10) / 10,
-          fat:         Math.round((nut["fat_100g"]             || 0) * 10) / 10,
-          source:      "Open Food Facts",
-        });
-        setBarcodeLoad(false);
-        return;
+        // Some entries (mostly smaller/less-maintained brands) only have kJ, not kcal — convert
+        // rather than silently showing 0. If NOTHING nutritional is present at all (sometimes a
+        // non-food item miscategorised in OFF), don't treat this as a match — fall through.
+        const kcalRaw = nut["energy-kcal_100g"] ?? (nut["energy_100g"] != null ? nut["energy_100g"] / 4.184 : null);
+        const proteinRaw = nut["proteins_100g"] ?? null;
+        const carbsRaw   = nut["carbohydrates_100g"] ?? null;
+        const fatRaw     = nut["fat_100g"] ?? null;
+        const hasNutritionData = kcalRaw != null || proteinRaw != null || carbsRaw != null || fatRaw != null;
+        console.log("[Nora][barcode DEBUG] OFF nutriments used:", { kcalRaw, proteinRaw, carbsRaw, fatRaw, hasNutritionData, nutrition_data_per: p.nutrition_data_per, serving_size: p.serving_size }); // TEMPORAR
+        if (hasNutritionData) {
+          setBarcodeResult({
+            name:        p.product_name?.trim() || "Unknown product",
+            brand:       p.brands?.split(",")[0]?.trim() || null,
+            image:       p.image_front_url || p.image_url || null,
+            nutriScore:  p.nutriscore_grade?.toUpperCase() || null,
+            ingredients: p.ingredients_text || p.ingredients_text_en || null,
+            kcal:        Math.round(kcalRaw || 0),
+            protein:     Math.round((proteinRaw || 0) * 10) / 10,
+            carbs:       Math.round((carbsRaw   || 0) * 10) / 10,
+            fat:         Math.round((fatRaw     || 0) * 10) / 10,
+            source:      "Open Food Facts",
+          });
+          setBarcodeLoad(false);
+          return;
+        }
+        console.log("[Nora][barcode DEBUG] OFF matched a product but with zero nutrition data — treating as not found"); // TEMPORAR
       }
     } catch (e) {
       console.log("[Nora][barcode DEBUG] OFF fetch threw:", e?.name, e?.message); // TEMPORAR
