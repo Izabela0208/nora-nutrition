@@ -676,7 +676,6 @@ function LibraryModal({ onClose }) {
               <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",paddingBottom:4}}>{bookCats.map(cat=>(<button key={cat} onClick={()=>setBookCat(cat)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${bookCat===cat?C.green:C.border}`,backgroundColor:bookCat===cat?C.green:"transparent",color:bookCat===cat?"#FDFAF5":C.muted,fontSize:10,fontWeight:bookCat===cat?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{cat}</button>))}</div>
               {busy.books?<Skel/>:(
                 <>{/* books list */}
-                  <p style={{fontSize:11,color:C.muted,margin:"0 0 14px",fontFamily:sans}}>{fBooks.length} {fBooks.length===1?"book":"books"}</p>
                   {fBooks.map((b,i)=>{const col=colFor(b);return(
                     <div key={b.id} style={{display:"flex",gap:14,paddingBottom:20,marginBottom:20,borderBottom:i<fBooks.length-1?`1px solid ${C.border}`:"none"}}>
                       <div style={{width:52,height:70,borderRadius:6,backgroundColor:col.bg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:"2px 3px 10px rgba(0,0,0,0.2)",borderLeft:`3px solid ${col.fg}44`}}>
@@ -731,7 +730,6 @@ function LibraryModal({ onClose }) {
               <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",paddingBottom:4}}>{conCats.map(cat=>(<button key={cat} onClick={()=>setConCat(cat)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${conCat===cat?C.green:C.border}`,backgroundColor:conCat===cat?C.green:"transparent",color:conCat===cat?"#FDFAF5":C.muted,fontSize:10,fontWeight:conCat===cat?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{cat}</button>))}</div>
               {busy.concepts?<Skel/>:(
                 <>{/* concepts list */}
-                  <p style={{fontSize:11,color:C.muted,margin:"0 0 14px",fontFamily:sans}}>{fCons.length} {fCons.length===1?"concept":"concepts"}</p>
                   {fCons.map((c,i)=>{const isOpen=expanded===c.id;const badge=LEVEL_BADGE[c.level]||{bg:C.bg,c:C.muted};return(
                     <div key={c.id} style={{paddingTop:i>0?14:0,paddingBottom:14,borderBottom:i<fCons.length-1?`1px solid ${C.border}`:"none"}}>
                       <div onClick={()=>setExpanded(isOpen?null:c.id)} style={{cursor:"pointer"}}>
@@ -767,7 +765,6 @@ function LibraryModal({ onClose }) {
               <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",paddingBottom:4}}>{podCats.map(cat=>(<button key={cat} onClick={()=>setPodCat(cat)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${podCat===cat?C.green:C.border}`,backgroundColor:podCat===cat?C.green:"transparent",color:podCat===cat?"#FDFAF5":C.muted,fontSize:10,fontWeight:podCat===cat?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{cat}</button>))}</div>
               {busy.podcasts?<Skel/>:(
                 <>{/* podcasts list */}
-                  <p style={{fontSize:11,color:C.muted,margin:"0 0 14px",fontFamily:sans}}>{fPods.length} podcasts</p>
                   {fPods.map((pod,i)=>(
                     <div key={pod.id} style={{paddingBottom:20,marginBottom:20,borderBottom:i<fPods.length-1?`1px solid ${C.border}`:"none"}}>
                       <div style={{display:"flex",gap:12,marginBottom:10}}>
