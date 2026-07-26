@@ -108,7 +108,9 @@ export default function Boost({ profile, targets, entries, cyclePhase }) {
 Return ONLY this JSON structure:
 {
   "deficiencies": [
-    {"name":"Iron","emoji":"🩸","reason":"Few iron-rich foods today","caution":"Don't supplement iron without a blood test first — excess iron can be harmful. Ask a doctor."}
+    {"name":"Iron","emoji":"🩸","reason":"Few iron-rich foods today","caution":"Don't supplement iron without a blood test first — excess iron can be harmful. Ask a doctor."},
+    {"name":"Zinc","emoji":"🦪","reason":"Few seeds, nuts or shellfish today"},
+    {"name":"Folate","emoji":"🥬","reason":"Limited leafy greens or legumes today"}
   ],
   "food_alts": [
     {"for":"Iron","food":"Lentils, spinach, red meat","emoji":"🥩","note":"Pair with vitamin C to absorb better"},
