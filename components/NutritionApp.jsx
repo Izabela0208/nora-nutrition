@@ -151,6 +151,13 @@ const rowToEntry = (row) => ({
 export default function NutritionApp() {
   const router = useRouter();
   const { session, loading: authLoading, signOut } = useAuthSession();
+  // Keeps LoadingScreen visible at least this long, so it doesn't flash by
+  // unseen on a fast connection when auth+profile resolve very quickly.
+  const [minLoadingDone, setMinLoadingDone] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setMinLoadingDone(true), 700);
+    return () => clearTimeout(t);
+  }, []);
   const [phase,      setPhase]      = useState("onboarding");
   const [profile,    setProfile]    = useState(null);
   const [targets,    setTargets]    = useState(null);
@@ -561,7 +568,7 @@ export default function NutritionApp() {
     : null;
 
   // ── Auth ────────────────────────────────────────────────────────
-  if(authLoading) return <LoadingScreen/>;
+  if(authLoading || !minLoadingDone) return <LoadingScreen/>;
   if(!session) return <AuthScreen/>;
   if(profileLoading) return <LoadingScreen/>;
 
