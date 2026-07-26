@@ -220,6 +220,9 @@ Notat 21.07, backlog — NU implementa acum. Când Open Food Facts/USDA nu găse
 ## G5 — Optimizare cost Ask Nora
 Notat 21.07, backlog — NU implementa acum. Evaluează trecerea la un model mai ieftin (Haiku) pentru conversații simple, activează prompt caching pe contextul trimis (profil, mese, ținte — se repetă la fiecare mesaj din aceeași sesiune), și ia în calcul limite de mesaje/zi pentru useri gratuiți dacă apare vreodată un model freemium. De evaluat când Nora are useri reali și volum de utilizare de măsurat.
 
+## G6 — Suport multi-limbă
+Notat 27.07, idee de arhitectură pentru viitor — backlog, NU implementa acum. Aplicația ar avea nevoie de două straturi separate: UI static (etichete, butoane, texte fixe din interfață) și vocea Norei generată dinamic (comentarii, insight-uri, răspunsuri Ask Nora — deja generate live prin Claude, deci ar putea primi limba dorită direct în prompt, fără traducere separată). De decis ulterior: câte limbi, ce mecanism pentru UI static (fișiere de traducere vs. altă abordare), și cum rămâne consistentă vocea Norei (`lib/nora-voice.md`) across limbi.
+
 ---
 
 # ORDINEA ELEMENTELOR PE FIECARE TAB (referință permanentă)
