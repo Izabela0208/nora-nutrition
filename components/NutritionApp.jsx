@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import OnboardingFlow from "./OnboardingFlow";
 import AuthScreen from "./auth/AuthScreen";
+import LoadingScreen from "./LoadingScreen";
 import MyDay    from "./tabs/MyDay";
 import Eat      from "./tabs/Eat";
 import Ritual   from "./tabs/Ritual";
@@ -560,9 +561,9 @@ export default function NutritionApp() {
     : null;
 
   // ── Auth ────────────────────────────────────────────────────────
-  if(authLoading) return <div style={{minHeight:"100vh",backgroundColor:C.bg}}/>;
+  if(authLoading) return <LoadingScreen/>;
   if(!session) return <AuthScreen/>;
-  if(profileLoading) return <div style={{minHeight:"100vh",backgroundColor:C.bg}}/>;
+  if(profileLoading) return <LoadingScreen/>;
 
   // ── Import local data (found on this device, no account data yet) ─
   if(phase==="import") return (
