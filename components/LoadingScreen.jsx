@@ -6,8 +6,10 @@ import { serif } from "./noraTokens";
 export default function LoadingScreen() {
   return (
     <div className="nora-loading-screen">
-      <div className="nora-loading-glow"/>
-      <p className="nora-loading-wordmark" style={{ position: "relative", fontFamily: serif, fontStyle: "italic", fontWeight: 500, fontSize: "clamp(22px, 6vw, 32px)", color: "#F4F2ED", margin: 0, letterSpacing: "0.01em", lineHeight: 1 }}>settling in</p>
+      <div className="nora-loading-inner">
+        <div className="nora-loading-glow"/>
+        <p className="nora-loading-wordmark" style={{ position: "relative", fontFamily: serif, fontStyle: "italic", fontWeight: 500, fontSize: "clamp(22px, 6vw, 32px)", color: "#F4F2ED", margin: 0, letterSpacing: "0.01em", lineHeight: 1 }}>settling in</p>
+      </div>
       <style>{`
         .nora-loading-screen {
           position: fixed;
@@ -22,6 +24,13 @@ export default function LoadingScreen() {
           align-items: center;
           justify-content: center;
           overflow: hidden;
+        }
+        .nora-loading-inner {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transform: translateY(-6vh); /* slightly above dead-center, not sitting low on the screen */
         }
         .nora-loading-glow {
           position: absolute;
