@@ -26,43 +26,46 @@ const parseJSON = (text) => {
   }
 };
 
+// cat: "cycle" (menstrual-phase-specific — follicular/luteal/PMS/ovulation), "peri" (perimenopause/
+// menopause-specific), "general" (applies regardless of biological context). Filtered below by
+// biologicalContext so a perimenopause/menopause user never sees cycle-phase-specific tips.
 const HORMONAL_TIPS = [
-  { tip: "Pair iron-rich foods with vitamin C to triple absorption. Spinach with lemon, lentils with tomato, or red meat with peppers — the combination is far more effective than either alone." },
-  { tip: "Ginger is as effective as ibuprofen for menstrual cramps in several clinical trials. Try 1g of fresh ginger in warm water or ginger tea starting 2 days before your period." },
-  { tip: "Oestrogen rises in the follicular phase, boosting energy and resilience. This is your prime window for high-intensity training, new challenges and social plans — lean into it." },
-  { tip: "Fermented foods like kefir, yoghurt and kimchi support the oestrobolome — the gut bacteria that regulate oestrogen metabolism. One serving daily improves hormonal clearance over time." },
-  { tip: "Zinc supports follicular development and is heavily used at ovulation. Pumpkin seeds, hemp seeds and oysters are excellent sources — aim for one zinc-rich food daily around mid-cycle." },
-  { tip: "EPA and DHA from fatty fish reduce prostaglandins — the compounds that trigger menstrual cramps. Two servings of salmon, mackerel or sardines weekly can reduce pain intensity over time." },
-  { tip: "Magnesium levels drop in the luteal phase, worsening mood, cravings and sleep. Dark chocolate, almonds and leafy greens are the richest sources — aim for one daily in the week before your period." },
-  { tip: "Progesterone and oestrogen fluctuations in the luteal phase increase water retention. Reducing sodium, processed foods and alcohol in the 7 days before your period can significantly ease bloating." },
-  { tip: "In the follicular phase (days 1–14), 1 tbsp each of ground flaxseed and pumpkin seeds daily may support oestrogen production. Flax lignans act as natural oestrogen modulators." },
-  { tip: "In the luteal phase (days 15–28), 1 tbsp each of sesame and sunflower seeds daily provides zinc and selenium to support progesterone. Consistent use over 3 cycles may improve PMS." },
-  { tip: "Flaxseeds, soy, chickpeas and lentils contain phytoestrogens — plant compounds that weakly bind oestrogen receptors, helping to ease perimenopausal symptoms and moderate oestrogen dominance." },
-  { tip: "Dietary fibre binds excess oestrogen in the gut for excretion. Insufficient fibre allows oestrogen to be reabsorbed, worsening hormonal symptoms. Aim for 25–35g daily from vegetables and legumes." },
-  { tip: "Vitamin B6 is essential for progesterone synthesis and reduces PMS-related anxiety and low mood. Avocado, banana, chicken, tuna and pistachio nuts are among the richest food sources." },
-  { tip: "Blood sugar spikes trigger cortisol, which disrupts oestrogen and progesterone. Front-loading protein and fat before carbohydrates at each meal blunts the glucose response and supports hormonal rhythm." },
-  { tip: "Iodine deficiency impairs thyroid hormone production, which regulates metabolism and cycle regularity. Seaweed, iodised salt, eggs and dairy are reliable sources — but never megadose; excess is equally harmful." },
-  { tip: "Just 1–2 Brazil nuts daily provides your full selenium requirement. Selenium protects the thyroid from oxidative damage and supports T4-to-T3 conversion — eating more offers no additional benefit." },
-  { tip: "Vitamin D receptors are present in the ovaries, uterus and pituitary. Deficiency links to irregular cycles and reduced fertility. A blood test is the only reliable guide — 2000 IU daily is a safe maintenance dose." },
-  { tip: "Progesterone has a natural sedative effect, peaking in the luteal phase. Disrupted sleep lowers progesterone, which worsens PMS and cycle irregularity. Protecting 7–9 hours is directly hormonal medicine." },
-  { tip: "Chronic stress raises cortisol, which competes with progesterone for the same receptor sites. This relative progesterone deficiency contributes to heavy periods and mood swings. Stress reduction is hormonal care." },
-  { tip: "Calcium supplementation reduces PMS severity by up to 48% in clinical studies. Dairy, fortified plant milks, tinned fish with bones, tofu and broccoli are the best food sources — aim for 1000mg daily." },
-  { tip: "Folate supports DNA synthesis in the rapidly dividing uterine lining. Dark leafy greens, lentils and avocado are the richest sources — particularly important for cycle regularity and egg quality." },
-  { tip: "Zinc inhibits 5-alpha reductase, reducing conversion of testosterone to DHT and lowering sebum production. Hormonal breakouts often respond well to consistent zinc intake from pumpkin seeds or whole foods." },
-  { tip: "Myo-inositol and D-chiro-inositol improve insulin sensitivity and have strong evidence for restoring cycle regularity. Found naturally in citrus fruits, beans and whole grains — or available as supplements." },
-  { tip: "Ashwagandha has robust evidence for reducing cortisol by 15–25% in chronically stressed adults. Lower cortisol directly supports progesterone levels and helps regulate the hormonal rhythm." },
-  { tip: "Maca root contains unique alkaloids that act on the hypothalamus-pituitary axis, supporting hormonal balance without acting as a phytoestrogen. Small trials show benefits for mood, energy and libido." },
-  { tip: "Two cups of spearmint tea daily has been shown in clinical trials to reduce free testosterone in women with elevated androgens. A simple, caffeine-free daily ritual with measurable hormonal effects." },
-  { tip: "Evening primrose oil is rich in gamma-linolenic acid (GLA), which can reduce breast tenderness, period pain and skin inflammation. Most studies used 1–3g daily in the second half of the cycle." },
-  { tip: "Melatonin regulates LH surges and ovulation timing. Blue light from screens after 9 pm suppresses melatonin and can disrupt ovulation and cycle length. Dim warm lighting in the evening protects this rhythm." },
-  { tip: "In the follicular phase, train harder — oestrogen supports performance and recovery. In the luteal phase, intensity feels harder due to elevated progesterone and core temperature. Honouring this shift reduces burnout." },
-  { tip: "Oestrogen decline after 40 accelerates bone loss. Weight-bearing exercise and resistance training are the most effective interventions — calcium and vitamin D support the process, but movement drives bone formation." },
-  { tip: "Phytoestrogens from soy, flaxseed and red clover may reduce hot flash frequency. Studies show greatest benefit in women with more frequent flushes. Avoid common triggers: caffeine, alcohol and hot rooms." },
-  { tip: "Progesterone decline in perimenopause disrupts sleep architecture. A cooler bedroom (16–18°C), no screens 90 min before bed, and magnesium glycinate before sleep all measurably improve sleep quality." },
-  { tip: "The gut microbiome regulates oestrogen recycling. Constipation allows oestrogen to be reabsorbed. Daily fermented foods and adequate fibre keep this enterohepatic cycle moving and hormones in better balance." },
-  { tip: "Prostaglandins drive period pain and are amplified by inflammatory foods. Reducing refined sugar and processed oils while increasing polyphenols and omega-3 is one of the most powerful dietary levers for cycle pain." },
-  { tip: "Curcumin in turmeric inhibits NF-kB, a key inflammatory pathway activated during menstruation. Adding turmeric with black pepper and a healthy fat daily may reduce period-related inflammation over time." },
-  { tip: "Dehydration concentrates prostaglandins in uterine tissue and worsens cramping. Electrolyte-balanced water — a pinch of sea salt and lemon — hydrates cells more effectively than plain water alone." },
+  { cat:"general", tip: "Pair iron-rich foods with vitamin C to triple absorption. Spinach with lemon, lentils with tomato, or red meat with peppers — the combination is far more effective than either alone." },
+  { cat:"cycle", tip: "Ginger is as effective as ibuprofen for menstrual cramps in several clinical trials. Try 1g of fresh ginger in warm water or ginger tea starting 2 days before your period." },
+  { cat:"cycle", tip: "Oestrogen rises in the follicular phase, boosting energy and resilience. This is your prime window for high-intensity training, new challenges and social plans — lean into it." },
+  { cat:"general", tip: "Fermented foods like kefir, yoghurt and kimchi support the oestrobolome — the gut bacteria that regulate oestrogen metabolism. One serving daily improves hormonal clearance over time." },
+  { cat:"cycle", tip: "Zinc supports follicular development and is heavily used at ovulation. Pumpkin seeds, hemp seeds and oysters are excellent sources — aim for one zinc-rich food daily around mid-cycle." },
+  { cat:"cycle", tip: "EPA and DHA from fatty fish reduce prostaglandins — the compounds that trigger menstrual cramps. Two servings of salmon, mackerel or sardines weekly can reduce pain intensity over time." },
+  { cat:"cycle", tip: "Magnesium levels drop in the luteal phase, worsening mood, cravings and sleep. Dark chocolate, almonds and leafy greens are the richest sources — aim for one daily in the week before your period." },
+  { cat:"cycle", tip: "Progesterone and oestrogen fluctuations in the luteal phase increase water retention. Reducing sodium, processed foods and alcohol in the 7 days before your period can significantly ease bloating." },
+  { cat:"cycle", tip: "In the follicular phase (days 1–14), 1 tbsp each of ground flaxseed and pumpkin seeds daily may support oestrogen production. Flax lignans act as natural oestrogen modulators." },
+  { cat:"cycle", tip: "In the luteal phase (days 15–28), 1 tbsp each of sesame and sunflower seeds daily provides zinc and selenium to support progesterone. Consistent use over 3 cycles may improve PMS." },
+  { cat:"peri", tip: "Flaxseeds, soy, chickpeas and lentils contain phytoestrogens — plant compounds that weakly bind oestrogen receptors, helping to ease perimenopausal symptoms and moderate oestrogen dominance." },
+  { cat:"general", tip: "Dietary fibre binds excess oestrogen in the gut for excretion. Insufficient fibre allows oestrogen to be reabsorbed, worsening hormonal symptoms. Aim for 25–35g daily from vegetables and legumes." },
+  { cat:"cycle", tip: "Vitamin B6 is essential for progesterone synthesis and reduces PMS-related anxiety and low mood. Avocado, banana, chicken, tuna and pistachio nuts are among the richest food sources." },
+  { cat:"general", tip: "Blood sugar spikes trigger cortisol, which disrupts oestrogen and progesterone. Front-loading protein and fat before carbohydrates at each meal blunts the glucose response and supports hormonal rhythm." },
+  { cat:"cycle", tip: "Iodine deficiency impairs thyroid hormone production, which regulates metabolism and cycle regularity. Seaweed, iodised salt, eggs and dairy are reliable sources — but never megadose; excess is equally harmful." },
+  { cat:"general", tip: "Just 1–2 Brazil nuts daily provides your full selenium requirement. Selenium protects the thyroid from oxidative damage and supports T4-to-T3 conversion — eating more offers no additional benefit." },
+  { cat:"cycle", tip: "Vitamin D receptors are present in the ovaries, uterus and pituitary. Deficiency links to irregular cycles and reduced fertility. A blood test is the only reliable guide — 2000 IU daily is a safe maintenance dose." },
+  { cat:"cycle", tip: "Progesterone has a natural sedative effect, peaking in the luteal phase. Disrupted sleep lowers progesterone, which worsens PMS and cycle irregularity. Protecting 7–9 hours is directly hormonal medicine." },
+  { cat:"cycle", tip: "Chronic stress raises cortisol, which competes with progesterone for the same receptor sites. This relative progesterone deficiency contributes to heavy periods and mood swings. Stress reduction is hormonal care." },
+  { cat:"cycle", tip: "Calcium supplementation reduces PMS severity by up to 48% in clinical studies. Dairy, fortified plant milks, tinned fish with bones, tofu and broccoli are the best food sources — aim for 1000mg daily." },
+  { cat:"cycle", tip: "Folate supports DNA synthesis in the rapidly dividing uterine lining. Dark leafy greens, lentils and avocado are the richest sources — particularly important for cycle regularity and egg quality." },
+  { cat:"general", tip: "Zinc inhibits 5-alpha reductase, reducing conversion of testosterone to DHT and lowering sebum production. Hormonal breakouts often respond well to consistent zinc intake from pumpkin seeds or whole foods." },
+  { cat:"cycle", tip: "Myo-inositol and D-chiro-inositol improve insulin sensitivity and have strong evidence for restoring cycle regularity. Found naturally in citrus fruits, beans and whole grains — or available as supplements." },
+  { cat:"general", tip: "Ashwagandha has robust evidence for reducing cortisol by 15–25% in chronically stressed adults. Lower cortisol directly supports progesterone levels and helps regulate the hormonal rhythm." },
+  { cat:"general", tip: "Maca root contains unique alkaloids that act on the hypothalamus-pituitary axis, supporting hormonal balance without acting as a phytoestrogen. Small trials show benefits for mood, energy and libido." },
+  { cat:"general", tip: "Two cups of spearmint tea daily has been shown in clinical trials to reduce free testosterone in women with elevated androgens. A simple, caffeine-free daily ritual with measurable hormonal effects." },
+  { cat:"cycle", tip: "Evening primrose oil is rich in gamma-linolenic acid (GLA), which can reduce breast tenderness, period pain and skin inflammation. Most studies used 1–3g daily in the second half of the cycle." },
+  { cat:"cycle", tip: "Melatonin regulates LH surges and ovulation timing. Blue light from screens after 9 pm suppresses melatonin and can disrupt ovulation and cycle length. Dim warm lighting in the evening protects this rhythm." },
+  { cat:"cycle", tip: "In the follicular phase, train harder — oestrogen supports performance and recovery. In the luteal phase, intensity feels harder due to elevated progesterone and core temperature. Honouring this shift reduces burnout." },
+  { cat:"peri", tip: "Oestrogen decline after 40 accelerates bone loss. Weight-bearing exercise and resistance training are the most effective interventions — calcium and vitamin D support the process, but movement drives bone formation." },
+  { cat:"peri", tip: "Phytoestrogens from soy, flaxseed and red clover may reduce hot flash frequency. Studies show greatest benefit in women with more frequent flushes. Avoid common triggers: caffeine, alcohol and hot rooms." },
+  { cat:"peri", tip: "Progesterone decline in perimenopause disrupts sleep architecture. A cooler bedroom (16–18°C), no screens 90 min before bed, and magnesium glycinate before sleep all measurably improve sleep quality." },
+  { cat:"general", tip: "The gut microbiome regulates oestrogen recycling. Constipation allows oestrogen to be reabsorbed. Daily fermented foods and adequate fibre keep this enterohepatic cycle moving and hormones in better balance." },
+  { cat:"cycle", tip: "Prostaglandins drive period pain and are amplified by inflammatory foods. Reducing refined sugar and processed oils while increasing polyphenols and omega-3 is one of the most powerful dietary levers for cycle pain." },
+  { cat:"cycle", tip: "Curcumin in turmeric inhibits NF-kB, a key inflammatory pathway activated during menstruation. Adding turmeric with black pepper and a healthy fat daily may reduce period-related inflammation over time." },
+  { cat:"cycle", tip: "Dehydration concentrates prostaglandins in uterine tissue and worsens cramping. Electrolyte-balanced water — a pinch of sea salt and lemon — hydrates cells more effectively than plain water alone." },
 ];
 
 const PHASE_EXTRAS = {
@@ -144,7 +147,8 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
 
   const isFemale     = profile?.sex === "female";
   const isMale       = profile?.sex === "male";
-  const isPeri       = profile?.biologicalTrackingEnabled && profile?.biologicalContext === "perimenopause";
+  const isPeri       = profile?.biologicalTrackingEnabled && (profile?.biologicalContext === "perimenopause" || profile?.biologicalContext === "menopause");
+  const hormonalTipsPool = HORMONAL_TIPS.filter(t => t.cat !== "cycle");
   const foodE        = entries.filter(e=>e.type==="food");
   const exerE        = entries.filter(e=>e.type==="exercise");
   const totalCal     = foodE.reduce((s,e)=>s+(e.calories||0),0);
@@ -859,7 +863,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:3}}>
               <p style={{fontSize:10,fontWeight:700,color:C.amber,textTransform:"uppercase",letterSpacing:"0.05em",margin:0}}>Hormonal balance</p>
             </div>
-            <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{pickDailyVariant("perimenopause_tip",HORMONAL_TIPS).tip}</p>
+            <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{pickDailyVariant("perimenopause_tip",hormonalTipsPool).tip}</p>
           </div>
         )}
         {isMale&&maleTip&&(

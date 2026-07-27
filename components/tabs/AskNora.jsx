@@ -149,6 +149,12 @@ export default function AskNora({ profile, targets, entries, waterMl, cyclePhase
 
     const suppList  = supps.map(s => s.name).join(", ") || "none";
     const cycleInfo = cyclePhase ? `${cyclePhase.label} phase, day ${cyclePhase.day}. ${cyclePhase.tip}` : "Not applicable";
+    // profile.perimenopause never existed as a field — the real signal is
+    // biologicalContext, opt-in via biologicalTrackingEnabled.
+    const bioNote = !profile?.biologicalTrackingEnabled ? ""
+      : profile?.biologicalContext === "perimenopause" ? " (perimenopausal)"
+      : profile?.biologicalContext === "menopause" ? " (postmenopausal)"
+      : "";
 
     const challengeTitle = activeChallenges?.[0]?.title?.replace(/^✦ For Her - |^✦ For Him - /, "") || null;
     const now = new Date();
@@ -173,7 +179,7 @@ export default function AskNora({ profile, targets, entries, waterMl, cyclePhase
     return `You are Nora — an elegant, evidence-based nutrition companion. You speak with precision and warmth. You have full access to this user's profile, daily food log, macro targets, and nutritional gap analysis.
 
 USER PROFILE:
-• Name: ${profile?.name || "User"} | Age: ${profile?.age || "—"} | Sex: ${profile?.sex || "—"}${profile?.perimenopause ? " (perimenopausal)" : ""}
+• Name: ${profile?.name || "User"} | Age: ${profile?.age || "—"} | Sex: ${profile?.sex || "—"}${bioNote}
 • Activity: ${profile?.activity || "not specified"} | Goals: ${(profile?.goals || []).join(", ") || "general health"}
 • Dietary preferences: ${profile?.preferences || "none stated"}
 
@@ -197,6 +203,8 @@ ACCURACY RULES (non-negotiable):
 - Nutritional values in the food log are user-logged estimates, not lab measurements — reflect this when citing them.
 - If uncertain about something, say so clearly: "I'm not certain, but…" or "Current evidence suggests…"
 - Do not invent studies, statistics, or micronutrient amounts you cannot verify with confidence.
+
+PERSONALISATION BY SEX/BIOLOGICAL CONTEXT: use Sex and the biological context above (perimenopausal/postmenopausal, or the cycle status below) to genuinely shape nutrition guidance when relevant — don't just acknowledge them as demographic facts. Iron needs are strongly tied to menstrual blood loss: weight iron considerations higher for users actively cycling, but not by default for men or for perimenopausal/postmenopausal users unless the food log itself clearly lacks iron. For perimenopausal/postmenopausal users, bone health (calcium, vitamin D, weight-bearing movement) deserves more weight given accelerated bone density loss after oestrogen decline. Never invent claims beyond established science, and never bring this up unprompted if it isn't relevant to the user's actual question.
 
 SAFETY RULES (non-negotiable):
 - Never diagnose conditions, interpret lab results, or suggest medications.
