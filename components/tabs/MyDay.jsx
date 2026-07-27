@@ -96,7 +96,7 @@ const fmtRemaining = (ms) => {
   return `${m}m`;
 };
 
-export default function MyDay({ profile, targets, entries, logMeal, updateMeal, deleteMeal, clearTodayMeals, waterMl, setWaterMl, cyclePhase, activeChallenges, checkInChallenge, setActiveTab, fastingEnabled, fastingStart, fastingEnd, fastingMode, fastingExtendedStartAt, fastingExtendedHours, logWaterEntry }) {
+export default function MyDay({ profile, targets, entries, logMeal, updateMeal, deleteMeal, clearTodayMeals, waterMl, setWaterMl, cyclePhase, activeChallenges, checkInChallenge, setActiveTab, fastingEnabled, fastingStart, fastingEnd, fastingMode, fastingExtendedStartAt, fastingExtendedHours, logWaterEntry, lookupCommunityBarcode, saveCommunityBarcode }) {
   const [greeting,          setGreeting]          = useState("");
   const [greetingLoad,      setGreetingLoad]      = useState(false);
   const [greetingDone,      setGreetingDone]      = useState(false);
@@ -120,6 +120,12 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   const [barcodeError,      setBarcodeError]      = useState("");
   const [manualBarcode,     setManualBarcode]     = useState("");
   const [cameraActive,      setCameraActive]      = useState(false);
+  const [manualAddOpen,     setManualAddOpen]     = useState(false);
+  const [manualAddForm,     setManualAddForm]     = useState({ name:"", kcal:"", protein:"", carbs:"", fat:"" });
+  const [manualAddError,    setManualAddError]    = useState("");
+  const [manualAddSaving,   setManualAddSaving]   = useState(false);
+  const [manualAddThanks,   setManualAddThanks]   = useState(false);
+  const [currentBarcode,    setCurrentBarcode]    = useState("");
   const [plateMode,        setPlateMode]        = useState(false);
   const [platePreviewUrl,  setPlatePreviewUrl]  = useState(null);
   const [plateLoad,        setPlateLoad]        = useState(false);
@@ -277,8 +283,24 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   const lookupBarcode = async (code) => {
     console.log("[Nora][barcode DEBUG] lookupBarcode called with code:", code); // TEMPORAR — de șters după diagnostic
     setBarcodeLoad(true); setBarcodeError(""); setBarcodeResult(null); setBarcodeGrams("100");
+    setManualAddOpen(false); setManualAddError(""); setManualAddThanks(false);
+    setCurrentBarcode(code);
     stopBarcodeCamera();
-    // Try Open Food Facts first (free, no key)
+    // G4 — Nora's own community database first: a code added once by any user
+    // benefits every future scan of it, before ever asking OFF/USDA.
+    try {
+      const community = await lookupCommunityBarcode?.(code);
+      if (community) {
+        setBarcodeResult({
+          name: community.name, brand: null, image: null, nutriScore: null, ingredients: null,
+          kcal: community.kcal || 0, protein: community.protein_g || 0, carbs: community.carbs_g || 0, fat: community.fat_g || 0,
+          source: "Nora community",
+        });
+        setBarcodeLoad(false);
+        return;
+      }
+    } catch {}
+    // Then Open Food Facts (free, no key)
     try {
       const offRes  = await fetch(`https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`);
       const offData = await offRes.json();
@@ -336,9 +358,32 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
     } catch (e) {
       console.log("[Nora][barcode DEBUG] USDA fallback fetch threw:", e?.name, e?.message); // TEMPORAR
     }
-    console.log("[Nora][barcode DEBUG] not found in OFF or USDA — showing error"); // TEMPORAR
-    setBarcodeError("Product not found. Try entering the barcode again or log manually.");
+    console.log("[Nora][barcode DEBUG] not found anywhere — offering manual add"); // TEMPORAR
+    setManualAddOpen(true);
     setBarcodeLoad(false);
+  };
+
+  const saveManualBarcodeEntry = async () => {
+    const name = manualAddForm.name.trim();
+    const kcal = parseFloat(manualAddForm.kcal);
+    const protein = parseFloat(manualAddForm.protein) || 0;
+    const carbs = parseFloat(manualAddForm.carbs) || 0;
+    const fat = parseFloat(manualAddForm.fat) || 0;
+
+    if (!name) { setManualAddError("Enter a product name."); return; }
+    if (!Number.isFinite(kcal) || kcal < 0 || kcal > 900) { setManualAddError("Calories per 100g should be between 0 and 900."); return; }
+    if (protein + carbs + fat > 100) { setManualAddError("Protein + carbs + fat can't add up to more than 100g per 100g."); return; }
+
+    setManualAddError("");
+    setManualAddSaving(true);
+    const result = await saveCommunityBarcode?.(currentBarcode, { name, kcal, protein_g: protein, carbs_g: carbs, fat_g: fat });
+    setManualAddSaving(false);
+    if (!result?.ok) { setManualAddError(result?.error || "Couldn't save this product. Try again."); return; }
+
+    setBarcodeResult({ name, brand: null, image: null, nutriScore: null, ingredients: null, kcal, protein, carbs, fat, source: "Nora community" });
+    setManualAddOpen(false);
+    setManualAddThanks(true);
+    setManualAddForm({ name:"", kcal:"", protein:"", carbs:"", fat:"" });
   };
 
   const startBarcodeCamera = async () => {
@@ -402,6 +447,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   const closeBarcodeModal = () => {
     stopBarcodeCamera();
     setBarcodeOpen(false); setBarcodeResult(null); setBarcodeGrams("100"); setBarcodeError(""); setManualBarcode(""); setBarcodeLoad(false);
+    setManualAddOpen(false); setManualAddError(""); setManualAddThanks(false); setManualAddForm({ name:"", kcal:"", protein:"", carbs:"", fat:"" }); setCurrentBarcode("");
   };
 
   const logBarcodeProduct = () => {
@@ -1017,6 +1063,31 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                 </div>
               )}
 
+              {/* Manual add — no source had this barcode */}
+              {manualAddOpen && !barcodeLoad && (
+                <div style={{...card,padding:"16px",marginBottom:14,animation:"fadeIn 0.2s ease"}}>
+                  <p style={{fontSize:13,color:C.text,fontWeight:600,margin:"0 0 3px"}}>Product not found</p>
+                  <p style={{fontSize:12,color:C.muted,margin:"0 0 14px",lineHeight:1.5}}>Add it once — Nora remembers it for next time, for you and everyone else who scans this code.</p>
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    <input placeholder="Product name" value={manualAddForm.name} onChange={e=>setManualAddForm(f=>({...f,name:e.target.value}))} style={inp}/>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                      <input type="number" placeholder="Calories /100g" value={manualAddForm.kcal} onChange={e=>setManualAddForm(f=>({...f,kcal:e.target.value}))} style={inp}/>
+                      <input type="number" placeholder="Protein g /100g" value={manualAddForm.protein} onChange={e=>setManualAddForm(f=>({...f,protein:e.target.value}))} style={inp}/>
+                      <input type="number" placeholder="Carbs g /100g" value={manualAddForm.carbs} onChange={e=>setManualAddForm(f=>({...f,carbs:e.target.value}))} style={inp}/>
+                      <input type="number" placeholder="Fat g /100g" value={manualAddForm.fat} onChange={e=>setManualAddForm(f=>({...f,fat:e.target.value}))} style={inp}/>
+                    </div>
+                  </div>
+                  {manualAddError && <p style={{fontSize:12,color:C.error,margin:"10px 0 0"}}>{manualAddError}</p>}
+                  <button onClick={saveManualBarcodeEntry} disabled={manualAddSaving} style={{width:"100%",marginTop:12,padding:"12px",backgroundColor:manualAddSaving?"#C8D5D1":C.green,color:C.bg,border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:manualAddSaving?"not-allowed":"pointer"}}>{manualAddSaving?"Saving…":"Save & log"}</button>
+                  <button onClick={()=>{setManualAddOpen(false);setManualBarcode("");startBarcodeCamera();}} style={{width:"100%",marginTop:8,padding:"10px",background:"none",color:C.muted,border:"none",fontSize:12,cursor:"pointer"}}>Try scanning again instead</button>
+                </div>
+              )}
+
+              {/* Thanks for a manual contribution — shown once, above the logged result */}
+              {manualAddThanks && barcodeResult && !barcodeLoad && (
+                <p style={{fontSize:12,color:C.sage,margin:"0 0 10px",fontStyle:"italic"}}>Added — thank you, this helps someone else log this too.</p>
+              )}
+
               {/* Product result */}
               {barcodeResult && !barcodeLoad && (() => {
                 const gramsNum = Math.max(1, parseFloat(barcodeGrams) || 100);
@@ -1081,7 +1152,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                       Add to today's log
                     </button>
                   </div>
-                  <button onClick={()=>{setBarcodeResult(null);setBarcodeGrams("100");setBarcodeError("");setManualBarcode("");startBarcodeCamera();}} style={{width:"100%",padding:"12px",backgroundColor:"transparent",color:C.green,border:`1.5px solid ${C.green}`,borderRadius:12,fontSize:13,fontWeight:500,cursor:"pointer"}}>
+                  <button onClick={()=>{setBarcodeResult(null);setBarcodeGrams("100");setBarcodeError("");setManualBarcode("");setManualAddThanks(false);startBarcodeCamera();}} style={{width:"100%",padding:"12px",backgroundColor:"transparent",color:C.green,border:`1.5px solid ${C.green}`,borderRadius:12,fontSize:13,fontWeight:500,cursor:"pointer"}}>
                     Scan another product
                   </button>
                 </div>

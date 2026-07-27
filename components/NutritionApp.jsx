@@ -509,6 +509,22 @@ export default function NutritionApp() {
     } catch {}
   };
 
+  // G4 — Nora's own barcode database, fed by users. Checked before Open Food
+  // Facts/USDA so a code added once benefits every future scan of it.
+  const lookupCommunityBarcode = async (barcode) => {
+    const { data } = await supabase.from("community_barcodes").select("*").eq("barcode", barcode).maybeSingle();
+    return data || null;
+  };
+
+  const saveCommunityBarcode = async (barcode, { name, kcal, protein_g, carbs_g, fat_g }) => {
+    if(!session?.user?.id) return { ok: false, error: "No active session." };
+    const { error } = await supabase.from("community_barcodes").insert({
+      barcode, name, kcal, protein_g, carbs_g, fat_g, created_by: session.user.id,
+    });
+    if(error) return { ok: false, error: error.message };
+    return { ok: true };
+  };
+
   const deleteAccount = async () => {
     if(!session?.access_token) return { ok: false, error: "No active session." };
     try {
@@ -631,7 +647,7 @@ export default function NutritionApp() {
   const ritualStreak = calcRitualStreak(completionDates);
 
   const tabContent = {
-    myday:   <MyDay {...sharedProps} activeChallenges={activeChallenges} checkInChallenge={checkInChallenge} setActiveTab={setActiveTab} fastingEnabled={fastingEnabled} fastingStart={fastingStart} fastingEnd={fastingEnd} fastingMode={fastingMode} fastingExtendedStartAt={fastingExtendedStartAt} fastingExtendedHours={fastingExtendedHours}/>,
+    myday:   <MyDay {...sharedProps} activeChallenges={activeChallenges} checkInChallenge={checkInChallenge} setActiveTab={setActiveTab} fastingEnabled={fastingEnabled} fastingStart={fastingStart} fastingEnd={fastingEnd} fastingMode={fastingMode} fastingExtendedStartAt={fastingExtendedStartAt} fastingExtendedHours={fastingExtendedHours} lookupCommunityBarcode={lookupCommunityBarcode} saveCommunityBarcode={saveCommunityBarcode}/>,
     eat:     <Eat     profile={profile} targets={targets} entries={entries} logMeal={logMeal} cyclePhase={cyclePhase}/>,
     ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} periodLogs={periodLogs} activeChallenges={activeChallenges} startChallenge={startChallenge} checkInChallenge={checkInChallenge} uncheckInChallenge={uncheckInChallenge} abandonChallenge={abandonChallenge} ritualStreak={ritualStreak} markChallengeDone={markChallengeDone} weekMeals={weekMeals} weekWaterLogs={weekWaterLogs} completionDates={completionDates} fastingStart={fastingStart} fastingEnd={fastingEnd}/>,
     boost:   <Boost   profile={profile} targets={targets} entries={entries} cyclePhase={cyclePhase}/>,
