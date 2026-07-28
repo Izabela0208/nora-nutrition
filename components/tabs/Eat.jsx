@@ -77,7 +77,7 @@ const categorizIng = (name) => {
   return "Pantry & Other";
 };
 
-const INGR_STRIP = /\b(diced|chopped|minced|sliced|fresh|dried|frozen|cooked|raw|washed|peeled|crushed|grated|shredded|torn|halved|quartered|cubed|whole|boneless|skinless|lean|ground|pitted|seeded|rinsed|drained|canned|roasted|toasted|blanched|trimmed|cut|about|approximately|large|medium|small|beaten|softened|melted|divided|packed|firmly|lightly|finely|coarsely|thinly|extra|virgin|unsalted|salted|organic|ripe|room|temperature|optional|taste|garnish|serving|plus|more|chunks|strips)\b/gi;
+const INGR_STRIP = /\b(diced|chopped|minced|sliced|fresh|dried|frozen|cooked|raw|washed|peeled|crushed|grated|shredded|torn|halved|quartered|cubed|whole|boneless|skinless|lean|ground|pitted|seeded|rinsed|drained|canned|roasted|toasted|blanched|trimmed|cut|about|approximately|large|medium|small|beaten|softened|melted|divided|packed|firmly|lightly|finely|coarsely|thinly|extra|virgin|unsalted|salted|organic|ripe|room|temperature|optional|taste|garnish|serving|plus|more|chunks|strips|a|an|the|of|at|in|on|to|for|with|and|or|into|from|such|as)\b/gi;
 // Simple English singularizer — covers the common shopping-list plural patterns
 // (eggs, tomatoes, berries, dishes) without a full stemming library.
 const singularizeWord = (w) => {
@@ -1571,6 +1571,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                               const col = G.muted;
                               const logKey = `${day.day}_${mk}`;
                               const logged = !!weekMealLogged[logKey];
+                              const isFav = savedItems.some(i => i.type === "meal" && i.data?.name === m.name);
                               return (
                                 <div key={mk} style={{ backgroundColor:G.ivory, borderRadius:12, border:`1px solid ${G.border}`, overflow:"hidden" }}>
                                   {m.image && <div style={{ width:"100%", height:160, overflow:"hidden" }}><img src={m.image} alt={m.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} loading="lazy"/></div>}
@@ -1583,6 +1584,9 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                                       <button onClick={() => { if (!logged) { addToLog({ name:m.name, calories:m.calories||0, protein_g:m.protein_g||0, carbs_g:m.carbs_g||0, fat_g:m.fat_g||0, fiber_g:0, notes:`Week prep — ${day.day}` }); setWeekMealLogged(p => ({ ...p, [logKey]:true })); } }} style={{ fontSize:11, color: logged ? G.sage : G.forest, background:"none", border:`1.5px solid ${logged ? G.sage : G.forest}40`, borderRadius:7, padding:"5px 10px", cursor: logged ? "default" : "pointer", fontWeight:600, fontFamily:sans }}>{logged ? "✓ Logged" : "Log"}</button>
                                       <button onClick={() => genWeekMealAlt(day.day, mk)} disabled={!!weekAltLoading[`${day.day}_${mk}`]} title="Generate alternative" style={{ width:34, borderRadius:7, border:`1.5px solid ${G.border}`, background:"none", cursor: weekAltLoading[`${day.day}_${mk}`] ? "not-allowed" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:15, color:G.muted, opacity: weekAltLoading[`${day.day}_${mk}`] ? 0.5 : 1, padding:"5px" }}>
                                         {weekAltLoading[`${day.day}_${mk}`] ? <Spinner/> : "↻"}
+                                      </button>
+                                      <button onClick={() => toggleMealFavourite(m)} title={isFav ? "Remove" : "Save"} style={{ width:34, borderRadius:7, border:`1.5px solid ${G.border}`, background:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, padding:"5px" }}>
+                                        <HeartIcon size={14} color={isFav ? G.forest : G.muted} filled={isFav}/>
                                       </button>
                                     </div>
                                   </div>
