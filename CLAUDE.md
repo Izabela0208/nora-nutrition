@@ -49,7 +49,7 @@ Reguli stricte — respectă-le la ORICE modificare de UI:
 
 \- \*\*Imagini (rețete etc.):\*\* tratament uniform obligatoriu — desaturare 10–15% + overlay subtil verde-cald, prin CSS, peste toate imaginile externe.
 
-\- \*\*Iconografie:\*\* line-style subțire (stroke 1.5px), neutră. Bookmark în loc de inimă pentru favorite. Fără inimioare, flori delicate, ornamente "pretty".
+\- \*\*Iconografie:\*\* line-style subțire (stroke 1.5px), neutră. Inimioară (❤️, HeartIcon) consecvent pentru favorite/salvare, în toată aplicația. Fără flori delicate, ornamente "pretty".
 
 \- \*\*Ilustrații botanice:\*\* doar watermark (opacitate 4–6%), motive nordice: ferigă, ramuri de conifer, stejar. NU monstera, palmieri, tropical.
 

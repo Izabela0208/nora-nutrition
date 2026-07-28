@@ -247,7 +247,7 @@ const IngList = ({ ingredients, checked, onToggle, accentColor }) => (
 
 const DESSERT_CAT_COLORS = { "No-Bake":"#7A9E8A","Frozen":"#1B3A2D","Baked":"#C9A84C","Mousse & Pudding":"#8C9E97","Energy Balls":"#2D5A45","Fruit-Based":"#9A7020" };
 
-const DessertCard = ({ dessert, isSaved, onToggleSave, ingChecked, onIngToggle }) => {
+const DessertCard = ({ dessert, isSaved, onToggleSave, ingChecked, onIngToggle, isLogged, onLogEaten }) => {
   const catColor = DESSERT_CAT_COLORS[dessert.category] || G.forest;
   return (
     <details style={{ backgroundColor:G.card, borderRadius:16, border:`1px solid ${G.border}`, overflow:"hidden", boxShadow:"0 1px 5px rgba(27,58,45,0.05)" }}>
@@ -265,7 +265,7 @@ const DessertCard = ({ dessert, isSaved, onToggleSave, ingChecked, onIngToggle }
           </div>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"0 14px", gap:10, flexShrink:0 }}>
             <button onClick={e => { e.stopPropagation(); e.preventDefault(); onToggleSave(); }} style={{ background:"none", border:"none", cursor:"pointer", padding:4 }}>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill={isSaved ? G.forest : "none"} stroke={isSaved ? G.forest : G.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2h12a1 1 0 0 1 1 1v14l-7-3.5L2 17V3a1 1 0 0 1 1-1z"/></svg>
+              <HeartIcon size={18} color={isSaved ? G.forest : G.muted} filled={isSaved}/>
             </button>
             <svg className="card-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M2 5l5 5 5-5" stroke={G.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -316,6 +316,9 @@ const DessertCard = ({ dessert, isSaved, onToggleSave, ingChecked, onIngToggle }
             <p style={{ fontSize:12, color:G.amber, margin:0, lineHeight:1.6 }}>💡 {dessert.tip}</p>
           </div>
         )}
+        <button onClick={e => { e.stopPropagation(); e.preventDefault(); if (!isLogged) onLogEaten(); }} style={{ width:"100%", marginTop:14, padding:"11px", backgroundColor: isLogged ? `${G.forest}15` : G.forest, color: isLogged ? G.forest : G.ivory, border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor: isLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+          {isLogged ? <><CheckIcon size={12} color={G.forest}/>Logged</> : "Log this"}
+        </button>
       </div>
     </details>
   );
@@ -376,7 +379,7 @@ const FoodResultCard = ({ food, onClick }) => {
 };
 
 
-const JuiceCard = ({ juice, isSaved, onToggleSave, ingChecked, onIngToggle }) => (
+const JuiceCard = ({ juice, isSaved, onToggleSave, ingChecked, onIngToggle, isLogged, onLogEaten }) => (
   <details style={{ backgroundColor:G.card, borderRadius:16, border:`1px solid ${G.border}`, overflow:"hidden", boxShadow:"0 1px 5px rgba(27,58,45,0.05)" }}>
     <summary style={{ display:"flex", alignItems:"stretch", listStyle:"none", cursor:"pointer" }}>
       <div style={{ flex:1, padding:"14px 0 14px 16px", display:"flex", alignItems:"flex-start", gap:12 }}>
@@ -389,9 +392,7 @@ const JuiceCard = ({ juice, isSaved, onToggleSave, ingChecked, onIngToggle }) =>
       </div>
       <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"0 14px", gap:10, flexShrink:0 }}>
         <button onClick={e => { e.stopPropagation(); e.preventDefault(); onToggleSave(); }} title={isSaved ? "Remove" : "Save"} style={{ background:"none", border:"none", cursor:"pointer", padding:4 }}>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill={isSaved ? G.forest : "none"} stroke={isSaved ? G.forest : G.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 2h12a1 1 0 0 1 1 1v14l-7-3.5L2 17V3a1 1 0 0 1 1-1z"/>
-          </svg>
+          <HeartIcon size={18} color={isSaved ? G.forest : G.muted} filled={isSaved}/>
         </button>
         <svg className="card-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none">
           <path d="M2 5l5 5 5-5" stroke={G.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -440,6 +441,9 @@ const JuiceCard = ({ juice, isSaved, onToggleSave, ingChecked, onIngToggle }) =>
           <p style={{ fontSize:12, color:G.amber, margin:0, lineHeight:1.6 }}>💡 {juice.tip}</p>
         </div>
       )}
+      <button onClick={e => { e.stopPropagation(); e.preventDefault(); if (!isLogged) onLogEaten(); }} style={{ width:"100%", marginTop:14, padding:"11px", backgroundColor: isLogged ? `${G.forest}15` : G.forest, color: isLogged ? G.forest : G.ivory, border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor: isLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+        {isLogged ? <><CheckIcon size={12} color={G.forest}/>Logged</> : "Log this"}
+      </button>
     </div>
   </details>
 );
@@ -512,6 +516,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
   const [juiceCat,      setJuiceCat]      = useState("all");
   const [juiceIngChk,   setJuiceIngChk]   = useState({});
   const [juiceLimit,    setJuiceLimit]    = useState(5);
+  const [loggedJuices,  setLoggedJuices]  = useState({});
 
   // Saved items
   const [savedItems,    setSavedItems]    = useState([]);
@@ -521,6 +526,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
   const [dessertSearch,        setDessertSearch]        = useState("");
   const [dessertCatFilter,     setDessertCatFilter]     = useState("all");
   const [dessertIngChkStatic,  setDessertIngChkStatic]  = useState({});
+  const [loggedDesserts,       setLoggedDesserts]       = useState({});
   const [showAIDessert,        setShowAIDessert]        = useState(false);
   const [dessertLimit,         setDessertLimit]         = useState(5);
 
@@ -625,6 +631,12 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
   const toggleIng = (key, idx) =>
     setIngChecked(p => ({ ...p, [key]: { ...(p[key] || {}), [idx]: !((p[key] || {})[idx]) } }));
 
+  const logJuiceEaten = (juice) => {
+    const m = juice.macros || {};
+    addToLog({ name: juice.name, calories: juice.kcal, protein_g: m.protein_g || 0, carbs_g: m.carbs_g || 0, fat_g: m.fat_g || 0, fiber_g: juice.fiber_g || 0, notes: "Juice" });
+    setLoggedJuices(p => ({ ...p, [juice.id]: true }));
+  };
+
   const toggleSavedJuice = (juice) => {
     const idx = savedItems.findIndex(i => i.type === "juice" && i.data?.id === juice.id);
     const updated = idx >= 0
@@ -632,6 +644,11 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
       : [{ id: Date.now(), date: new Date().toLocaleDateString(), type: "juice", label: juice.name, data: juice }, ...savedItems].slice(0, 50);
     setSavedItems(updated);
     try { localStorage.setItem("nora_saved_items", JSON.stringify(updated)); } catch {}
+  };
+
+  const logDessertEaten = (dessert) => {
+    addToLog({ name: dessert.name, calories: dessert.kcal, protein_g: dessert.macros.protein_g || 0, carbs_g: dessert.macros.carbs_g || 0, fat_g: dessert.macros.fat_g || 0, fiber_g: dessert.fiber_g || 0, notes: "Dessert" });
+    setLoggedDesserts(p => ({ ...p, [dessert.id]: true }));
   };
 
   const toggleSavedDessert = (dessert) => {
@@ -1204,7 +1221,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                         const isSaved = savedItems.some(i => i.type === "food" && i.label === sf.name);
                         return (
                           <button onClick={() => { if (!isSaved) saveItem("food", sf.name, { id:sf.id, name:sf.name, source:sf.source, brand:sf.brand, per100g:sf.per100g, image:sf.image }); }} style={{ width:50, height:50, borderRadius:13, border:`1.5px solid ${isSaved ? G.forest : G.border}`, backgroundColor: isSaved ? `${G.forest}15` : "transparent", cursor: isSaved ? "default" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                            <svg width="18" height="18" viewBox="0 0 18 18" fill={isSaved ? G.forest : "none"} stroke={isSaved ? G.forest : G.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2h12a1 1 0 0 1 1 1v14l-7-3.5L2 17V3a1 1 0 0 1 1-1z"/></svg>
+                            <HeartIcon size={18} color={isSaved ? G.forest : G.muted} filled={isSaved}/>
                           </button>
                         );
                       })()}
@@ -1712,12 +1729,12 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
             {savedJuiceObjects.length > 0 && (
               <div>
                 <p style={{ fontSize:11, fontWeight:700, color:G.forest, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px", display:"flex", alignItems:"center", gap:5 }}>
-                  <svg width="12" height="12" viewBox="0 0 18 18" fill={G.forest} stroke={G.forest} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2h12a1 1 0 0 1 1 1v14l-7-3.5L2 17V3a1 1 0 0 1 1-1z"/></svg>
+                  <HeartIcon size={12} color={G.forest} filled/>
                   Saved
                 </p>
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                   {savedJuiceObjects.map(juice => (
-                    <JuiceCard key={juice.id} juice={juice} isSaved={savedItems.some(i => i.type === "juice" && i.data?.id === juice.id)} onToggleSave={() => toggleSavedJuice(juice)} ingChecked={juiceIngChk} onIngToggle={key => setJuiceIngChk(p => ({ ...p, [key]:!p[key] }))}/>
+                    <JuiceCard key={juice.id} juice={juice} isSaved={savedItems.some(i => i.type === "juice" && i.data?.id === juice.id)} onToggleSave={() => toggleSavedJuice(juice)} ingChecked={juiceIngChk} onIngToggle={key => setJuiceIngChk(p => ({ ...p, [key]:!p[key] }))} isLogged={!!loggedJuices[juice.id]} onLogEaten={() => logJuiceEaten(juice)}/>
                   ))}
                 </div>
               </div>
@@ -1754,7 +1771,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
               <>
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                   {filteredJuices.slice(0, juiceLimit).map(juice => (
-                    <JuiceCard key={juice.id} juice={juice} isSaved={savedItems.some(i => i.type === "juice" && i.data?.id === juice.id)} onToggleSave={() => toggleSavedJuice(juice)} ingChecked={juiceIngChk} onIngToggle={key => setJuiceIngChk(p => ({ ...p, [key]:!p[key] }))}/>
+                    <JuiceCard key={juice.id} juice={juice} isSaved={savedItems.some(i => i.type === "juice" && i.data?.id === juice.id)} onToggleSave={() => toggleSavedJuice(juice)} ingChecked={juiceIngChk} onIngToggle={key => setJuiceIngChk(p => ({ ...p, [key]:!p[key] }))} isLogged={!!loggedJuices[juice.id]} onLogEaten={() => logJuiceEaten(juice)}/>
                   ))}
                 </div>
                 {filteredJuices.length > juiceLimit && (
@@ -1783,12 +1800,12 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
               {savedDessertObjects.length > 0 && (
                 <div>
                   <p style={{ fontSize:11, fontWeight:700, color:G.forest, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px", display:"flex", alignItems:"center", gap:5 }}>
-                    <svg width="12" height="12" viewBox="0 0 18 18" fill={G.forest} stroke={G.forest} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2h12a1 1 0 0 1 1 1v14l-7-3.5L2 17V3a1 1 0 0 1 1-1z"/></svg>
+                    <HeartIcon size={12} color={G.forest} filled/>
                     Saved
                   </p>
                   <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                     {savedDessertObjects.map(d => (
-                      <DessertCard key={d.id} dessert={d} isSaved={true} onToggleSave={() => toggleSavedDessert(d)} ingChecked={dessertIngChkStatic} onIngToggle={k => setDessertIngChkStatic(p => ({ ...p, [k]:!p[k] }))}/>
+                      <DessertCard key={d.id} dessert={d} isSaved={true} onToggleSave={() => toggleSavedDessert(d)} ingChecked={dessertIngChkStatic} onIngToggle={k => setDessertIngChkStatic(p => ({ ...p, [k]:!p[k] }))} isLogged={!!loggedDesserts[d.id]} onLogEaten={() => logDessertEaten(d)}/>
                     ))}
                   </div>
                 </div>
@@ -1829,7 +1846,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                 <>
                   <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                     {filteredDesserts.slice(0, dessertLimit).map(d => (
-                      <DessertCard key={d.id} dessert={d} isSaved={savedItems.some(i => i.type === "dessert" && i.data?.id === d.id)} onToggleSave={() => toggleSavedDessert(d)} ingChecked={dessertIngChkStatic} onIngToggle={k => setDessertIngChkStatic(p => ({ ...p, [k]:!p[k] }))}/>
+                      <DessertCard key={d.id} dessert={d} isSaved={savedItems.some(i => i.type === "dessert" && i.data?.id === d.id)} onToggleSave={() => toggleSavedDessert(d)} ingChecked={dessertIngChkStatic} onIngToggle={k => setDessertIngChkStatic(p => ({ ...p, [k]:!p[k] }))} isLogged={!!loggedDesserts[d.id]} onLogEaten={() => logDessertEaten(d)}/>
                     ))}
                   </div>
                   {filteredDesserts.length > dessertLimit && (
