@@ -269,6 +269,11 @@ export const getCyclePhase = (periodLogs, fallbackCycleLength = 28) => {
   const daysSince = daysBetween(todayStr, mostRecent.start_date);
   const day = daysSince + 1;
 
+  // If far more time has passed than even one predicted cycle (+ grace), the
+  // estimate is no longer trustworthy — stop extrapolating a phase forever.
+  // Same "not tracking" state every consumer already handles (cyclePhase falsy).
+  if (day > cycleLength + 14) return null;
+
   const { follicularEnd, ovulatoryEnd } = scaleCycleBoundaries(periodLength, cycleLength);
   const phase = day <= periodLength ? "menstrual" : day <= follicularEnd ? "follicular" : day <= ovulatoryEnd ? "ovulatory" : "luteal";
   const meta = CYCLE_TIP_POOLS[phase];
