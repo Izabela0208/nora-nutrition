@@ -964,7 +964,6 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
     const matchQ = !juiceQ || j.name.toLowerCase().includes(juiceQ) || j.category.toLowerCase().includes(juiceQ) || (j.benefits||[]).some(b => b.toLowerCase().includes(juiceQ)) || (j.ingredients||[]).some(i => i.item.toLowerCase().includes(juiceQ));
     return matchCat && matchQ;
   });
-  const savedJuiceObjects = savedItems.filter(i => i.type === "juice").map(i => i.data).filter(Boolean);
 
   const GBtn = ({ onClick, disabled, children }) => (
     <button onClick={onClick} disabled={!!disabled} style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", padding:"14px", backgroundColor: disabled ? `${G.forest}80` : G.forest, color:G.ivory, border:"none", borderRadius:14, fontSize:14, fontWeight:600, fontFamily:sans, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.8 : 1 }}>
@@ -1727,20 +1726,6 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
         {activeSection === "juice" && (
           <div style={{ display:"flex", flexDirection:"column", gap:16, animation:"sectionIn 0.22s ease", paddingBottom:28 }}>
 
-            {savedJuiceObjects.length > 0 && (
-              <div>
-                <p style={{ fontSize:11, fontWeight:700, color:G.forest, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px", display:"flex", alignItems:"center", gap:5 }}>
-                  <HeartIcon size={12} color={G.forest} filled/>
-                  Saved
-                </p>
-                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                  {savedJuiceObjects.map(juice => (
-                    <JuiceCard key={juice.id} juice={juice} isSaved={savedItems.some(i => i.type === "juice" && i.data?.id === juice.id)} onToggleSave={() => toggleSavedJuice(juice)} ingChecked={juiceIngChk} onIngToggle={key => setJuiceIngChk(p => ({ ...p, [key]:!p[key] }))} isLogged={!!loggedJuices[juice.id]} onLogEaten={() => logJuiceEaten(juice)}/>
-                  ))}
-                </div>
-              </div>
-            )}
-
           <div style={{ ...card, padding:"20px 18px 22px" }}>
             <p style={STitleStyle}>Fresh Juices</p>
             <div style={{ position:"relative", marginBottom:12 }}>
@@ -1793,24 +1778,8 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
             const matchQ = !dQ || d.name.toLowerCase().includes(dQ) || d.category.toLowerCase().includes(dQ) || (d.benefits||[]).some(b => b.toLowerCase().includes(dQ)) || (d.ingredients||[]).some(i => i.item.toLowerCase().includes(dQ));
             return matchCat && matchQ;
           });
-          const savedDessertObjects = savedItems.filter(i => i.type === "dessert").map(i => i.data).filter(Boolean);
           return (
             <div style={{ display:"flex", flexDirection:"column", gap:16, animation:"sectionIn 0.22s ease", paddingBottom:28 }}>
-
-              {/* Saved desserts */}
-              {savedDessertObjects.length > 0 && (
-                <div>
-                  <p style={{ fontSize:11, fontWeight:700, color:G.forest, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px", display:"flex", alignItems:"center", gap:5 }}>
-                    <HeartIcon size={12} color={G.forest} filled/>
-                    Saved
-                  </p>
-                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                    {savedDessertObjects.map(d => (
-                      <DessertCard key={d.id} dessert={d} isSaved={true} onToggleSave={() => toggleSavedDessert(d)} ingChecked={dessertIngChkStatic} onIngToggle={k => setDessertIngChkStatic(p => ({ ...p, [k]:!p[k] }))} isLogged={!!loggedDesserts[d.id]} onLogEaten={() => logDessertEaten(d)}/>
-                    ))}
-                  </div>
-                </div>
-              )}
 
             <div style={{ ...card, padding:"20px 18px 22px" }}>
               <p style={STitleStyle}>Desserts</p>
