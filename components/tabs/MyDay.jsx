@@ -44,19 +44,19 @@ const HORMONAL_TIPS = [
   { cat:"general", tip: "Dietary fibre binds excess oestrogen in the gut for excretion. Insufficient fibre allows oestrogen to be reabsorbed, worsening hormonal symptoms. Aim for 25–35g daily from vegetables and legumes." },
   { cat:"cycle", tip: "Vitamin B6 is essential for progesterone synthesis and reduces PMS-related anxiety and low mood. Avocado, banana, chicken, tuna and pistachio nuts are among the richest food sources." },
   { cat:"general", tip: "Blood sugar spikes trigger cortisol, which disrupts oestrogen and progesterone. Front-loading protein and fat before carbohydrates at each meal blunts the glucose response and supports hormonal rhythm." },
-  { cat:"cycle", tip: "Iodine deficiency impairs thyroid hormone production, which regulates metabolism and cycle regularity. Seaweed, iodised salt, eggs and dairy are reliable sources — but never megadose; excess is equally harmful." },
+  { cat:"cycle", tip: "Low iodine intake can impair thyroid hormone production, which regulates metabolism and cycle regularity. Seaweed, iodised salt, eggs and dairy are reliable sources — but more isn't better; excess may be equally harmful." },
   { cat:"general", tip: "Just 1–2 Brazil nuts daily provides your full selenium requirement. Selenium protects the thyroid from oxidative damage and supports T4-to-T3 conversion — eating more offers no additional benefit." },
-  { cat:"cycle", tip: "Vitamin D receptors are present in the ovaries, uterus and pituitary. Deficiency links to irregular cycles and reduced fertility. A blood test is the only reliable guide — 2000 IU daily is a safe maintenance dose." },
+  { cat:"cycle", tip: "Vitamin D receptors are present in the ovaries, uterus and pituitary. Low levels are linked to irregular cycles and reduced fertility in some studies. A blood test is the best way to know where you stand — talk to your doctor about whether a maintenance supplement makes sense for you." },
   { cat:"cycle", tip: "Progesterone has a natural sedative effect, peaking in the luteal phase. Disrupted sleep lowers progesterone, which worsens PMS and cycle irregularity. Protecting 7–9 hours is directly hormonal medicine." },
-  { cat:"cycle", tip: "Chronic stress raises cortisol, which competes with progesterone for the same receptor sites. This relative progesterone deficiency contributes to heavy periods and mood swings. Stress reduction is hormonal care." },
-  { cat:"cycle", tip: "Calcium supplementation reduces PMS severity by up to 48% in clinical studies. Dairy, fortified plant milks, tinned fish with bones, tofu and broccoli are the best food sources — aim for 1000mg daily." },
+  { cat:"cycle", tip: "Chronic stress raises cortisol, which competes with progesterone for the same receptor sites. This relative progesterone drop may contribute to heavier periods and mood swings. Stress reduction is a form of hormonal care." },
+  { cat:"cycle", tip: "Calcium supplementation may help reduce PMS severity, according to clinical studies. Dairy, fortified plant milks, tinned fish with bones, tofu and broccoli are the best food sources — worth including some most days." },
   { cat:"cycle", tip: "Folate supports DNA synthesis in the rapidly dividing uterine lining. Dark leafy greens, lentils and avocado are the richest sources — particularly important for cycle regularity and egg quality." },
   { cat:"general", tip: "Zinc inhibits 5-alpha reductase, reducing conversion of testosterone to DHT and lowering sebum production. Hormonal breakouts often respond well to consistent zinc intake from pumpkin seeds or whole foods." },
   { cat:"cycle", tip: "Myo-inositol and D-chiro-inositol improve insulin sensitivity and have strong evidence for restoring cycle regularity. Found naturally in citrus fruits, beans and whole grains — or available as supplements." },
-  { cat:"general", tip: "Ashwagandha has robust evidence for reducing cortisol by 15–25% in chronically stressed adults. Lower cortisol directly supports progesterone levels and helps regulate the hormonal rhythm." },
+  { cat:"general", tip: "Ashwagandha has good evidence for helping reduce cortisol in chronically stressed adults. Lower cortisol may support progesterone levels and help regulate the hormonal rhythm." },
   { cat:"general", tip: "Maca root contains unique alkaloids that act on the hypothalamus-pituitary axis, supporting hormonal balance without acting as a phytoestrogen. Small trials show benefits for mood, energy and libido." },
   { cat:"general", tip: "Two cups of spearmint tea daily has been shown in clinical trials to reduce free testosterone in women with elevated androgens. A simple, caffeine-free daily ritual with measurable hormonal effects." },
-  { cat:"cycle", tip: "Evening primrose oil is rich in gamma-linolenic acid (GLA), which can reduce breast tenderness, period pain and skin inflammation. Most studies used 1–3g daily in the second half of the cycle." },
+  { cat:"cycle", tip: "Evening primrose oil is rich in gamma-linolenic acid (GLA), which studies suggest may help ease breast tenderness, period pain and skin inflammation when taken in the second half of the cycle." },
   { cat:"cycle", tip: "Melatonin regulates LH surges and ovulation timing. Blue light from screens after 9 pm suppresses melatonin and can disrupt ovulation and cycle length. Dim warm lighting in the evening protects this rhythm." },
   { cat:"cycle", tip: "In the follicular phase, train harder — oestrogen supports performance and recovery. In the luteal phase, intensity feels harder due to elevated progesterone and core temperature. Honouring this shift reduces burnout." },
   { cat:"peri", tip: "Oestrogen decline after 40 accelerates bone loss. Weight-bearing exercise and resistance training are the most effective interventions — calcium and vitamin D support the process, but movement drives bone formation." },
@@ -906,6 +906,10 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
             <p style={{fontFamily:serif,fontSize:15,fontWeight:500,color:C.ivory,lineHeight:1.75,margin:0,fontStyle:"italic"}}>{eveningSummary}</p>
           </div>
         )}
+
+        <p style={{fontSize:11,color:C.muted,textAlign:"center",lineHeight:1.6,padding:"0 16px"}}>
+          Informational only, not medical advice. Talk to your doctor or a registered dietitian for guidance specific to you.
+        </p>
 
       {/* ── Plate analysis modal ── */}
       {plateMode&&(

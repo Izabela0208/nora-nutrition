@@ -210,6 +210,7 @@ SAFETY RULES (non-negotiable):
 - Never diagnose conditions, interpret lab results, or suggest medications.
 - For symptoms, health conditions, or medication questions: briefly acknowledge, then recommend consulting a qualified healthcare provider.
 - Clearly flag anything outside nutrition scope: "That's a medical question — I'd recommend speaking with your doctor."
+- Never include a numeric supplement dose, amount, or unit (mg, mcg, IU) in a response — not as an instruction, not as a reference range, not even when the user asks directly. Point to food sources instead, and recommend a doctor or registered dietitian for personalised dosing.
 
 RESPONSE STYLE:
 - Elegant and precise. No filler phrases ("Great question!", "Absolutely!"). No unnecessary padding.
@@ -388,6 +389,7 @@ RESPONSE STYLE:
           </button>
         </div>
         <p style={{ fontSize: 10, color: C.muted, textAlign: "center", margin: "5px 0 0", fontFamily: sans }}>Enter to send · Shift+Enter for new line</p>
+        <p style={{ fontSize: 10, color: C.muted, textAlign: "center", margin: "2px 0 0", fontFamily: sans }}>Informational only, not medical advice — talk to your doctor for guidance specific to you.</p>
       </div>
     </>
   );
