@@ -26,6 +26,61 @@ const parseJSON = (text) => {
   }
 };
 
+// Resizes to Claude Vision's own effective max (~1568px long edge - larger doesn't improve
+// accuracy) and re-encodes as JPEG. This also normalises the format, so HEIC photos (the iPhone
+// camera default) come out as plain JPEG - as long as the browser can decode the source image
+// into <img> at all (true on iOS Safari, which has native HEIC support; browsers that genuinely
+// can't decode the source format surface as UNSUPPORTED_FORMAT below, not a silent failure).
+const resizeImageToJPEG = (file, maxDim = 1568, quality = 0.85) => new Promise((resolve, reject) => {
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    URL.revokeObjectURL(url);
+    let { width, height } = img;
+    if (width > maxDim || height > maxDim) {
+      if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+      else { width = Math.round(width * maxDim / height); height = maxDim; }
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = width; canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(img, 0, 0, width, height);
+    canvas.toBlob(blob => {
+      if (!blob) { reject(new Error("UNSUPPORTED_FORMAT")); return; }
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(",")[1]);
+      reader.onerror = () => reject(new Error("READ_FAILED"));
+      reader.readAsDataURL(blob);
+    }, "image/jpeg", quality);
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("UNSUPPORTED_FORMAT")); };
+  img.src = url;
+});
+
+// Vision-specific caller: unlike callClaude below, this checks res.ok/content-type before
+// parsing, so a non-JSON failure response (e.g. a 413 from the body-size limit, which Next.js
+// returns as plain text) doesn't get silently mistaken for "the AI couldn't read the photo".
+const callClaudeVision = async (sys, content, maxTokens) => {
+  let res;
+  try {
+    res = await fetch("/api/chat", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: maxTokens, system: sys, messages: [{ role: "user", content }] }),
+    });
+  } catch {
+    throw new Error("NETWORK");
+  }
+  if (res.status === 413) throw new Error("TOO_LARGE");
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) throw new Error("BAD_RESPONSE");
+  let data;
+  try { data = await res.json(); } catch { throw new Error("BAD_RESPONSE"); }
+  if (!res.ok) throw new Error(data?.error?.message || data?.error || "API_ERROR");
+  const text = data.content?.map(b => b.text || "").join("") || "";
+  if (!text) throw new Error("EMPTY_RESPONSE");
+  return text;
+};
+
 // cat: "cycle" (menstrual-phase-specific — follicular/luteal/PMS/ovulation), "peri" (perimenopause/
 // menopause-specific), "general" (applies regardless of biological context). Filtered below by
 // biologicalContext so a perimenopause/menopause user never sees cycle-phase-specific tips.
@@ -206,16 +261,11 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
     setPlatePreviewUrl(url); setPlateMode(true); setPlateLoad(true);
     setPlateError(""); setPlateFoodData([]); setEditPortions({});
     try {
-      const b64 = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(r.result.split(",")[1]);
-        r.onerror = rej;
-        r.readAsDataURL(file);
-      });
-      const raw = await callClaude(
+      const b64 = await resizeImageToJPEG(file);
+      const raw = await callClaudeVision(
         "You are a professional nutritionist. Return only valid JSON, no extra text.",
         [
-          { type:"image", source:{ type:"base64", media_type:file.type, data:b64 } },
+          { type:"image", source:{ type:"base64", media_type:"image/jpeg", data:b64 } },
           { type:"text",  text:'Analyze this food photo. Identify every food item visible, estimate the portion size in grams for each item, then calculate total calories, protein, carbohydrates and fat. Be as accurate as possible. Return ONLY a JSON object with no extra text: {"foods": [{"name": "string", "portion_grams": number, "kcal": number, "protein_g": number, "carbs_g": number, "fat_g": number}], "totals": {"kcal": number, "protein_g": number, "carbs_g": number, "fat_g": number}}' },
         ],
         1500
@@ -236,8 +286,13 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
       }));
       setPlateFoodData(enriched);
       setEditPortions(Object.fromEntries(enriched.map((f, i) => [i, String(f.portion_grams)])));
-    } catch {
-      setPlateError("Couldn't analyse this photo. Try a clearer image with good lighting.");
+    } catch (err) {
+      const code = err?.message || "";
+      if (code === "UNSUPPORTED_FORMAT") setPlateError("This photo's format isn't supported. Try a different photo.");
+      else if (code === "TOO_LARGE") setPlateError("This photo is too large to upload. Try a different one, or a lower-resolution photo.");
+      else if (code === "NETWORK") setPlateError("Couldn't reach the server. Check your connection and try again.");
+      else if (code === "READ_FAILED" || code === "BAD_RESPONSE" || code === "EMPTY_RESPONSE" || code === "parse error") setPlateError("Couldn't read this photo clearly. Try a different angle or better lighting.");
+      else setPlateError("Something went wrong analysing this photo. Please try again.");
     }
     setPlateLoad(false);
   };
