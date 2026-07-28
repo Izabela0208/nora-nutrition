@@ -61,7 +61,7 @@ const MEAL_CARD   = {
   Snack:     { accent: "#7A9E8A" },
   Dessert:   { accent: "#2D5A45" },
 };
-const TYPE_LABELS = { day_plan: "Day Plans", meal: "Meals", smoothie: "Smoothies", shot: "Shots", juice: "Juices", dessert: "Desserts" };
+const TYPE_LABELS = { day_plan: "Day Plans", meal: "Meals", food: "Foods", smoothie: "Smoothies", shot: "Shots", juice: "Juices", dessert: "Desserts" };
 
 const SHOP_CATS = ["Proteins","Vegetables","Fruits","Dairy","Grains","Pantry & Other"];
 const SHOP_CAT_RX = [
@@ -620,10 +620,11 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
   };
 
   const toggleMealFavourite = (meal) => {
-    const idx = savedItems.findIndex(i => i.type === "meal" && i.data?.name === meal.name);
+    const type = meal.type || "meal";
+    const idx = savedItems.findIndex(i => i.type === type && i.data?.name === meal.name);
     const updated = idx >= 0
       ? savedItems.filter((_, j) => j !== idx)
-      : [{ id: Date.now(), date: new Date().toLocaleDateString(), type: "meal", label: meal.name, data: meal }, ...savedItems].slice(0, 50);
+      : [{ id: Date.now(), date: new Date().toLocaleDateString(), type, label: meal.name, data: meal }, ...savedItems].slice(0, 50);
     setSavedItems(updated);
     try { localStorage.setItem("nora_saved_items", JSON.stringify(updated)); } catch {}
   };
@@ -1710,7 +1711,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                   <button onClick={() => { if (!shotLogged) { addToLog({ name:currentShot.name, calories:currentShot.calories||25, protein_g:currentShot.protein_g||0, carbs_g:currentShot.carbs_g||0, fat_g:currentShot.fat_g||0, fiber_g:0, notes:"Morning shot" }); setShotLogged(true); } }} style={{ flex:2, padding:"11px", backgroundColor: shotLogged ? `${G.forest}15` : G.forest, color: shotLogged ? G.forest : G.ivory, border:"none", borderRadius:11, fontSize:13, fontWeight:600, cursor: shotLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
                     {shotLogged ? <><CheckIcon size={12} color={G.forest}/>Logged</> : "Log this"}
                   </button>
-                  <button onClick={() => { toggleMealFavourite({ ...currentShot, mealGroup:"Shot" }); setShotSaved(!shotSaved); }} style={{ width:44, padding:"11px", backgroundColor: shotSaved ? G.ivory : "transparent", border:`1.5px solid ${shotSaved ? `${G.forest}40` : G.border}`, borderRadius:11, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <button onClick={() => { toggleMealFavourite({ ...currentShot, mealGroup:"Shot", type:"shot" }); setShotSaved(!shotSaved); }} style={{ width:44, padding:"11px", backgroundColor: shotSaved ? G.ivory : "transparent", border:`1.5px solid ${shotSaved ? `${G.forest}40` : G.border}`, borderRadius:11, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
                     <HeartIcon size={16} color={shotSaved ? G.forest : G.muted} filled={shotSaved}/>
                   </button>
                   <button onClick={genShot} style={{ flex:1, padding:"11px", backgroundColor:"transparent", color:G.forest, border:`1.5px solid ${G.forest}`, borderRadius:11, fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
