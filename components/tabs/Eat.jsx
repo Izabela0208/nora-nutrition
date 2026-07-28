@@ -61,7 +61,7 @@ const MEAL_CARD   = {
   Snack:     { accent: "#7A9E8A" },
   Dessert:   { accent: "#2D5A45" },
 };
-const TYPE_LABELS = { day_plan: "Day Plans", meal: "Meals", smoothie: "Smoothies", shot: "Shots", dessert: "Desserts" };
+const TYPE_LABELS = { day_plan: "Day Plans", meal: "Meals", smoothie: "Smoothies", shot: "Shots", juice: "Juices", dessert: "Desserts" };
 
 const SHOP_CATS = ["Proteins","Vegetables","Fruits","Dairy","Grains","Pantry & Other"];
 const SHOP_CAT_RX = [
@@ -512,7 +512,6 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
   const [juiceCat,      setJuiceCat]      = useState("all");
   const [juiceIngChk,   setJuiceIngChk]   = useState({});
   const [juiceLimit,    setJuiceLimit]    = useState(5);
-  const [savedJuices,   setSavedJuices]   = useState([]);
 
   // Saved items
   const [savedItems,    setSavedItems]    = useState([]);
@@ -521,7 +520,6 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
   // Static desserts browse
   const [dessertSearch,        setDessertSearch]        = useState("");
   const [dessertCatFilter,     setDessertCatFilter]     = useState("all");
-  const [savedDesserts,        setSavedDesserts]        = useState([]);
   const [dessertIngChkStatic,  setDessertIngChkStatic]  = useState({});
   const [showAIDessert,        setShowAIDessert]        = useState(false);
   const [dessertLimit,         setDessertLimit]         = useState(5);
@@ -541,12 +539,6 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
     try {
       const si = localStorage.getItem("nora_saved_items");
       if (si) setSavedItems(JSON.parse(si));
-
-      const sj = localStorage.getItem("nora_saved_juices");
-      if (sj) setSavedJuices(JSON.parse(sj));
-
-      const sdess = localStorage.getItem("nora_saved_desserts");
-      if (sdess) setSavedDesserts(JSON.parse(sdess));
 
       const sm = localStorage.getItem("nora_smoothie");
       if (sm) { const d = JSON.parse(sm); if (d.date === localDateStr()) { const s = d.data; if (s?.ingredients && typeof s.ingredients[0] === "string") s.ingredients = s.ingredients.map(x => ({ item: x, amount: "" })); setSmoothie(s); } }
@@ -633,16 +625,22 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
   const toggleIng = (key, idx) =>
     setIngChecked(p => ({ ...p, [key]: { ...(p[key] || {}), [idx]: !((p[key] || {})[idx]) } }));
 
-  const toggleSavedJuice = (id) => {
-    const updated = savedJuices.includes(id) ? savedJuices.filter(x => x !== id) : [...savedJuices, id];
-    setSavedJuices(updated);
-    try { localStorage.setItem("nora_saved_juices", JSON.stringify(updated)); } catch {}
+  const toggleSavedJuice = (juice) => {
+    const idx = savedItems.findIndex(i => i.type === "juice" && i.data?.id === juice.id);
+    const updated = idx >= 0
+      ? savedItems.filter((_, j) => j !== idx)
+      : [{ id: Date.now(), date: new Date().toLocaleDateString(), type: "juice", label: juice.name, data: juice }, ...savedItems].slice(0, 50);
+    setSavedItems(updated);
+    try { localStorage.setItem("nora_saved_items", JSON.stringify(updated)); } catch {}
   };
 
-  const toggleSavedDessert = (id) => {
-    const updated = savedDesserts.includes(id) ? savedDesserts.filter(x => x !== id) : [...savedDesserts, id];
-    setSavedDesserts(updated);
-    try { localStorage.setItem("nora_saved_desserts", JSON.stringify(updated)); } catch {}
+  const toggleSavedDessert = (dessert) => {
+    const idx = savedItems.findIndex(i => i.type === "dessert" && i.data?.id === dessert.id);
+    const updated = idx >= 0
+      ? savedItems.filter((_, j) => j !== idx)
+      : [{ id: Date.now(), date: new Date().toLocaleDateString(), type: "dessert", label: dessert.name, data: dessert }, ...savedItems].slice(0, 50);
+    setSavedItems(updated);
+    try { localStorage.setItem("nora_saved_items", JSON.stringify(updated)); } catch {}
   };
 
   const searchFoods = async (q) => {
@@ -948,7 +946,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
     const matchQ = !juiceQ || j.name.toLowerCase().includes(juiceQ) || j.category.toLowerCase().includes(juiceQ) || (j.benefits||[]).some(b => b.toLowerCase().includes(juiceQ)) || (j.ingredients||[]).some(i => i.item.toLowerCase().includes(juiceQ));
     return matchCat && matchQ;
   });
-  const savedJuiceObjects = savedJuices.map(id => juicesData.find(j => j.id === id)).filter(Boolean);
+  const savedJuiceObjects = savedItems.filter(i => i.type === "juice").map(i => i.data).filter(Boolean);
 
   const GBtn = ({ onClick, disabled, children }) => (
     <button onClick={onClick} disabled={!!disabled} style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", padding:"14px", backgroundColor: disabled ? `${G.forest}80` : G.forest, color:G.ivory, border:"none", borderRadius:14, fontSize:14, fontWeight:600, fontFamily:sans, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.8 : 1 }}>
@@ -1719,7 +1717,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                 </p>
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                   {savedJuiceObjects.map(juice => (
-                    <JuiceCard key={juice.id} juice={juice} isSaved={savedJuices.includes(juice.id)} onToggleSave={() => toggleSavedJuice(juice.id)} ingChecked={juiceIngChk} onIngToggle={key => setJuiceIngChk(p => ({ ...p, [key]:!p[key] }))}/>
+                    <JuiceCard key={juice.id} juice={juice} isSaved={savedItems.some(i => i.type === "juice" && i.data?.id === juice.id)} onToggleSave={() => toggleSavedJuice(juice)} ingChecked={juiceIngChk} onIngToggle={key => setJuiceIngChk(p => ({ ...p, [key]:!p[key] }))}/>
                   ))}
                 </div>
               </div>
@@ -1756,7 +1754,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
               <>
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                   {filteredJuices.slice(0, juiceLimit).map(juice => (
-                    <JuiceCard key={juice.id} juice={juice} isSaved={savedJuices.includes(juice.id)} onToggleSave={() => toggleSavedJuice(juice.id)} ingChecked={juiceIngChk} onIngToggle={key => setJuiceIngChk(p => ({ ...p, [key]:!p[key] }))}/>
+                    <JuiceCard key={juice.id} juice={juice} isSaved={savedItems.some(i => i.type === "juice" && i.data?.id === juice.id)} onToggleSave={() => toggleSavedJuice(juice)} ingChecked={juiceIngChk} onIngToggle={key => setJuiceIngChk(p => ({ ...p, [key]:!p[key] }))}/>
                   ))}
                 </div>
                 {filteredJuices.length > juiceLimit && (
@@ -1777,7 +1775,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
             const matchQ = !dQ || d.name.toLowerCase().includes(dQ) || d.category.toLowerCase().includes(dQ) || (d.benefits||[]).some(b => b.toLowerCase().includes(dQ)) || (d.ingredients||[]).some(i => i.item.toLowerCase().includes(dQ));
             return matchCat && matchQ;
           });
-          const savedDessertObjects = savedDesserts.map(id => dessertsData.find(d => d.id === id)).filter(Boolean);
+          const savedDessertObjects = savedItems.filter(i => i.type === "dessert").map(i => i.data).filter(Boolean);
           return (
             <div style={{ display:"flex", flexDirection:"column", gap:16, animation:"sectionIn 0.22s ease", paddingBottom:28 }}>
 
@@ -1790,7 +1788,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                   </p>
                   <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                     {savedDessertObjects.map(d => (
-                      <DessertCard key={d.id} dessert={d} isSaved={true} onToggleSave={() => toggleSavedDessert(d.id)} ingChecked={dessertIngChkStatic} onIngToggle={k => setDessertIngChkStatic(p => ({ ...p, [k]:!p[k] }))}/>
+                      <DessertCard key={d.id} dessert={d} isSaved={true} onToggleSave={() => toggleSavedDessert(d)} ingChecked={dessertIngChkStatic} onIngToggle={k => setDessertIngChkStatic(p => ({ ...p, [k]:!p[k] }))}/>
                     ))}
                   </div>
                 </div>
@@ -1831,7 +1829,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                 <>
                   <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                     {filteredDesserts.slice(0, dessertLimit).map(d => (
-                      <DessertCard key={d.id} dessert={d} isSaved={savedDesserts.includes(d.id)} onToggleSave={() => toggleSavedDessert(d.id)} ingChecked={dessertIngChkStatic} onIngToggle={k => setDessertIngChkStatic(p => ({ ...p, [k]:!p[k] }))}/>
+                      <DessertCard key={d.id} dessert={d} isSaved={savedItems.some(i => i.type === "dessert" && i.data?.id === d.id)} onToggleSave={() => toggleSavedDessert(d)} ingChecked={dessertIngChkStatic} onIngToggle={k => setDessertIngChkStatic(p => ({ ...p, [k]:!p[k] }))}/>
                     ))}
                   </div>
                   {filteredDesserts.length > dessertLimit && (
@@ -2045,7 +2043,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                                     <p style={{ fontSize:10, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 8px" }}>Ingredients</p>
                                     {(d.ingredients||[]).map((ing, i) => {
                                       const nm = typeof ing === "string" ? ing : ing.item;
-                                      const am = typeof ing === "string" ? "" : ing.amount;
+                                      const am = typeof ing === "string" ? "" : (ing.amount_display || ing.amount);
                                       return (
                                         <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"5px 0", borderBottom: i < d.ingredients.length-1 ? `1px solid ${G.border}` : "none" }}>
                                           <span style={{ fontSize:13, color:G.text }}>{nm}</span>

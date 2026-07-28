@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { C, card, serif, sans, inp, localDateStr } from "../noraTokens";
-import { NoraAvatar, CheckIcon, HeartIcon, MoonIcon } from "../NoraIcons";
+import { NoraAvatar, MoonIcon } from "../NoraIcons";
 import { SectionHeader, Collapsible } from "../NoraUI";
 import AtmosphereBackground from "../AtmosphereBackground";
 
@@ -75,11 +75,9 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
     const id = setInterval(() => setFastingNowTick(Date.now()), 60000);
     return () => clearInterval(id);
   }, [fastingMode]);
-  const [open,     setOpen]     = useState({ edit: false, plans: false, about: false });
+  const [open,     setOpen]     = useState({ edit: false, about: false });
   const [heightUnit, setHeightUnit] = useState(profile?.heightUnit || "cm");
   const [weightUnit, setWeightUnit] = useState(profile?.weightUnit || "kg");
-  const [favRecipe, setFavRecipe] = useState(null);
-  const [favIngChk, setFavIngChk] = useState({});
   const [sleepHours,   setSleepHours]   = useState("");
   const [sleepQuality, setSleepQuality] = useState("ok");
   const [sleepSaved,   setSleepSaved]   = useState(false);
@@ -143,12 +141,6 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
     saveProfile(updated);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
-  };
-
-  const deletePlan = id => {
-    const updated = plans.filter(p => p.id !== id);
-    setPlans(updated);
-    try { localStorage.setItem("nora_saved_items", JSON.stringify(updated)); } catch {}
   };
 
   const confirmDelete = async () => {
@@ -665,107 +657,6 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
             <p style={{ fontSize: 11, color: C.muted, textAlign: "center", margin: "-8px 0 0" }}>
               Targets will update next time you regenerate a meal plan.
             </p>
-          </div>
-        </Collapsible>
-      </div>
-
-      {/* ── Saved Items ──────────────────────────────────────────── */}
-      <div style={{ ...card }}>
-        <SectionHeader title="Saved Items" sub={plans.length > 0 ? `${plans.length} item${plans.length !== 1 ? "s" : ""} from the Eat tab` : "Save meals, plans & more from the Eat tab"} open={open.plans} onToggle={() => tog("plans")} accent/>
-        <Collapsible open={open.plans}>
-          <div style={{ padding: "0 18px 18px" }}>
-            {plans.length === 0 ? (
-              <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.6 }}>Nothing saved yet. Generate meal plans, smoothies, shots or desserts in the Eat tab and tap Save.</p>
-            ) : (
-              (() => {
-                const TYPE_LABELS = { day_plan: "Day Plans", meal: "Meals", smoothie: "Smoothies", shot: "Shots", dessert: "Desserts" };
-                const byType = plans.reduce((acc, item) => {
-                  const k = item.type || "day_plan"; if (!acc[k]) acc[k] = []; acc[k].push(item); return acc;
-                }, {});
-                return (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                    {Object.entries(byType).map(([type, items]) => (
-                      <div key={type}>
-                        <p style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 8px" }}>{TYPE_LABELS[type] || type}</p>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          {items.map(item => {
-                            const meal = item.data || {};
-                            const isExpanded = favRecipe === item.id;
-                            if (type === "meal") {
-                              return (
-                                <div key={item.id} style={{ backgroundColor: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-                                  <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-                                    <HeartIcon size={16} color="#C8847A" filled/>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                      <p style={{ fontFamily: serif, fontSize: 14, fontWeight: 600, color: C.text, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</p>
-                                      <p style={{ fontSize: 11, color: C.muted, margin: "1px 0 0" }}>~{meal.calories || 0} kcal · ~{meal.protein_g || 0}g protein</p>
-                                    </div>
-                                    <button onClick={() => setFavRecipe(isExpanded ? null : item.id)} style={{ fontSize: 11, color: C.green, background: "none", border: `1px solid ${C.green}`, borderRadius: 7, padding: "5px 10px", cursor: "pointer", flexShrink: 0, fontFamily: sans }}>
-                                      {isExpanded ? "Close" : "Recipe"}
-                                    </button>
-                                    <button onClick={() => { const updated = plans.filter(p => p.id !== item.id); setPlans(updated); try { localStorage.setItem("nora_saved_items", JSON.stringify(updated)); } catch {} }} style={{ fontSize: 17, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: "0 2px", opacity: 0.5, lineHeight: 1, flexShrink: 0 }}>×</button>
-                                  </div>
-                                  {isExpanded && (
-                                    <div style={{ borderTop: `1px solid ${C.border}`, padding: "14px 14px 16px", backgroundColor: "#fafaf7" }}>
-                                      {meal.image && (
-                                        <div style={{ height: 160, borderRadius: 9, overflow: "hidden", marginBottom: 14 }}>
-                                          <img src={meal.image} alt={meal.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading="lazy"/>
-                                        </div>
-                                      )}
-                                      {(meal.ingredients || []).length > 0 && (
-                                        <div style={{ marginBottom: 14 }}>
-                                          <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 8px" }}>Ingredients</p>
-                                          {(meal.ingredients || []).map((ing, i) => {
-                                            const name = typeof ing === "string" ? ing : ing.item;
-                                            const amt  = typeof ing === "string" ? "" : ing.amount;
-                                            const ck   = !!(favIngChk[`${item.id}_${i}`]);
-                                            return (
-                                              <div key={i} onClick={() => setFavIngChk(p => ({ ...p, [`${item.id}_${i}`]: !p[`${item.id}_${i}`] }))} style={{ display: "flex", alignItems: "center", gap: 9, padding: "7px 0", cursor: "pointer", borderBottom: i < meal.ingredients.length - 1 ? `1px solid ${C.border}` : "none", opacity: ck ? 0.45 : 1 }}>
-                                                <div style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${ck ? C.green : C.border}`, backgroundColor: ck ? C.green : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                                  {ck && <CheckIcon size={9} color={C.bg}/>}
-                                                </div>
-                                                <span style={{ fontSize: 13, color: C.text, flex: 1, textDecoration: ck ? "line-through" : "none" }}>{name}</span>
-                                                {amt && <span style={{ fontSize: 12, color: C.muted, flexShrink: 0 }}>{amt}</span>}
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      )}
-                                      {(meal.steps || []).length > 0 && (
-                                        <div>
-                                          <p style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", margin: "0 0 10px" }}>Instructions</p>
-                                          {meal.steps.map((step, i) => (
-                                            <div key={i} style={{ display: "flex", gap: 12, marginBottom: 10 }}>
-                                              <div style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, backgroundColor: C.green, color: C.bg, fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{i + 1}</div>
-                                              <p style={{ fontSize: 13, color: C.text, lineHeight: 1.6, margin: 0, paddingTop: 2 }}>{step}</p>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            }
-                            return (
-                              <div key={item.id} style={{ backgroundColor: C.card, borderRadius: 10, padding: "12px 14px", border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 10 }}>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <p style={{ fontSize: 13, fontWeight: 600, color: C.text, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                    {item.label || (item.plan ? `Plan — ${item.date}` : item.date)}
-                                  </p>
-                                  <p style={{ fontSize: 11, color: C.muted, margin: "1px 0 0" }}>{item.date}</p>
-                                </div>
-                                <button onClick={() => deletePlan(item.id)} style={{ fontSize: 18, color: C.muted, background: "none", border: "none", cursor: "pointer", padding: "0 2px", lineHeight: 1, opacity: 0.5, flexShrink: 0 }}>×</button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()
-            )}
           </div>
         </Collapsible>
       </div>
