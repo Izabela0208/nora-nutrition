@@ -55,7 +55,6 @@ const BIO_CONTEXTS = [
 export default function Me({ profile, saveProfile, targets, resetProfile, signOut, notificationsEnabled, saveNotifications, deleteAccount, fastingEnabled, fastingStart, fastingEnd, saveFastingWindow, fastingMode, fastingExtendedStartAt, fastingExtendedHours, saveExtendedFast, stopExtendedFast, periodLogs, cyclePhase, logPeriodStart, logPeriodEnd, deletePeriodLog, ouraConnected, connectOura, disconnectOura }) {
   const [form,     setForm]     = useState({ ...profile });
   const [saved,    setSaved]    = useState(false);
-  const [plans,    setPlans]    = useState([]);
   const [fastingOtherOpen, setFastingOtherOpen] = useState(false);
   const [fastingDays,      setFastingDays]      = useState(0);
   const [fastingHours,     setFastingHours]     = useState(36);
@@ -92,16 +91,6 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
     setHeightUnit(profile?.heightUnit || "cm");
     setWeightUnit(profile?.weightUnit || "kg");
   }, [profile]);
-
-  useEffect(() => {
-    try {
-      // Prefer unified saved items; fall back to legacy saved plans
-      const si = localStorage.getItem("nora_saved_items");
-      if (si) { setPlans(JSON.parse(si)); return; }
-      const sp = localStorage.getItem("nora_saved_plans");
-      if (sp) setPlans(JSON.parse(sp).map(p => ({ id: p.id, date: p.date, type: "day_plan", label: `Plan — ${p.date}`, data: p.plan })));
-    } catch {}
-  }, []);
 
   useEffect(() => {
     try {
@@ -246,10 +235,6 @@ export default function Me({ profile, saveProfile, targets, resetProfile, signOu
           <div style={{ ...card, flex: 1, padding: "14px 16px", textAlign: "center" }}>
             <p style={{ fontSize: 22, fontWeight: 700, color: C.green, margin: 0, fontFamily: serif }}>{takenCount}/{suppCount}</p>
             <p style={{ fontSize: 11, color: C.muted, margin: "2px 0 0" }}>Supplements taken</p>
-          </div>
-          <div style={{ ...card, flex: 1, padding: "14px 16px", textAlign: "center" }}>
-            <p style={{ fontSize: 22, fontWeight: 700, color: C.green, margin: 0, fontFamily: serif }}>{plans.length}</p>
-            <p style={{ fontSize: 11, color: C.muted, margin: "2px 0 0" }}>Saved meal plans</p>
           </div>
         </div>
       )}
