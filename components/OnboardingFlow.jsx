@@ -1,16 +1,21 @@
 import { useState } from "react";
 import { C, card, serif, sans, inp } from "./noraTokens";
 import { NoraAvatar } from "./NoraIcons";
+import { LANGUAGES, LANGUAGE_NAMES, useLanguage } from "../lib/i18n/LanguageContext";
 
+// Stored verbatim in profile.goals / profile.activity and matched elsewhere (Me.jsx, AI
+// prompts) by exact English string — kept untranslated so those comparisons keep working.
+// See CLAUDE.md decision: same reasoning as leaving recipe ingredient names untranslated.
 const GOAL_OPTIONS = ["Lose weight","Build muscle","Maintain weight","Improve energy","Just be healthier","Be aware of my intakes"];
 const ACTIVITIES   = ["Sedentary","Lightly active","Moderately active","Very active","Athlete"];
 
 export default function OnboardingFlow({ onComplete }) {
+  const { t } = useLanguage();
   const [step, setStep] = useState(0);
   const [profile, setProfile] = useState({
     name:"", age:"", sex:"", heightCm:"", heightFt:"", heightIn:"",
     weightKg:"", weightLbs:"", heightUnit:"cm", weightUnit:"kg",
-    goals:[], activity:"", preferences:"", language:"",
+    goals:[], activity:"", preferences:"", language:"en",
   });
   const [selectedGoals, setSelectedGoals] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -46,9 +51,8 @@ export default function OnboardingFlow({ onComplete }) {
     try {
       const hCm = profile.heightUnit==="cm" ? profile.heightCm : Math.round(parseInt(profile.heightFt)*30.48+parseInt(profile.heightIn||0)*2.54);
       const wKg = profile.weightUnit==="kg" ? profile.weightKg : Math.round(parseFloat(profile.weightLbs)*0.453592);
-      const lang = profile.language.trim();
-      const langNote = lang && lang.toLowerCase() !== "english"
-        ? ` Respond entirely in ${lang}, including the welcome_message.` : "";
+      const langNote = profile.language !== "en"
+        ? ` Respond entirely in ${LANGUAGE_NAMES[profile.language] || "English"}, including the welcome_message.` : "";
       const text = await callClaude(
         "You are Nora, a warm nutritionist AI. Return ONLY valid JSON, no preamble.",
         `Calculate daily nutrition targets. User: ${profile.name}, sex: ${profile.sex||"not specified"}, age ${profile.age}, height ${hCm}cm, weight ${wKg}kg, goals: ${selectedGoals.join(", ")}, activity: ${profile.activity}, preferences: ${profile.preferences||"none"}.${langNote} Use Mifflin-St Jeor. Return JSON: { "calories":number, "protein_g":number, "carbs_g":number, "fat_g":number, "fiber_g":number, "water_ml":number, "key_micronutrients":["string"], "welcome_message":"2-3 warm sentences" }`
@@ -56,7 +60,7 @@ export default function OnboardingFlow({ onComplete }) {
       const data = parseJSON(text);
       const finalProfile = { ...profile, goals: selectedGoals };
       onComplete(finalProfile, data);
-    } catch { setError("Something went wrong. Please try again."); }
+    } catch { setError(t("onboarding.error.generic")); }
     setLoading(false);
   };
 
@@ -86,7 +90,7 @@ export default function OnboardingFlow({ onComplete }) {
 
         <div style={{ textAlign:"center", marginBottom:32 }}>
           <h1 style={{ fontFamily:serif, fontSize:30, color:C.green, margin:"12px 0 4px", fontWeight:600, letterSpacing:"-0.01em" }}>Nora</h1>
-          <p style={{ color:C.muted, fontSize:13, letterSpacing:"0.05em" }}>Your personal nutrition companion</p>
+          <p style={{ color:C.muted, fontSize:13, letterSpacing:"0.05em" }}>{t("onboarding.tagline")}</p>
         </div>
 
         {/* Step indicators */}
@@ -101,19 +105,19 @@ export default function OnboardingFlow({ onComplete }) {
           {/* ── Step 0: Name & Age ─────────────────────────────── */}
           {step === 0 && (
             <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
-              <p style={{ fontFamily:serif, fontSize:18, color:C.green, fontWeight:500, margin:0 }}>Let's get acquainted</p>
+              <p style={{ fontFamily:serif, fontSize:18, color:C.green, fontWeight:500, margin:0 }}>{t("onboarding.step0.title")}</p>
               <div>
-                <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", display:"block", marginBottom:6 }}>Your name</label>
-                <input className="focus-gold" style={inp} placeholder="e.g. Alexandra" value={profile.name} onChange={e=>setProfile(p=>({...p,name:e.target.value}))}
+                <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", display:"block", marginBottom:6 }}>{t("onboarding.name.label")}</label>
+                <input className="focus-gold" style={inp} placeholder={t("onboarding.name.placeholder")} value={profile.name} onChange={e=>setProfile(p=>({...p,name:e.target.value}))}
                   onKeyDown={e=>e.key==="Enter"&&isStep0Valid&&setStep(1)}/>
               </div>
               <div>
-                <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", display:"block", marginBottom:6 }}>Age</label>
-                <input className="focus-gold" type="number" style={inp} placeholder="e.g. 28" value={profile.age} onChange={e=>setProfile(p=>({...p,age:e.target.value}))}
+                <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", display:"block", marginBottom:6 }}>{t("onboarding.age.label")}</label>
+                <input className="focus-gold" type="number" style={inp} placeholder={t("onboarding.age.placeholder")} value={profile.age} onChange={e=>setProfile(p=>({...p,age:e.target.value}))}
                   onKeyDown={e=>e.key==="Enter"&&isStep0Valid&&setStep(1)}/>
               </div>
               <button disabled={!isStep0Valid} onClick={()=>setStep(1)} style={{ ...btnBase, width:"100%", backgroundColor:isStep0Valid?C.green:"#C8D5D1", color:C.bg, cursor:isStep0Valid?"pointer":"not-allowed" }}>
-                Continue
+                {t("onboarding.continue")}
               </button>
             </div>
           )}
@@ -121,19 +125,19 @@ export default function OnboardingFlow({ onComplete }) {
           {/* ── Step 1: Height & Weight ────────────────────────── */}
           {step === 1 && (
             <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
-              <p style={{ fontFamily:serif, fontSize:18, color:C.green, fontWeight:500, margin:0 }}>Your measurements</p>
+              <p style={{ fontFamily:serif, fontSize:18, color:C.green, fontWeight:500, margin:0 }}>{t("onboarding.step1.title")}</p>
 
               {/* Height */}
               <div>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-                  <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase" }}>Height</label>
+                  <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase" }}>{t("onboarding.height.label")}</label>
                   {toggle(["cm","ft"], profile.heightUnit, u=>setProfile(p=>({...p,heightUnit:u})))}
                 </div>
                 {profile.heightUnit==="cm"
-                  ? <input className="focus-gold" type="number" style={inp} placeholder="e.g. 170" value={profile.heightCm} onChange={e=>setProfile(p=>({...p,heightCm:e.target.value}))}/>
+                  ? <input className="focus-gold" type="number" style={inp} placeholder={t("me.field.heightCm.placeholder")} value={profile.heightCm} onChange={e=>setProfile(p=>({...p,heightCm:e.target.value}))}/>
                   : <div style={{ display:"flex", gap:8 }}>
-                      <input className="focus-gold" type="number" style={{...inp,width:"50%"}} placeholder="Feet" value={profile.heightFt} onChange={e=>setProfile(p=>({...p,heightFt:e.target.value}))}/>
-                      <input className="focus-gold" type="number" style={{...inp,width:"50%"}} placeholder="Inches" value={profile.heightIn} onChange={e=>setProfile(p=>({...p,heightIn:e.target.value}))}/>
+                      <input className="focus-gold" type="number" style={{...inp,width:"50%"}} placeholder={t("onboarding.height.feet")} value={profile.heightFt} onChange={e=>setProfile(p=>({...p,heightFt:e.target.value}))}/>
+                      <input className="focus-gold" type="number" style={{...inp,width:"50%"}} placeholder={t("onboarding.height.inches")} value={profile.heightIn} onChange={e=>setProfile(p=>({...p,heightIn:e.target.value}))}/>
                     </div>
                 }
               </div>
@@ -141,17 +145,17 @@ export default function OnboardingFlow({ onComplete }) {
               {/* Weight */}
               <div>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-                  <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase" }}>Weight</label>
+                  <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase" }}>{t("onboarding.weight.label")}</label>
                   {toggle(["kg","lbs"], profile.weightUnit, u=>setProfile(p=>({...p,weightUnit:u})))}
                 </div>
-                <input className="focus-gold" type="number" style={inp} placeholder={profile.weightUnit==="kg"?"e.g. 68":"e.g. 150"}
+                <input className="focus-gold" type="number" style={inp} placeholder={profile.weightUnit==="kg"?t("onboarding.weight.kgPlaceholder"):t("onboarding.weight.lbsPlaceholder")}
                   value={profile.weightUnit==="kg"?profile.weightKg:profile.weightLbs}
                   onChange={e=>setProfile(p=>profile.weightUnit==="kg"?{...p,weightKg:e.target.value}:{...p,weightLbs:e.target.value})}/>
               </div>
 
               <div style={{ display:"flex", gap:10 }}>
-                <button onClick={()=>setStep(0)} style={{ ...btnBase, flex:1, backgroundColor:"transparent", color:C.green, border:`1px solid ${C.green}`, cursor:"pointer" }}>← Back</button>
-                <button disabled={!isStep1Valid} onClick={()=>setStep(2)} style={{ ...btnBase, flex:2, backgroundColor:isStep1Valid?C.green:"#C8D5D1", color:C.bg, cursor:isStep1Valid?"pointer":"not-allowed" }}>Continue</button>
+                <button onClick={()=>setStep(0)} style={{ ...btnBase, flex:1, backgroundColor:"transparent", color:C.green, border:`1px solid ${C.green}`, cursor:"pointer" }}>← {t("onboarding.back")}</button>
+                <button disabled={!isStep1Valid} onClick={()=>setStep(2)} style={{ ...btnBase, flex:2, backgroundColor:isStep1Valid?C.green:"#C8D5D1", color:C.bg, cursor:isStep1Valid?"pointer":"not-allowed" }}>{t("onboarding.continue")}</button>
               </div>
             </div>
           )}
@@ -159,31 +163,31 @@ export default function OnboardingFlow({ onComplete }) {
           {/* ── Step 2: Sex, Goals, Lifestyle ─────────────────── */}
           {step === 2 && (
             <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
-              <p style={{ fontFamily:serif, fontSize:18, color:C.green, fontWeight:500, margin:0 }}>Goals & lifestyle</p>
+              <p style={{ fontFamily:serif, fontSize:18, color:C.green, fontWeight:500, margin:0 }}>{t("onboarding.step2.title")}</p>
 
               {/* Sex */}
               <div>
-                <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", display:"block", marginBottom:8 }}>Biological sex</label>
+                <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", display:"block", marginBottom:8 }}>{t("onboarding.sex.label")}</label>
                 <div style={{ display:"flex", gap:8 }}>
-                  {[{v:"female",l:"Female"},{v:"male",l:"Male"}].map(({v,l})=>(
+                  {[{v:"female",l:t("onboarding.sex.female")},{v:"male",l:t("onboarding.sex.male")}].map(({v,l})=>(
                     <button key={v} type="button" onClick={()=>setProfile(p=>({...p,sex:v}))} style={{ flex:1, padding:"12px", borderRadius:10, border:`1px solid ${profile.sex===v?C.green:C.border}`, backgroundColor:profile.sex===v?C.green:C.card, color:profile.sex===v?C.bg:C.text, fontSize:14, fontWeight:profile.sex===v?500:400, cursor:"pointer", transition:"all 0.15s" }}>{l}</button>
                   ))}
                 </div>
-                <p style={{ fontSize:11, color:C.muted, margin:"6px 0 0" }}>Used for accurate targets</p>
+                <p style={{ fontSize:11, color:C.muted, margin:"6px 0 0" }}>{t("onboarding.sex.note")}</p>
               </div>
 
               {/* Goals */}
               <div>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-                  <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase" }}>Goals</label>
-                  {selectedGoals.length > 0 && <span style={{ fontSize:11, color:C.gold, fontWeight:500 }}>{selectedGoals.length} selected</span>}
+                  <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase" }}>{t("onboarding.goals.label")}</label>
+                  {selectedGoals.length > 0 && <span style={{ fontSize:11, color:C.gold, fontWeight:500 }}>{selectedGoals.length} {t("onboarding.goals.selected")}</span>}
                 </div>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
                   {GOAL_OPTIONS.map(g => {
                     const sel = selectedGoals.includes(g);
                     return (
                       <button type="button" key={g} onClick={()=>toggleGoal(g)} style={{ padding:"10px 12px", borderRadius:10, border:`1px solid ${sel?C.green:C.border}`, backgroundColor:sel?C.green:C.card, color:sel?C.bg:C.text, fontSize:13, fontWeight:sel?500:400, cursor:"pointer", textAlign:"left", transition:"all 0.15s ease" }}>
-                        {sel && <span style={{ marginRight:5, opacity:0.8 }}>✓</span>}{g}
+                        {sel && <span style={{ marginRight:5, opacity:0.8 }}>✓</span>}{t(`me.goal.${g}`, g)}
                       </button>
                     );
                   })}
@@ -192,37 +196,40 @@ export default function OnboardingFlow({ onComplete }) {
 
               {/* Activity */}
               <div>
-                <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", display:"block", marginBottom:8 }}>Activity level</label>
+                <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", display:"block", marginBottom:8 }}>{t("onboarding.activity.label")}</label>
                 <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
                   {ACTIVITIES.map(a=>(
-                    <button key={a} onClick={()=>setProfile(p=>({...p,activity:a}))} style={{ padding:"7px 12px", borderRadius:8, border:`1px solid ${profile.activity===a?C.green:C.border}`, backgroundColor:profile.activity===a?C.green:C.card, color:profile.activity===a?C.bg:C.text, fontSize:12, fontWeight:profile.activity===a?500:400, cursor:"pointer", transition:"all 0.15s" }}>{a}</button>
+                    <button key={a} onClick={()=>setProfile(p=>({...p,activity:a}))} style={{ padding:"7px 12px", borderRadius:8, border:`1px solid ${profile.activity===a?C.green:C.border}`, backgroundColor:profile.activity===a?C.green:C.card, color:profile.activity===a?C.bg:C.text, fontSize:12, fontWeight:profile.activity===a?500:400, cursor:"pointer", transition:"all 0.15s" }}>{t(`me.activityLevel.${a}`, a)}</button>
                   ))}
                 </div>
               </div>
 
               {/* Dietary preferences */}
               <div>
-                <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", display:"block", marginBottom:6 }}>Dietary preferences <span style={{ color:C.border, fontSize:11, textTransform:"none", letterSpacing:0 }}>— optional</span></label>
-                <input className="focus-gold" style={inp} placeholder="e.g. vegetarian, gluten-free" value={profile.preferences} onChange={e=>setProfile(p=>({...p,preferences:e.target.value}))}/>
+                <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", display:"block", marginBottom:6 }}>{t("onboarding.preferences.label")} <span style={{ color:C.border, fontSize:11, textTransform:"none", letterSpacing:0 }}>— {t("onboarding.optional")}</span></label>
+                <input className="focus-gold" style={inp} placeholder={t("onboarding.preferences.placeholder")} value={profile.preferences} onChange={e=>setProfile(p=>({...p,preferences:e.target.value}))}/>
               </div>
 
-              {/* Language — free text */}
+              {/* Language */}
               <div>
-                <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", display:"block", marginBottom:6 }}>Language <span style={{ color:C.border, fontSize:11, textTransform:"none", letterSpacing:0 }}>— optional</span></label>
-                <input className="focus-gold" style={inp} placeholder="English, Română, Español, 中文…" value={profile.language} onChange={e=>setProfile(p=>({...p,language:e.target.value}))}/>
-                <p style={{ fontSize:11, color:C.muted, margin:"5px 0 0" }}>Nora will respond in any language you type here</p>
+                <label style={{ fontSize:12, color:C.muted, fontWeight:500, letterSpacing:"0.05em", textTransform:"uppercase", display:"block", marginBottom:6 }}>{t("onboarding.language.label")}</label>
+                <div style={{ display:"flex", gap:8 }}>
+                  {LANGUAGES.map(l => (
+                    <button key={l.code} type="button" onClick={()=>setProfile(p=>({...p,language:l.code}))} style={{ flex:1, padding:"10px 12px", borderRadius:10, border:`1px solid ${profile.language===l.code?C.green:C.border}`, backgroundColor:profile.language===l.code?C.green:C.card, color:profile.language===l.code?C.bg:C.text, fontSize:13, fontWeight:profile.language===l.code?500:400, cursor:"pointer", transition:"all 0.15s" }}>{l.label}</button>
+                  ))}
+                </div>
               </div>
 
               {error && <div style={{ padding:"10px 14px", backgroundColor:C.errorBg, border:`1px solid ${C.error}20`, borderRadius:10, fontSize:13, color:C.error }}>{error}</div>}
               <div style={{ display:"flex", gap:10 }}>
-                <button onClick={()=>setStep(1)} style={{ ...btnBase, flex:1, backgroundColor:"transparent", color:C.green, border:`1px solid ${C.green}`, cursor:"pointer" }}>← Back</button>
+                <button onClick={()=>setStep(1)} style={{ ...btnBase, flex:1, backgroundColor:"transparent", color:C.green, border:`1px solid ${C.green}`, cursor:"pointer" }}>← {t("onboarding.back")}</button>
                 <button disabled={!isStep2Valid||loading} onClick={handleSubmit} style={{ ...btnBase, flex:2, backgroundColor:isStep2Valid&&!loading?C.green:"#C8D5D1", color:C.bg, cursor:isStep2Valid&&!loading?"pointer":"not-allowed" }}>
                   {loading
                     ? <span style={{ display:"flex", alignItems:"center", gap:8 }}>
                         <span style={{ width:14, height:14, border:`2px solid ${C.bg}`, borderTopColor:"transparent", borderRadius:"50%", display:"inline-block", animation:"spin 0.8s linear infinite" }}/>
-                        Calculating…
+                        {t("onboarding.calculating")}
                       </span>
-                    : "Calculate my targets"}
+                    : t("onboarding.calculate")}
                 </button>
               </div>
             </div>

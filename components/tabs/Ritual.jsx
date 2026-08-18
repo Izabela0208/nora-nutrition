@@ -3,6 +3,36 @@ import Image from "next/image";
 import { C, card, serif, sans, localDateStr, getCyclePhase, getCycleTip, getMaleTip, getWeekKey } from "../noraTokens";
 import { SectionHeader, Collapsible } from "../NoraUI";
 import { BotanicalBranch } from "../NoraIcons";
+import { useLanguage } from "../../lib/i18n/LanguageContext";
+import challengesRo from "../../lib/i18n/content/challenges.ro";
+import conceptsRo from "../../lib/i18n/content/concepts.ro";
+import podcastsRo from "../../lib/i18n/content/podcasts.ro";
+
+// Merges the Romanian overlay (title/instruction/science) over an English challenge object
+// when the active language is "ro" and a translation exists for its id. AI-generated fallback
+// challenges (no stable id in the overlay) simply stay in whatever language the model wrote —
+// that prompt itself is Phase 4 scope, not this overlay.
+const trChallenge = (c, lang) => {
+  if (!c || lang !== "ro") return c;
+  const tr = challengesRo[c.id];
+  return tr ? { ...c, ...tr } : c;
+};
+
+// Same pattern for Library → Concepts (title/summary/body/key_points, fully original content)
+// and Library → Podcasts (description only — title/host/top_episodes are real published names,
+// never translated). category/level/frequency are NOT part of these overlays — they're small
+// closed enums translated separately for display only, via ritual.library.*Category./frequency.*,
+// while the underlying value (used for filter matching) stays English.
+const trConcept = (c, lang) => {
+  if (!c || lang !== "ro") return c;
+  const tr = conceptsRo[c.id];
+  return tr ? { ...c, ...tr } : c;
+};
+const trPodcast = (p, lang) => {
+  if (!p || lang !== "ro") return p;
+  const tr = podcastsRo[p.id];
+  return tr ? { ...p, ...tr } : p;
+};
 
 // ─── JOURNEY DATA ────────────────────────────────────────────────────────────
 const MOTIVATIONAL = [
@@ -20,6 +50,13 @@ const CYCLE_NUTRITION = {
   follicular: { foods:["Fermented foods — yoghurt, kefir, kimchi","Complex carbs for rising energy — oats, quinoa","Zinc for hormonal support — pumpkin seeds, chickpeas"], avoid:"Heavy or processed foods that may slow your rising energy." },
   ovulatory:  { foods:["Zinc-rich seeds — hemp, pumpkin","Salmon or sardines for anti-inflammation","Fibre-rich vegetables to support oestrogen clearance"], avoid:"Excess sugar and alcohol during this sensitive window." },
   luteal:     { foods:["Magnesium foods — dark chocolate, almonds, leafy greens","Vitamin B6 — bananas, poultry, avocado","Complex carbs to balance serotonin — sweet potato, brown rice"], avoid:"Salt and processed foods that worsen bloating and mood shifts." },
+};
+// Romanian overlay for CYCLE_NUTRITION — same shape, picked by language at the read site below.
+const CYCLE_NUTRITION_RO = {
+  menstrual:  { foods:["Alimente bogate în fier — linte, carne roșie, spanac","Ceaiuri din plante pentru calmarea crampelor","Turmeric și ghimbir anti-inflamator"], avoid:"Cofeina și alcoolul, care agravează crampele și oboseala." },
+  follicular: { foods:["Alimente fermentate — iaurt, chefir, kimchi","Carbohidrați complecși pentru energia în creștere — ovăz, quinoa","Zinc pentru suport hormonal — semințe de dovleac, năut"], avoid:"Alimente grele sau procesate care îți pot încetini energia în creștere." },
+  ovulatory:  { foods:["Semințe bogate în zinc — cânepă, dovleac","Somon sau sardine pentru efect anti-inflamator","Legume bogate în fibre pentru eliminarea estrogenului"], avoid:"Excesul de zahăr și alcool în această fereastră sensibilă." },
+  luteal:     { foods:["Alimente cu magneziu — ciocolată neagră, migdale, verdețuri","Vitamina B6 — banane, carne de pasăre, avocado","Carbohidrați complecși pentru echilibrarea serotoninei — cartof dulce, orez brun"], avoid:"Sarea și alimentele procesate, care agravează balonarea și schimbările de dispoziție." },
 };
 
 // ─── THRIVE DATA ─────────────────────────────────────────────────────────────
@@ -201,6 +238,31 @@ const WEEKLY_REPORT_MESSAGES = {
     "A quietly excellent week. Nothing flashy — just shown up, day after day.",
   ],
 };
+// Romanian overlay — same shape/order as WEEKLY_REPORT_MESSAGES, picked by language at the
+// pickWeeklyVariant() call site so the anti-repeat index logic keeps working unchanged.
+const WEEKLY_REPORT_MESSAGES_RO = {
+  low: [
+    "O săptămână mai liniștită — e în regulă. Mâine e o pagină nouă, nu un termen limită.",
+    "Unele săptămâni cer mai mult de la noi decât altele. Ce contează e că ești tot aici.",
+    "O săptămână lentă nu e una pierdută. Revenirile mici contează la fel de mult ca cele mari.",
+    "Nu-i datorezi nicio explicație acestei săptămâni. Alege un singur lucru la care să te întorci și începe de acolo.",
+    "Consecvența nu înseamnă neîntrerupt — înseamnă la ce te întorci. Săptămâna asta, întoarce-te blând.",
+  ],
+  medium: [
+    "O săptămână stabilă — mai multe zile atinse decât ratate. Așa arată obiceiurile reale.",
+    "Ai fost prezent mai des decât nu, săptămâna asta. Merită observat.",
+    "Ritm bun săptămâna asta, chiar și cu câteva goluri. Golurile sunt normale; tiparul e ce contează.",
+    "Construiești ceva aici — nu perfect, dar persistent. Acesta e lucrul mai greu, dar mai bun.",
+    "O săptămână solidă, per ansamblu. Zilele care n-au mers conform planului nu le anulează pe cele care au mers.",
+  ],
+  high: [
+    "O săptămână puternică — majoritatea zilelor atinse, pe toate planurile. Bine construită.",
+    "Așa arată consecvența atunci când funcționează. Observă cum s-a simțit.",
+    "O săptămână plină, aproape de la un capăt la altul. Asta nu e noroc — e un tipar pe care l-ai creat.",
+    "Ai ținut linia toată săptămâna. Lasă asta să fie dovadă pentru săptămânile care se simt mai grele.",
+    "O săptămână discret excelentă. Nimic spectaculos — doar prezență, zi după zi.",
+  ],
+};
 
 const EXPLORE_QUERIES = {
   sleep:       { q:"sleep quality",              fbs:["sleep health adults","sleep duration outcomes"] },
@@ -378,6 +440,7 @@ function CategoryIcon({ id, size=22, color="#1F2E26" }) {
 
 // ─── EXPLORE GRID ────────────────────────────────────────────────────────────
 function ExploreGrid() {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(null);
   const [studyMap, setStudyMap] = useState({});
   const exp = EXPLORE_CATEGORIES.find(c => c.id === expanded);
@@ -470,20 +533,20 @@ function ExploreGrid() {
           </div>
           <p style={{ fontSize:13, color:C.text, lineHeight:1.82, margin:"0 0 14px", fontFamily:sans }}>{exp.guide}</p>
           <div style={{ padding:"11px 14px", backgroundColor:C.card, borderRadius:10, borderLeft:`2px solid ${C.green}` }}>
-            <p style={{ fontSize:9, fontWeight:700, color:C.green, textTransform:"uppercase", letterSpacing:"0.1em", margin:"0 0 4px", fontFamily:sans }}>Protocol</p>
+            <p style={{ fontSize:9, fontWeight:700, color:C.green, textTransform:"uppercase", letterSpacing:"0.1em", margin:"0 0 4px", fontFamily:sans }}>{t("ritual.protocol")}</p>
             <p style={{ fontSize:12, color:C.text, lineHeight:1.72, margin:0, fontFamily:sans }}>{exp.protocol}</p>
           </div>
 
           {/* PubMed research */}
           {studyMap[exp.id]?.loading && (
             <div style={{ marginTop:10, padding:"11px 14px", backgroundColor:C.card, borderRadius:10, border:`1px solid ${C.border}` }}>
-              <p style={{ fontSize:11, color:C.muted, margin:0, fontStyle:"italic", fontFamily:sans }}>Loading research.</p>
+              <p style={{ fontSize:11, color:C.muted, margin:0, fontStyle:"italic", fontFamily:sans }}>{t("ritual.loadingResearch")}</p>
             </div>
           )}
           {!studyMap[exp.id]?.loading && studyMap[exp.id]?.studies?.length > 0 && (
             <div style={{ marginTop:10, padding:"13px 14px", backgroundColor:C.card, borderRadius:10, border:`1px solid ${C.border}` }}>
               <p style={{ fontSize:9, fontWeight:700, color:C.green, textTransform:"uppercase", letterSpacing:"0.1em", margin:"0 0 10px", fontFamily:sans }}>
-                {"\uD83D\uDD2C"} Research {"\u00B7"} {studyMap[exp.id].studies.length} studies
+                {"\uD83D\uDD2C"} {t("ritual.research")} {"\u00B7"} {studyMap[exp.id].studies.length} {t("ritual.studies")}
               </p>
               {studyMap[exp.id].studies.map((s, i) => {
                 const notLast = i < studyMap[exp.id].studies.length - 1;
@@ -591,6 +654,7 @@ function dedupArticles(arr){
 
 // ─── LIBRARY MODAL ───────────────────────────────────────────────────────────
 function LibraryModal({ onClose }) {
+  const { t, language } = useLanguage();
   const [tab,     setTab]     = useState("books");
   const [books,   setBooks]   = useState([]);
   const [concepts,setConcepts]= useState([]);
@@ -670,10 +734,10 @@ function LibraryModal({ onClose }) {
   const LEVELS=["All","beginner","intermediate","advanced"];
   const colFor=b=>CAT_COLOR[b.category]||CAT_COLOR.default;
   const initials=t=>t.split(" ").slice(0,2).map(w=>w[0]?.toUpperCase()||"").join("");
-  const Skel=()=>(<div style={{padding:"20px 0"}}>{[90,70,80,60,75].map((w,i)=><div key={i} style={{height:11,width:`${w}%`,backgroundColor:C.border,borderRadius:4,marginBottom:12,opacity:0.4}}/>)}<p style={{fontSize:11,color:C.muted,fontFamily:sans,textAlign:"center",fontStyle:"italic"}}>Loading from database{"\u2026"}</p></div>);
-  const Pills=({options,value,onChange})=>(<div style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:4,flexShrink:0}}>{options.map(opt=>{const active=value===opt;const badge=LEVEL_BADGE[opt];return(<button key={opt} onClick={()=>onChange(opt)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${active?(badge?.c||C.green):C.border}`,backgroundColor:active?(badge?.bg||C.greenLight):"transparent",color:active?(badge?.c||C.green):C.muted,fontSize:10,fontWeight:active?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{opt==="All"?"All":opt.charAt(0).toUpperCase()+opt.slice(1)}</button>);})}</div>);
+  const Skel=()=>(<div style={{padding:"20px 0"}}>{[90,70,80,60,75].map((w,i)=><div key={i} style={{height:11,width:`${w}%`,backgroundColor:C.border,borderRadius:4,marginBottom:12,opacity:0.4}}/>)}<p style={{fontSize:11,color:C.muted,fontFamily:sans,textAlign:"center",fontStyle:"italic"}}>{t("ritual.library.loadingDb")}{"\u2026"}</p></div>);
+  const Pills=({options,value,onChange})=>(<div style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:4,flexShrink:0}}>{options.map(opt=>{const active=value===opt;const badge=LEVEL_BADGE[opt];return(<button key={opt} onClick={()=>onChange(opt)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${active?(badge?.c||C.green):C.border}`,backgroundColor:active?(badge?.bg||C.greenLight):"transparent",color:active?(badge?.c||C.green):C.muted,fontSize:10,fontWeight:active?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{opt==="All"?t("ritual.library.all"):t(`ritual.library.level.${opt}`,opt.charAt(0).toUpperCase()+opt.slice(1))}</button>);})}</div>);
   const SBar=({value,onChange,placeholder})=>(<div style={{position:"relative",marginBottom:10}}><input type="text" placeholder={placeholder} value={value} onChange={e=>onChange(e.target.value)} style={{width:"100%",padding:"9px 32px 9px 34px",borderRadius:10,border:`1px solid ${C.border}`,backgroundColor:C.card,fontSize:12,fontFamily:sans,color:C.text,outline:"none",boxSizing:"border-box"}}/><svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}><circle cx="5.5" cy="5.5" r="4" stroke={C.muted} strokeWidth="1.3"/><path d="M9 9l2 2" stroke={C.muted} strokeWidth="1.3" strokeLinecap="round"/></svg>{value&&<button onClick={()=>onChange("")} style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:C.muted,fontSize:15,cursor:"pointer",lineHeight:1,padding:0}}>x</button>}</div>);
-  const TABS=[{id:"books",icon:"\uD83D\uDCDA",label:"Books"},{id:"concepts",icon:"\uD83E\uDDE0",label:"Concepts"},{id:"podcasts",icon:"\uD83C\uDF99\uFE0F",label:"Podcasts"},{id:"articles",icon:"\uD83D\uDCF0",label:"Articles"}];
+  const TABS=[{id:"books",icon:"\uD83D\uDCDA",label:t("ritual.library.books")},{id:"concepts",icon:"\uD83E\uDDE0",label:t("ritual.library.concepts")},{id:"podcasts",icon:"\uD83C\uDF99\uFE0F",label:t("ritual.library.podcasts")},{id:"articles",icon:"\uD83D\uDCF0",label:t("ritual.library.articles")}];
 
   return (
     <div style={{position:"fixed",inset:0,backgroundColor:"rgba(14,28,20,0.88)",zIndex:400,display:"flex",flexDirection:"column"}}>
@@ -681,8 +745,8 @@ function LibraryModal({ onClose }) {
         <div style={{padding:"18px 20px 0",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
             <div>
-              <p style={{fontFamily:serif,fontSize:22,fontWeight:700,color:C.green,margin:0,letterSpacing:"-0.01em"}}>{"\u2726"} Library</p>
-              <p style={{fontSize:11,color:C.muted,margin:"2px 0 0",fontFamily:sans}}>Biohacking knowledge collection</p>
+              <p style={{fontFamily:serif,fontSize:22,fontWeight:700,color:C.green,margin:0,letterSpacing:"-0.01em"}}>{"\u2726"} {t("ritual.library.title")}</p>
+              <p style={{fontSize:11,color:C.muted,margin:"2px 0 0",fontFamily:sans}}>{t("ritual.library.subtitle")}</p>
             </div>
             <button onClick={onClose} style={{width:34,height:34,borderRadius:"50%",border:`1px solid ${C.border}`,backgroundColor:"transparent",color:C.muted,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>x</button>
           </div>
@@ -699,7 +763,7 @@ function LibraryModal({ onClose }) {
 
           {tab==="books"&&(
             <div>
-              <SBar value={bookSearch} onChange={setBookSearch} placeholder="Search title, author?"/>
+              <SBar value={bookSearch} onChange={setBookSearch} placeholder={t("ritual.library.searchBooks")}/>
               <div style={{marginBottom:6}}><Pills options={LEVELS} value={bookLevel} onChange={setBookLevel}/></div>
               <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",paddingBottom:4}}>{bookCats.map(cat=>(<button key={cat} onClick={()=>setBookCat(cat)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${bookCat===cat?C.green:C.border}`,backgroundColor:bookCat===cat?C.green:"transparent",color:bookCat===cat?"#FDFAF5":C.muted,fontSize:10,fontWeight:bookCat===cat?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{cat}</button>))}</div>
               {busy.books?<Skel/>:(
@@ -728,10 +792,10 @@ function LibraryModal({ onClose }) {
                 <div style={{marginTop:24}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                     <div style={{flex:1,height:1,backgroundColor:C.border}}/>
-                    <span style={{fontSize:10,color:C.muted,fontFamily:sans,whiteSpace:"nowrap",padding:"0 8px"}}>From Google Books</span>
+                    <span style={{fontSize:10,color:C.muted,fontFamily:sans,whiteSpace:"nowrap",padding:"0 8px"}}>{t("ritual.library.fromGoogleBooks")}</span>
                     <div style={{flex:1,height:1,backgroundColor:C.border}}/>
                   </div>
-                  {gbLoading&&<div style={{textAlign:"center",padding:"16px 0"}}><p style={{fontSize:11,color:C.muted,fontFamily:sans,fontStyle:"italic"}}>Searching Google Books{"…"}</p></div>}
+                  {gbLoading&&<div style={{textAlign:"center",padding:"16px 0"}}><p style={{fontSize:11,color:C.muted,fontFamily:sans,fontStyle:"italic"}}>{t("ritual.library.searchingGoogleBooks")}</p></div>}
                   {!gbLoading&&filteredGb.map((b,i)=>(
                     <div key={b.id} style={{display:"flex",gap:14,paddingBottom:18,marginBottom:18,borderBottom:i<filteredGb.length-1?`1px solid ${C.border}`:"none"}}>
                       {b.cover?(<img src={b.cover} alt={b.title} style={{width:52,height:70,objectFit:"cover",borderRadius:6,flexShrink:0,boxShadow:"2px 3px 10px rgba(0,0,0,0.2)"}}/>):(<div style={{width:52,height:70,borderRadius:6,backgroundColor:C.greenLight,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontFamily:serif,fontSize:14,fontWeight:700,color:C.green}}>{initials(b.title)}</span></div>)}
@@ -753,29 +817,29 @@ function LibraryModal({ onClose }) {
 
           {tab==="concepts"&&(
             <div>
-              <SBar value={conSearch} onChange={setConSearch} placeholder="Search concepts, tags?"/>
+              <SBar value={conSearch} onChange={setConSearch} placeholder={t("ritual.library.searchConcepts")}/>
               <div style={{marginBottom:8}}><Pills options={LEVELS} value={conLevel} onChange={setConLevel}/></div>
-              <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",paddingBottom:4}}>{conCats.map(cat=>(<button key={cat} onClick={()=>setConCat(cat)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${conCat===cat?C.green:C.border}`,backgroundColor:conCat===cat?C.green:"transparent",color:conCat===cat?"#FDFAF5":C.muted,fontSize:10,fontWeight:conCat===cat?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{cat}</button>))}</div>
+              <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",paddingBottom:4}}>{conCats.map(cat=>(<button key={cat} onClick={()=>setConCat(cat)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${conCat===cat?C.green:C.border}`,backgroundColor:conCat===cat?C.green:"transparent",color:conCat===cat?"#FDFAF5":C.muted,fontSize:10,fontWeight:conCat===cat?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{cat==="All"?t("ritual.library.all"):t(`ritual.library.conceptCategory.${cat}`,cat)}</button>))}</div>
               {busy.concepts?<Skel/>:(
                 <>{/* concepts list */}
-                  {fCons.map((c,i)=>{const isOpen=expanded===c.id;const badge=LEVEL_BADGE[c.level]||{bg:C.bg,c:C.muted};return(
+                  {fCons.map((c,i)=>{const isOpen=expanded===c.id;const badge=LEVEL_BADGE[c.level]||{bg:C.bg,c:C.muted};const tc=trConcept(c,language);return(
                     <div key={c.id} style={{paddingTop:i>0?14:0,paddingBottom:14,borderBottom:i<fCons.length-1?`1px solid ${C.border}`:"none"}}>
                       <div onClick={()=>setExpanded(isOpen?null:c.id)} style={{cursor:"pointer"}}>
                         <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5,flexWrap:"wrap"}}>
-                          <span style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:8,fontFamily:sans,backgroundColor:badge.bg,color:badge.c}}>{c.level?.charAt(0).toUpperCase()+(c.level?.slice(1)||"")}</span>
-                          <span style={{fontSize:9,color:C.green,backgroundColor:C.greenLight,padding:"2px 8px",borderRadius:8,fontFamily:sans}}>{c.category}</span>
+                          <span style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:8,fontFamily:sans,backgroundColor:badge.bg,color:badge.c}}>{c.level?t(`ritual.library.level.${c.level}`,c.level.charAt(0).toUpperCase()+c.level.slice(1)):""}</span>
+                          <span style={{fontSize:9,color:C.green,backgroundColor:C.greenLight,padding:"2px 8px",borderRadius:8,fontFamily:sans}}>{t(`ritual.library.conceptCategory.${c.category}`,c.category)}</span>
                           <span style={{marginLeft:"auto",fontSize:16,color:C.muted,transform:isOpen?"rotate(180deg)":"rotate(0deg)",transition:"transform 0.2s"}}>{"\u25BE"}</span>
                         </div>
-                        <p style={{fontFamily:serif,fontSize:14,fontWeight:700,color:C.green,margin:"0 0 4px"}}>{c.title}</p>
-                        <p style={{fontSize:12,color:C.text,lineHeight:1.7,margin:0,fontFamily:sans}}>{c.summary}</p>
+                        <p style={{fontFamily:serif,fontSize:14,fontWeight:700,color:C.green,margin:"0 0 4px"}}>{tc.title}</p>
+                        <p style={{fontSize:12,color:C.text,lineHeight:1.7,margin:0,fontFamily:sans}}>{tc.summary}</p>
                       </div>
                       {isOpen&&(
                         <div style={{marginTop:12,animation:"fadeIn 0.18s ease"}}>
-                          <p style={{fontSize:12,color:C.text,lineHeight:1.8,fontFamily:sans,margin:"0 0 12px"}}>{c.body}</p>
-                          {c.key_points?.length>0&&(
+                          <p style={{fontSize:12,color:C.text,lineHeight:1.8,fontFamily:sans,margin:"0 0 12px"}}>{tc.body}</p>
+                          {tc.key_points?.length>0&&(
                             <div style={{backgroundColor:C.greenLight,borderRadius:10,padding:"10px 14px"}}>
-                              <p style={{fontSize:10,fontWeight:700,color:C.green,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 8px",fontFamily:sans}}>Key Points</p>
-                              {c.key_points.map((pt,j)=><p key={j} style={{fontSize:12,color:C.text,margin:"0 0 5px",fontFamily:sans,lineHeight:1.6,paddingLeft:12,position:"relative"}}><span style={{position:"absolute",left:0,color:C.green}}>{"\u25B8"}</span>{pt}</p>)}
+                              <p style={{fontSize:10,fontWeight:700,color:C.green,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 8px",fontFamily:sans}}>{t("ritual.library.keyPoints")}</p>
+                              {tc.key_points.map((pt,j)=><p key={j} style={{fontSize:12,color:C.text,margin:"0 0 5px",fontFamily:sans,lineHeight:1.6,paddingLeft:12,position:"relative"}}><span style={{position:"absolute",left:0,color:C.green}}>{"\u25B8"}</span>{pt}</p>)}
                             </div>
                           )}
                         </div>
@@ -789,11 +853,11 @@ function LibraryModal({ onClose }) {
 
           {tab==="podcasts"&&(
             <div>
-              <SBar value={podSearch} onChange={setPodSearch} placeholder="Search podcasts?"/>
-              <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",paddingBottom:4}}>{podCats.map(cat=>(<button key={cat} onClick={()=>setPodCat(cat)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${podCat===cat?C.green:C.border}`,backgroundColor:podCat===cat?C.green:"transparent",color:podCat===cat?"#FDFAF5":C.muted,fontSize:10,fontWeight:podCat===cat?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{cat}</button>))}</div>
+              <SBar value={podSearch} onChange={setPodSearch} placeholder={t("ritual.library.searchPodcasts")}/>
+              <div style={{display:"flex",gap:5,marginBottom:14,overflowX:"auto",paddingBottom:4}}>{podCats.map(cat=>(<button key={cat} onClick={()=>setPodCat(cat)} style={{padding:"4px 11px",borderRadius:20,border:`1px solid ${podCat===cat?C.green:C.border}`,backgroundColor:podCat===cat?C.green:"transparent",color:podCat===cat?"#FDFAF5":C.muted,fontSize:10,fontWeight:podCat===cat?700:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0}}>{cat==="All"?t("ritual.library.all"):t(`ritual.library.podcastCategory.${cat}`,cat)}</button>))}</div>
               {busy.podcasts?<Skel/>:(
                 <>{/* podcasts list */}
-                  {fPods.map((pod,i)=>(
+                  {fPods.map((pod,i)=>{const tp=trPodcast(pod,language);return(
                     <div key={pod.id} style={{paddingBottom:20,marginBottom:20,borderBottom:i<fPods.length-1?`1px solid ${C.border}`:"none"}}>
                       <div style={{display:"flex",gap:12,marginBottom:10}}>
                         <div style={{width:46,height:46,borderRadius:13,backgroundColor:C.greenLight,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:22}}>{"\uD83C\uDF99\uFE0F"}</div>
@@ -801,16 +865,16 @@ function LibraryModal({ onClose }) {
                           <p style={{fontFamily:serif,fontSize:15,fontWeight:700,color:C.green,margin:"0 0 2px",lineHeight:1.2}}>{pod.title}</p>
                           <p style={{fontSize:11,color:C.muted,margin:"0 0 4px",fontFamily:serif,fontStyle:"italic"}}>{pod.host}</p>
                           <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-                            <span style={{fontSize:9,color:C.muted,fontFamily:sans,backgroundColor:C.bg,border:`1px solid ${C.border}`,padding:"1px 7px",borderRadius:10}}>{pod.category}</span>
-                            {pod.frequency&&<span style={{fontSize:9,color:C.muted,fontFamily:sans,backgroundColor:C.bg,border:`1px solid ${C.border}`,padding:"1px 7px",borderRadius:10}}>{pod.frequency}</span>}
+                            <span style={{fontSize:9,color:C.muted,fontFamily:sans,backgroundColor:C.bg,border:`1px solid ${C.border}`,padding:"1px 7px",borderRadius:10}}>{t(`ritual.library.podcastCategory.${pod.category}`,pod.category)}</span>
+                            {pod.frequency&&<span style={{fontSize:9,color:C.muted,fontFamily:sans,backgroundColor:C.bg,border:`1px solid ${C.border}`,padding:"1px 7px",borderRadius:10}}>{t(`ritual.library.frequency.${pod.frequency}`,pod.frequency)}</span>}
                             {pod.avg_duration&&<span style={{fontSize:9,color:C.muted,fontFamily:sans,backgroundColor:C.bg,border:`1px solid ${C.border}`,padding:"1px 7px",borderRadius:10}}>~{pod.avg_duration}/ep</span>}
                           </div>
                         </div>
                       </div>
-                      <p style={{fontSize:12,color:C.text,lineHeight:1.72,margin:"0 0 8px",fontFamily:sans}}>{pod.description}</p>
+                      <p style={{fontSize:12,color:C.text,lineHeight:1.72,margin:"0 0 8px",fontFamily:sans}}>{tp.description}</p>
                       {pod.top_episodes?.length>0&&(
                         <div style={{backgroundColor:C.bg,borderRadius:8,padding:"8px 12px",marginBottom:10}}>
-                          <p style={{fontSize:9,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 6px",fontFamily:sans}}>Top Episodes</p>
+                          <p style={{fontSize:9,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 6px",fontFamily:sans}}>{t("ritual.library.topEpisodes")}</p>
                           {pod.top_episodes.map((ep,j)=><p key={j} style={{fontSize:11,color:C.text,margin:"0 0 3px",fontFamily:sans}}>{"\u25B8"} {ep}</p>)}
                         </div>
                       )}
@@ -819,13 +883,13 @@ function LibraryModal({ onClose }) {
                         {pod.apple_url&&<a href={pod.apple_url} target="_blank" rel="noopener noreferrer" style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,padding:"9px 0",backgroundColor:"#7A3BB9",color:"#fff",borderRadius:10,textDecoration:"none",fontSize:11,fontWeight:600,fontFamily:sans}}>{"\uD83C\uDFA7"} Apple</a>}
                       </div>
                     </div>
-                  ))}
+                  );})}
                 </>
               )}
               <div style={{marginTop:16,paddingTop:16,borderTop:`1px solid ${C.border}`}}>
                 <button onClick={searchItunes} disabled={itunesLoading}
                   style={{width:"100%",padding:"11px",backgroundColor:itunesLoading?C.muted:C.green,color:"#FDFAF5",border:"none",borderRadius:10,fontSize:12,fontWeight:600,cursor:itunesLoading?"not-allowed":"pointer",fontFamily:sans,marginBottom:itunesResults.length?16:0}}>
-                  {itunesLoading?"… Searching iTunes":"🎧 Search more podcasts"}
+                  {itunesLoading?t("ritual.library.searchingItunes"):t("ritual.library.searchMorePodcasts")}
                 </button>
                 {itunesResults.map((pod,i)=>(
                   <div key={pod.id||i} style={{display:"flex",gap:12,paddingBottom:18,marginBottom:18,borderBottom:i<itunesResults.length-1?`1px solid ${C.border}`:"none"}}>
@@ -850,22 +914,22 @@ function LibraryModal({ onClose }) {
             <div>
               <form onSubmit={e=>{e.preventDefault();if(artInput.trim()){setArtQuery(artInput.trim());setArtCat("");}}} style={{display:"flex",gap:8,marginBottom:14}}>
                 <div style={{position:"relative",flex:1}}>
-                  <input type="text" placeholder="Search medical literature? (e.g. magnesium sleep)" value={artInput} onChange={e=>setArtInput(e.target.value)}
+                  <input type="text" placeholder={t("ritual.library.searchMedLit")} value={artInput} onChange={e=>setArtInput(e.target.value)}
                     style={{width:"100%",padding:"9px 12px 9px 34px",borderRadius:10,border:`1px solid ${C.border}`,backgroundColor:C.card,fontSize:12,fontFamily:sans,color:C.text,outline:"none",boxSizing:"border-box"}}/>
                   <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{position:"absolute",left:11,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}>
                     <circle cx="5.5" cy="5.5" r="4" stroke={C.muted} strokeWidth="1.3"/>
                     <path d="M9 9l2 2" stroke={C.muted} strokeWidth="1.3" strokeLinecap="round"/>
                   </svg>
                 </div>
-                <button type="submit" style={{padding:"9px 14px",backgroundColor:C.green,color:"#FDFAF5",border:"none",borderRadius:10,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:sans,flexShrink:0}}>Search</button>
+                <button type="submit" style={{padding:"9px 14px",backgroundColor:C.green,color:"#FDFAF5",border:"none",borderRadius:10,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:sans,flexShrink:0}}>{t("ritual.library.searchButton")}</button>
               </form>
-              {artQuery&&<button onClick={()=>{setArtQuery("");setArtInput("");setArtCat("circadian");}} style={{fontSize:10,color:C.muted,background:"none",border:`1px solid ${C.border}`,borderRadius:20,padding:"3px 10px",cursor:"pointer",fontFamily:sans,marginBottom:12}}>x Clear</button>}
+              {artQuery&&<button onClick={()=>{setArtQuery("");setArtInput("");setArtCat("circadian");}} style={{fontSize:10,color:C.muted,background:"none",border:`1px solid ${C.border}`,borderRadius:20,padding:"3px 10px",cursor:"pointer",fontFamily:sans,marginBottom:12}}>x {t("ritual.library.clear")}</button>}
               {!artQuery&&(
                 <div style={{display:"flex",gap:6,marginBottom:16,overflowX:"auto",paddingBottom:4}}>
                   {Object.entries(LIBRARY_ARTICLE_QUERIES).map(([key,val])=>(
                     <button key={key} onClick={()=>setArtCat(key)}
                       style={{padding:"6px 14px",borderRadius:20,border:`1px solid ${artCat===key?C.green:C.border}`,backgroundColor:artCat===key?C.green:"transparent",color:artCat===key?"#FDFAF5":C.muted,fontSize:11,fontWeight:artCat===key?600:400,cursor:"pointer",fontFamily:sans,whiteSpace:"nowrap",flexShrink:0,transition:"background 0.15s"}}>
-                      {val.label}
+                      {t(`ritual.library.query.${key}`,val.label)}
                     </button>
                   ))}
                 </div>
@@ -880,12 +944,12 @@ function LibraryModal({ onClose }) {
               {artExamine&&(
                 <div style={{padding:"14px 16px",backgroundColor:"#FFF7ED",borderRadius:12,marginBottom:16,border:"1px solid #FDBA74"}}>
                   <span style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:8,fontFamily:sans,backgroundColor:"#FFF7ED",color:"#EA580C",border:"1px solid #FDBA74"}}>Examine.com</span>
-                  <p style={{fontFamily:serif,fontSize:14,fontWeight:700,color:"#C2410C",margin:"8px 0 4px"}}>{artExamine.split('-').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ')} {"\u2014"} Evidence Summary</p>
-                  <p style={{fontSize:12,color:C.text,lineHeight:1.7,margin:"0 0 8px",fontFamily:sans}}>Evidence-based supplement research with clinical trial breakdowns.</p>
-                  <a href={"https://examine.com/supplements/"+artExamine+"/"} target="_blank" rel="noopener noreferrer" style={{fontSize:11,fontWeight:600,color:"#EA580C",fontFamily:sans}}>{"\u2197"} View on Examine.com</a>
+                  <p style={{fontFamily:serif,fontSize:14,fontWeight:700,color:"#C2410C",margin:"8px 0 4px"}}>{artExamine.split('-').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ')} {"\u2014"} {t("ritual.library.evidenceSummary")}</p>
+                  <p style={{fontSize:12,color:C.text,lineHeight:1.7,margin:"0 0 8px",fontFamily:sans}}>{t("ritual.library.evidenceDesc")}</p>
+                  <a href={"https://examine.com/supplements/"+artExamine+"/"} target="_blank" rel="noopener noreferrer" style={{fontSize:11,fontWeight:600,color:"#EA580C",fontFamily:sans}}>{"\u2197"} {t("ritual.library.viewOn")} Examine.com</a>
                 </div>
               )}
-              {!artLoading&&articles.length===0&&!artExamine&&(<div style={{textAlign:"center",padding:"36px 0"}}><p style={{fontSize:13,color:C.muted,fontFamily:sans}}>No articles found. Try a different search or category.</p></div>)}
+              {!artLoading&&articles.length===0&&!artExamine&&(<div style={{textAlign:"center",padding:"36px 0"}}><p style={{fontSize:13,color:C.muted,fontFamily:sans}}>{t("ritual.library.noArticles")}</p></div>)}
               {articles.map((a,i)=>{const badge=SOURCE_BADGE[a.source]||{label:a.source||"Article",bg:"#F9FAFB",fg:C.muted};return(
                 <a key={(a.id||'')+i} href={a.url||`https://pubmed.ncbi.nlm.nih.gov/${a.id}/`} target="_blank" rel="noopener noreferrer"
                   style={{display:"block",textDecoration:"none",paddingBottom:16,marginBottom:16,borderBottom:i<articles.length-1?`1px solid ${C.border}`:"none"}}>
@@ -895,7 +959,7 @@ function LibraryModal({ onClose }) {
                   </div>
                   <p style={{fontSize:13,fontWeight:600,color:C.green,margin:"0 0 5px",lineHeight:1.55,fontFamily:serif}}>{a.title}</p>
                   <p style={{fontSize:11,color:C.muted,margin:"0 0 6px",fontFamily:sans}}>{[a.authors,a.journal].filter(Boolean).join(" \u00B7 ")}</p>
-                  <span style={{fontSize:10,color:badge.fg,fontWeight:600,fontFamily:sans}}>{"\u2197"} Read article</span>
+                  <span style={{fontSize:10,color:badge.fg,fontWeight:600,fontFamily:sans}}>{"\u2197"} {t("ritual.library.readArticle")}</span>
                 </a>
               );})}
             </div>
@@ -909,25 +973,28 @@ function LibraryModal({ onClose }) {
 
 // ─── SAVED CHALLENGES MODAL ──────────────────────────────────────────────────
 function SavedModal({ saved, activeIds, onClose, onRemove, onStart }) {
+  const { t, language } = useLanguage();
   return (
     <div style={{ position:"fixed", inset:0, backgroundColor:"rgba(45,74,62,0.55)", zIndex:300, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
       <div style={{ width:"100%", maxHeight:"88vh", backgroundColor:C.card, borderRadius:"20px 20px 0 0", display:"flex", flexDirection:"column", animation:"slideUp 0.28s ease" }} onClick={e => e.stopPropagation()}>
         <div style={{ padding:"14px 20px 0", flexShrink:0 }}>
           <div style={{ width:40, height:3, backgroundColor:"#E2DAD0", borderRadius:2, margin:"0 auto 16px" }}/>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4 }}>
-            <p style={{ fontFamily:serif, fontSize:19, fontWeight:700, color:C.green, margin:0 }}>Saved Challenges</p>
+            <p style={{ fontFamily:serif, fontSize:19, fontWeight:700, color:C.green, margin:0 }}>{t("ritual.saved.title")}</p>
             <button onClick={onClose} style={{ background:"none", border:"none", color:C.muted, fontSize:22, cursor:"pointer", lineHeight:1, padding:"0 4px" }}>{"\u00D7"}</button>
           </div>
-          <p style={{ fontSize:12, color:C.muted, margin:"0 0 14px", fontFamily:sans }}>{saved.length} {saved.length===1?"challenge":"challenges"} saved {"\u00B7"} start any time</p>
+          <p style={{ fontSize:12, color:C.muted, margin:"0 0 14px", fontFamily:sans }}>{saved.length} {saved.length===1?t("ritual.saved.challenge"):t("ritual.saved.challenges")} {t("ritual.saved.saved")} {"\u00B7"} {t("ritual.saved.startAnyTime")}</p>
           <div style={{ height:1, backgroundColor:"#E2DAD0" }}/>
         </div>
         <div style={{ overflowY:"auto", padding:"4px 20px 36px" }}>
           {saved.length === 0 ? (
             <div style={{ padding:"40px 0", textAlign:"center" }}>
-              <p style={{ fontFamily:serif, fontSize:15, color:C.muted, margin:"0 0 6px" }}>No saved challenges yet</p>
-              <p style={{ fontSize:12, color:C.muted, fontFamily:sans }}>Tap the bookmark icon on any daily challenge to save it here.</p>
+              <p style={{ fontFamily:serif, fontSize:15, color:C.muted, margin:"0 0 6px" }}>{t("ritual.saved.empty")}</p>
+              <p style={{ fontSize:12, color:C.muted, fontFamily:sans }}>{t("ritual.saved.emptyDesc")}</p>
             </div>
-          ) : saved.map((c, i) => (
+          ) : saved.map((raw, i) => {
+            const c = trChallenge(raw, language);
+            return (
             <div key={c.id} style={{ paddingTop:18, paddingBottom:18, borderBottom: i < saved.length-1 ? `1px solid #E2DAD0` : "none" }}>
               <p style={{ fontFamily:serif, fontSize:16, fontWeight:700, color:C.green, margin:"0 0 6px", lineHeight:1.3 }}>
                 {c.title}
@@ -937,29 +1004,30 @@ function SavedModal({ saved, activeIds, onClose, onRemove, onStart }) {
                   <span style={{ fontSize:9, fontWeight:600, padding:"2px 8px", borderRadius:10, fontFamily:sans,
                     backgroundColor: c.difficulty==="Beginner" ? C.greenLight : c.difficulty==="Advanced" ? "#FDECEA" : C.goldLight,
                     color:           c.difficulty==="Beginner" ? C.green     : c.difficulty==="Advanced" ? "#C0392B"  : C.gold }}>
-                    {c.difficulty}
+                    {t(`ritual.difficulty.${c.difficulty}`)}
                   </span>
                 )}
                 {c.duration && <span style={{ fontSize:9, color:C.muted, padding:"2px 8px", borderRadius:10, fontFamily:sans, backgroundColor:C.bg, border:`1px solid #E2DAD0` }}>{"\u23F1"} {c.duration}</span>}
-                <span style={{ fontSize:9, color:C.muted, padding:"2px 8px", borderRadius:10, fontFamily:sans, backgroundColor:C.bg, border:`1px solid #E2DAD0` }}>{getChallengeTargetDays(c)}-day commitment</span>
+                <span style={{ fontSize:9, color:C.muted, padding:"2px 8px", borderRadius:10, fontFamily:sans, backgroundColor:C.bg, border:`1px solid #E2DAD0` }}>{getChallengeTargetDays(c)} {t("ritual.dayCommitment")}</span>
               </div>
               <p style={{ fontSize:12, color:C.text, lineHeight:1.65, margin:"0 0 14px", fontFamily:sans }}>{c.instruction || c.action}</p>
               <div style={{ display:"flex", gap:8 }}>
                 {activeIds?.has(c.id) ? (
                   <div style={{ flex:1, padding:"11px 0", textAlign:"center", backgroundColor:C.bg, border:`1px solid #E2DAD0`, borderRadius:11, fontSize:12, fontWeight:600, color:C.muted, fontFamily:serif }}>
-                    Already active
+                    {t("ritual.alreadyActive")}
                   </div>
                 ) : (
                   <button onClick={() => onStart(c)} style={{ flex:1, padding:"11px 0", backgroundColor:C.green, color:"#FDFAF5", border:"none", borderRadius:11, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:serif }}>
-                    Start Challenge {"\u2192"}
+                    {t("ritual.startChallenge")} {"\u2192"}
                   </button>
                 )}
                 <button onClick={() => onRemove(c.id)} style={{ padding:"11px 16px", backgroundColor:"transparent", color:C.muted, border:`1px solid #E2DAD0`, borderRadius:11, fontSize:11, cursor:"pointer", fontFamily:sans }}>
-                  Remove
+                  {t("common.remove")}
                 </button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -967,16 +1035,18 @@ function SavedModal({ saved, activeIds, onClose, onRemove, onStart }) {
 }
 
 // ─── START CHALLENGE MODAL ───────────────────────────────────────────────────
-function StartModal({ challenge, onStart, onClose }) {
+function StartModal({ challenge: rawChallenge, onStart, onClose }) {
+  const { t, language } = useLanguage();
+  const challenge = trChallenge(rawChallenge, language);
   const suggested = getChallengeTargetDays(challenge);
   const options   = [7, 14, 21, 30];
   return (
     <div style={{ position:"fixed", inset:0, backgroundColor:"rgba(45,74,62,0.55)", zIndex:300, display:"flex", alignItems:"flex-end" }} onClick={onClose}>
       <div style={{ width:"100%", backgroundColor:C.card, borderRadius:"20px 20px 0 0", padding:"20px 24px 44px", animation:"slideUp 0.28s ease" }} onClick={e => e.stopPropagation()}>
         <div style={{ width:40, height:3, backgroundColor:"#E2DAD0", borderRadius:2, margin:"0 auto 20px" }}/>
-        <p style={{ fontFamily:serif, fontSize:19, fontWeight:700, color:C.green, margin:"0 0 4px" }}>Start Challenge</p>
+        <p style={{ fontFamily:serif, fontSize:19, fontWeight:700, color:C.green, margin:"0 0 4px" }}>{t("ritual.startChallenge")}</p>
         <p style={{ fontSize:13, color:C.muted, margin:"0 0 20px", fontFamily:sans }}>{challenge.title}</p>
-        <p style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.09em", margin:"0 0 10px", fontFamily:sans }}>Choose your commitment</p>
+        <p style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.09em", margin:"0 0 10px", fontFamily:sans }}>{t("ritual.chooseCommitment")}</p>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:18 }}>
           {options.map(d => {
             const isRec = d === suggested;
@@ -986,14 +1056,14 @@ function StartModal({ challenge, onStart, onClose }) {
                   border:`2px solid ${isRec ? C.green : "#E2DAD0"}`,
                   backgroundColor: isRec ? C.greenLight : "transparent",
                   color: isRec ? C.green : C.muted }}>
-                {d} days
-                {isRec && <span style={{ display:"block", fontSize:9, fontWeight:600, color:C.green, fontFamily:sans, letterSpacing:"0.05em", textTransform:"uppercase", marginTop:2 }}>Recommended</span>}
+                {d} {t("ritual.days")}
+                {isRec && <span style={{ display:"block", fontSize:9, fontWeight:600, color:C.green, fontFamily:sans, letterSpacing:"0.05em", textTransform:"uppercase", marginTop:2 }}>{t("ritual.recommended")}</span>}
               </button>
             );
           })}
         </div>
         <button onClick={onClose} style={{ width:"100%", padding:"13px 0", border:`1px solid #E2DAD0`, borderRadius:12, backgroundColor:"transparent", color:C.muted, fontSize:13, cursor:"pointer", fontFamily:sans }}>
-          Cancel
+          {t("common.cancel")}
         </button>
       </div>
     </div>
@@ -1011,16 +1081,20 @@ const parseHour = str => {
   if (m[3].toUpperCase() === "AM" && h === 12) h = 0;
   return h + mn / 60;
 };
-const fmtHour = h => {
+// Romanian uses the 24h clock, not AM/PM — "ora 14:30", never "2:30 PM" — so lang==="ro"
+// switches format entirely rather than translating the AM/PM letters themselves.
+const fmtHour = (h, lang) => {
   if (h == null) return "";
   const hr = Math.floor(h), mn = Math.round((h - Math.floor(h)) * 60);
+  if (lang === "ro") return `${String(hr).padStart(2, "0")}:${String(mn).padStart(2, "0")}`;
   const ap = hr >= 12 ? "PM" : "AM";
   const dh = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
   return `${dh}:${String(mn).padStart(2, "0")} ${ap}`;
 };
-const fmtHourShort = h => {
+const fmtHourShort = (h, lang) => {
   if (h == null) return "";
   const hr = Math.floor(h), mn = Math.round((h - Math.floor(h)) * 60);
+  if (lang === "ro") return `${String(hr).padStart(2, "0")}:${String(mn).padStart(2, "0")}`;
   const ap = hr >= 12 ? "PM" : "AM";
   const dh = hr === 0 ? 12 : hr > 12 ? hr - 12 : hr;
   return mn > 0 ? `${dh}:${String(mn).padStart(2, "0")} ${ap}` : `${dh} ${ap}`;
@@ -1050,6 +1124,7 @@ function TLMoonIcon({ size = 13, col }) {
   );
 }
 function CircadianTimeline({ sun, geoError, entries, locationLabel, onRetryLocation }) {
+  const { t, language } = useLanguage();
   const now  = new Date();
   const nowH = now.getHours() + now.getMinutes() / 60;
   const srH  = parseHour(sun?.sunrise)    ?? 6.5;
@@ -1089,27 +1164,27 @@ function CircadianTimeline({ sun, geoError, entries, locationLabel, onRetryLocat
     }).filter(t => t >= 0 && t < 24);
     if (times.length > 0) {
       const first = Math.min(...times), last = Math.max(...times);
-      eatWindow = first === last ? fmtHourShort(first) : `${fmtHourShort(first)}–${fmtHourShort(last)}`;
+      eatWindow = first === last ? fmtHourShort(first, language) : `${fmtHourShort(first, language)}–${fmtHourShort(last, language)}`;
     }
   }
 
   const rhythmItems = [
-    { icon: "☕", label: "Caffeine cutoff", time: fmtHourShort(cafCutH) },
-    { icon: "🍽️", label: "Eating window",  time: eatWindow },
-    { icon: "⚡", label: "Energy peak",    time: `${fmtHourShort(peakS)}–${fmtHourShort(peakE)}` },
-    { icon: "🌙", label: "Wind-down",      time: fmtHourShort(bedH - 2) },
+    { icon: "☕", label: t("ritual.circadian.caffeineCutoff"), time: fmtHourShort(cafCutH, language) },
+    { icon: "🍽️", label: t("ritual.circadian.eatingWindow"),  time: eatWindow },
+    { icon: "⚡", label: t("ritual.circadian.energyPeak"),    time: `${fmtHourShort(peakS, language)}–${fmtHourShort(peakE, language)}` },
+    { icon: "🌙", label: t("ritual.circadian.windDown"),      time: fmtHourShort(bedH - 2, language) },
   ];
 
   const getPhase = () => {
-    if (nowH < srH - 0.5)  return { label:"Night · Rest & Recovery",        sub:"Sleep is your most powerful recovery tool right now." };
-    if (nowH < srH + 0.75) return { label:"Golden Dawn · Morning Light",     sub:"Step outside now — morning photons anchor your circadian clock for the day." };
-    if (nowH < uvbS)        return { label:"Morning · Low UV",                sub:"UV is minimal. Safe and ideal for outdoor activity." };
-    if (nowH < snH - 0.5)  return { label:"Rising UV · Vitamin D Window",    sub:"Ideal 15–20 min of direct sunlight now for optimal vitamin D synthesis." };
-    if (nowH < snH + 0.5)  return { label:"Peak UV · Seek Shade",            sub:"UV index is at its highest. Limit prolonged unprotected exposure." };
-    if (nowH < uvbE)        return { label:"Declining UV · Still Beneficial", sub:"UV remains effective for vitamin D — intensity decreasing through the afternoon." };
-    if (nowH < ssH - 0.75) return { label:"Afternoon · Low UV",              sub:"UV is minimal. Excellent time for outdoor exercise or a gentle walk." };
-    if (nowH < ssH + 0.5)  return { label:"Golden Hour · Ideal Outdoors",    sub:"Warm evening light — perfect for a walk, breathwork, or outdoor wind-down." };
-    return                       { label:"Evening · Wind Down",               sub:"Reduce blue light now to let melatonin rise naturally for deeper sleep." };
+    if (nowH < srH - 0.5)  return { label:t("ritual.phase.night.label"),    sub:t("ritual.phase.night.sub") };
+    if (nowH < srH + 0.75) return { label:t("ritual.phase.dawn.label"),     sub:t("ritual.phase.dawn.sub") };
+    if (nowH < uvbS)        return { label:t("ritual.phase.morningLow.label"), sub:t("ritual.phase.morningLow.sub") };
+    if (nowH < snH - 0.5)  return { label:t("ritual.phase.risingUV.label"), sub:t("ritual.phase.risingUV.sub") };
+    if (nowH < snH + 0.5)  return { label:t("ritual.phase.peakUV.label"),   sub:t("ritual.phase.peakUV.sub") };
+    if (nowH < uvbE)        return { label:t("ritual.phase.declining.label"), sub:t("ritual.phase.declining.sub") };
+    if (nowH < ssH - 0.75) return { label:t("ritual.phase.afternoonLow.label"), sub:t("ritual.phase.afternoonLow.sub") };
+    if (nowH < ssH + 0.5)  return { label:t("ritual.phase.goldenHour.label"), sub:t("ritual.phase.goldenHour.sub") };
+    return                       { label:t("ritual.phase.evening.label"),   sub:t("ritual.phase.evening.sub") };
   };
   const phase = getPhase();
   const isDay = nowH >= srH && nowH <= ssH;
@@ -1157,9 +1232,9 @@ function CircadianTimeline({ sun, geoError, entries, locationLabel, onRetryLocat
         {showInfo && (
           <div onClick={e => e.stopPropagation()} style={{ position:"absolute", top:0, left:0, right:22, backgroundColor:C.card, border:`1px solid ${C.border}`, borderRadius:9, padding:"10px 13px", zIndex:15, boxShadow:"0 4px 16px rgba(27,58,45,0.12)" }}>
             <p style={{ fontSize:11, color:C.text, margin:"0 0 7px", lineHeight:1.7, fontFamily:sans }}>
-              The <b>green zones</b> show safe outdoor time — morning and afternoon. The <b>gold midday band</b> marks peak UV, best kept brief.
+              {t("ritual.circadian.infoTooltip1")} <b>{t("ritual.circadian.greenZones")}</b> {t("ritual.circadian.infoTooltip2")} <b>{t("ritual.circadian.goldBand")}</b> {t("ritual.circadian.infoTooltip3")}
             </p>
-            <button onClick={e => { e.stopPropagation(); setShowInfo(false); }} style={{ fontSize:10, color:C.muted, background:"none", border:"none", cursor:"pointer", padding:0, fontFamily:sans }}>Dismiss</button>
+            <button onClick={e => { e.stopPropagation(); setShowInfo(false); }} style={{ fontSize:10, color:C.muted, background:"none", border:"none", cursor:"pointer", padding:0, fontFamily:sans }}>{t("ritual.dismiss")}</button>
           </div>
         )}
 
@@ -1181,12 +1256,12 @@ function CircadianTimeline({ sun, geoError, entries, locationLabel, onRetryLocat
         {/* Zone tap tooltip — floats above bar in the icon-row space */}
         {activeTip === "safe" && (
           <div style={{ position:"absolute", top:2, left:`${(sr + uvbSP) / 2}%`, transform:"translateX(-50%)", backgroundColor:C.green, color:"#FDFAF5", fontSize:9, fontFamily:sans, fontWeight:600, padding:"2px 8px", borderRadius:5, whiteSpace:"nowrap", pointerEvents:"none", zIndex:12, boxShadow:"0 1px 6px rgba(27,58,45,0.2)" }}>
-            Safe exposure · {fmtHour(srH)}–{fmtHour(uvbS)} & {fmtHour(uvbE)}–{fmtHour(ssH)}
+            {t("ritual.circadian.safeExposure")} · {fmtHour(srH, language)}–{fmtHour(uvbS, language)} & {fmtHour(uvbE, language)}–{fmtHour(ssH, language)}
           </div>
         )}
         {activeTip === "peak" && (
           <div style={{ position:"absolute", top:2, left:`${sn}%`, transform:"translateX(-50%)", backgroundColor:C.amber, color:"#FDFAF5", fontSize:9, fontFamily:sans, fontWeight:600, padding:"2px 8px", borderRadius:5, whiteSpace:"nowrap", pointerEvents:"none", zIndex:12, boxShadow:"0 1px 6px rgba(154,112,32,0.3)" }}>
-            Peak UV · {fmtHour(uvbS)}–{fmtHour(uvbE)} · Limit time outdoors
+            {t("ritual.circadian.peakUV")} · {fmtHour(uvbS, language)}–{fmtHour(uvbE, language)} · {t("ritual.circadian.limitOutdoors")}
           </div>
         )}
 
@@ -1211,7 +1286,7 @@ function CircadianTimeline({ sun, geoError, entries, locationLabel, onRetryLocat
         {/* Now label below bar */}
         {nw > 5 && nw < 93 && !activeTip && (
           <div style={{ position:"absolute", bottom:18, left:`${nw}%`, transform:"translateX(-50%)", fontSize:9, fontWeight:700, color:C.green, whiteSpace:"nowrap", fontFamily:sans, letterSpacing:"0.04em" }}>
-            Now · {fmtHour(nowH)}
+            {t("ritual.circadian.now")} · {fmtHour(nowH, language)}
           </div>
         )}
         {/* Hour ticks */}
@@ -1219,7 +1294,7 @@ function CircadianTimeline({ sun, geoError, entries, locationLabel, onRetryLocat
           const xp = p(h);
           return (
             <div key={h} style={{ position:"absolute", bottom:0, left:`${xp}%`, transform:"translateX(-50%)" }}>
-              <span style={{ fontSize:9, color:C.muted, fontFamily:sans, lineHeight:1 }}>{h === 24 ? "12 AM" : h === 12 ? "12 PM" : h < 12 ? `${h} AM` : `${h - 12} PM`}</span>
+              <span style={{ fontSize:9, color:C.muted, fontFamily:sans, lineHeight:1 }}>{language === "ro" ? (h === 24 ? "00" : String(h).padStart(2, "0")) : (h === 24 ? "12 AM" : h === 12 ? "12 PM" : h < 12 ? `${h} AM` : `${h - 12} PM`)}</span>
             </div>
           );
         })}
@@ -1228,11 +1303,11 @@ function CircadianTimeline({ sun, geoError, entries, locationLabel, onRetryLocat
       <div style={{ display:"flex", gap:18, marginTop:12, justifyContent:"center" }}>
         <div style={{ display:"flex", alignItems:"center", gap:5 }}>
           <div style={{ width:9, height:9, borderRadius:"50%", backgroundColor:C.green, flexShrink:0 }}/>
-          <span style={{ fontSize:10, color:C.muted, fontFamily:sans }}>Safe exposure</span>
+          <span style={{ fontSize:10, color:C.muted, fontFamily:sans }}>{t("ritual.circadian.safeExposure")}</span>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:5 }}>
           <div style={{ width:9, height:9, borderRadius:"50%", backgroundColor:C.amber, flexShrink:0 }}/>
-          <span style={{ fontSize:10, color:C.muted, fontFamily:sans }}>Peak UV — limit time outdoors</span>
+          <span style={{ fontSize:10, color:C.muted, fontFamily:sans }}>{t("ritual.circadian.peakUV")} — {t("ritual.circadian.limitOutdoors")}</span>
         </div>
       </div>
 
@@ -1253,9 +1328,9 @@ function CircadianTimeline({ sun, geoError, entries, locationLabel, onRetryLocat
         <p style={{ fontSize:12, color:C.amber, margin:0, lineHeight:1.6, fontFamily:sans }}>{phase.sub}</p>
         {sun && (
           <div style={{ display:"flex", gap:16, marginTop:9, flexWrap:"wrap" }}>
-            <span style={{ fontSize:11, color:C.muted, fontFamily:sans, display:"flex", alignItems:"center", gap:4 }}><TLSunIcon size={11}/> Sunrise {fmtHour(srH)}</span>
-            <span style={{ fontSize:11, color:C.muted, fontFamily:sans, display:"flex", alignItems:"center", gap:4 }}><TLMoonIcon size={10}/> Sunset {fmtHour(ssH)}</span>
-            <span style={{ fontSize:11, color:C.muted, fontFamily:sans }}>◇ Solar noon {fmtHour(snH)}</span>
+            <span style={{ fontSize:11, color:C.muted, fontFamily:sans, display:"flex", alignItems:"center", gap:4 }}><TLSunIcon size={11}/> {t("ritual.circadian.sunrise")} {fmtHour(srH, language)}</span>
+            <span style={{ fontSize:11, color:C.muted, fontFamily:sans, display:"flex", alignItems:"center", gap:4 }}><TLMoonIcon size={10}/> {t("ritual.circadian.sunset")} {fmtHour(ssH, language)}</span>
+            <span style={{ fontSize:11, color:C.muted, fontFamily:sans }}>◇ {t("ritual.circadian.solarNoon")} {fmtHour(snH, language)}</span>
           </div>
         )}
         {locationLabel && (
@@ -1265,9 +1340,9 @@ function CircadianTimeline({ sun, geoError, entries, locationLabel, onRetryLocat
               <>
                 {" · "}
                 <button onClick={e => { e.stopPropagation(); onRetryLocation?.(); }} style={{ fontSize:10, color:C.green, background:"none", border:"none", padding:0, cursor:"pointer", fontFamily:sans, textDecoration:"underline", fontWeight:600 }}>
-                  Enable location
+                  {t("ritual.circadian.enableLocation")}
                 </button>
-                {" for your exact times"}
+                {` ${t("ritual.circadian.forExactTimes")}`}
               </>
             )}
           </p>
@@ -1279,6 +1354,8 @@ function CircadianTimeline({ sun, geoError, entries, locationLabel, onRetryLocat
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 export default function Ritual({ profile, targets, entries, waterMl, cyclePhase, periodLogs, activeChallenges, startChallenge, checkInChallenge, uncheckInChallenge, abandonChallenge, ritualStreak, markChallengeDone, weekMeals, weekWaterLogs, completionDates, fastingStart, fastingEnd }) {
+  const { t, language } = useLanguage();
+  const dateLocale = language === "ro" ? "ro-RO" : "en-US";
   const [biohack,        setBiohack]        = useState(null);
   const [loading,        setLoading]        = useState(false);
   const [loadingStatus,  setLoadingStatus]  = useState("");
@@ -1305,7 +1382,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
 
   const tog = k => setOpen(p => ({ ...p, [k]: !p[k] }));
 
-  const localCyclePhase = cyclePhase || ((profile?.sex==="female" && profile?.biologicalTrackingEnabled && profile?.biologicalContext==="cycle") ? getCyclePhase(periodLogs, profile?.cycleLength||28) : null);
+  const localCyclePhase = cyclePhase || ((profile?.sex==="female" && profile?.biologicalTrackingEnabled && profile?.biologicalContext==="cycle") ? getCyclePhase(periodLogs, profile?.cycleLength||28, language) : null);
 
   // Weekly Biohack Report — Monday-reset consistency grid (food/water/challenge) + numbers + message.
   // Structured as a `rows` array so a 4th row (movement/smartwatch) is just another entry, later.
@@ -1342,9 +1419,9 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
   const challengeDone = weekDateStrs.map(ds => challengeDateSet.has(ds));
 
   const weekRows = [
-    { key: "food",      label: "Food",      data: foodDone },
-    { key: "water",     label: "Water",     data: waterDone },
-    { key: "challenge", label: "Challenge", data: challengeDone },
+    { key: "food",      label: t("ritual.week.food"),      data: foodDone },
+    { key: "water",     label: t("ritual.week.water"),     data: waterDone },
+    { key: "challenge", label: t("ritual.week.challenge"), data: challengeDone },
   ];
 
   const todayIdx = Math.max(0, weekDateStrs.indexOf(localDateStr()));
@@ -1352,15 +1429,15 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
     const monday = new Date(weekDateStrs[0] + "T00:00:00");
     const sunday = new Date(weekDateStrs[6] + "T00:00:00");
     return monday.getMonth() === sunday.getMonth()
-      ? `${monday.toLocaleDateString("en-US", { month:"long" })} ${monday.getDate()} – ${sunday.getDate()}`
-      : `${monday.toLocaleDateString("en-US", { month:"short" })} ${monday.getDate()} – ${sunday.toLocaleDateString("en-US", { month:"short" })} ${sunday.getDate()}`;
+      ? `${monday.toLocaleDateString(dateLocale, { month:"long" })} ${monday.getDate()} – ${sunday.getDate()}`
+      : `${monday.toLocaleDateString(dateLocale, { month:"short" })} ${monday.getDate()} – ${sunday.toLocaleDateString(dateLocale, { month:"short" })} ${sunday.getDate()}`;
   })();
 
   const challengeDaysThisWeek = challengeDone.filter(Boolean).length;
   const weekTicks = foodDone.filter(Boolean).length + waterDone.filter(Boolean).length + challengeDaysThisWeek;
   const weekRatio = weekTicks / 21;
   const weekTier = weekRatio < 0.34 ? "low" : weekRatio < 0.67 ? "medium" : "high";
-  const weeklyMessage = pickWeeklyVariant(`weekly_report_msg_${weekTier}`, WEEKLY_REPORT_MESSAGES[weekTier], weekKey);
+  const weeklyMessage = pickWeeklyVariant(`weekly_report_msg_${weekTier}`, (language === "ro" ? WEEKLY_REPORT_MESSAGES_RO : WEEKLY_REPORT_MESSAGES)[weekTier], weekKey);
   // Weekly goals now live inside the normal Daily Challenge pool (see CHALLENGES_GENERAL) — this
   // slot just reflects real Active Challenges, or disappears entirely when there are none.
   const activeSorted = [...activeChallenges].sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""));
@@ -1390,7 +1467,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
     if (!navigator.geolocation) {
       console.log("[Nora][location DEBUG] navigator.geolocation is unavailable (insecure context or unsupported browser)");
       setGeoError(true);
-      useCoords(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, `${DEFAULT_LOCATION.city} (default)`, "default");
+      useCoords(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, `${DEFAULT_LOCATION.city} ${t("ritual.location.default")}`, "default");
       return;
     }
     console.log("[Nora][location DEBUG] calling navigator.geolocation.getCurrentPosition…");
@@ -1401,12 +1478,12 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
         const city = await reverseGeocodeCity(lat, lng);
         console.log("[Nora][location DEBUG] reverse geocode result:", city);
         setGeoError(false);
-        useCoords(lat, lng, city || "Your location", "gps", !!city);
+        useCoords(lat, lng, city || t("ritual.location.yourLocation"), "gps", !!city);
       },
       err => {
         console.log("[Nora][location DEBUG] geolocation error:", err.code, err.message);
         setGeoError(true);
-        useCoords(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, `${DEFAULT_LOCATION.city} (default)`, "default");
+        useCoords(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng, `${DEFAULT_LOCATION.city} ${t("ritual.location.default")}`, "default");
       }
     );
   };
@@ -1432,7 +1509,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
   }, []);
 
   const generate = async (rejected = []) => {
-    setLoading(true); setCitOpen(false); setLoadingStatus("Selecting today's challenge.");
+    setLoading(true); setCitOpen(false); setLoadingStatus(t("ritual.status.selecting"));
     const sex = profile?.sex;
 
     let hist60 = [];
@@ -1453,7 +1530,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
       const seed = parseInt(todayStr().replace(/-/g, "")) + rejected.length * 7919;
       challenge = available[seed % available.length];
     } else {
-      setLoadingStatus("Generating a new challenge.");
+      setLoadingStatus(t("ritual.status.generating"));
       const goalsStr = (profile?.goals || []).join(", ") || "general health";
       const isPeriOrMeno = profile?.biologicalTrackingEnabled && (profile?.biologicalContext === "perimenopause" || profile?.biologicalContext === "menopause");
       const genderCtx = sex === "female" && isPeriOrMeno ? "Female user, perimenopausal/menopausal. Women's wellness content welcome, but NEVER menstrual-cycle-phase content (no follicular/luteal/ovulation framing) — she does not have regular ovulation. Perimenopause/menopause-relevant content (bone density, hot flashes, sleep) is welcome instead."
@@ -1471,7 +1548,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
       if (!challenge) challenge = getFallbackChallenge(sex, usedIds, localCyclePhase);
     }
 
-    setLoadingStatus("Searching research database.");
+    setLoadingStatus(t("ritual.status.searching"));
     const studies = challenge.pubmedQ
       ? (await fetchPubMed(challenge.pubmedQ, 10, challenge.pubmedFbs || [])).studies || []
       : [];
@@ -1590,8 +1667,8 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
       <div style={{ background:`linear-gradient(160deg,${C.greenDark} 0%,${C.green} 100%)`, padding:"20px 20px 18px", margin:"-24px -20px 18px", position:"relative", overflow:"hidden" }}>
         <div style={{ display:"flex", alignItems:"center", gap:12, flex:1 }}>
           <div style={{ flex:1 }}>
-            <h2 style={{ fontFamily:serif, fontSize:21, color:"#FDFAF5", fontWeight:700, margin:0, lineHeight:1.2, letterSpacing:"-0.01em" }}>Ritual</h2>
-            <p style={{ fontSize:11, color:"rgba(253,250,245,0.55)", margin:0, fontFamily:sans }}>Biohacking · Circadian · Protocols</p>
+            <h2 style={{ fontFamily:serif, fontSize:21, color:"#FDFAF5", fontWeight:700, margin:0, lineHeight:1.2, letterSpacing:"-0.01em" }}>{t("nav.ritual")}</h2>
+            <p style={{ fontSize:11, color:"rgba(253,250,245,0.55)", margin:0, fontFamily:sans }}>{t("ritual.header.subtitle")}</p>
           </div>
         </div>
       </div>
@@ -1599,8 +1676,8 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
       {/* ─── 1. CIRCADIAN CLOCK — hero, top of tab ──────────────────────────────── */}
       <div style={{ ...card }}>
         <SectionHeader
-          title="Circadian Rhythm"
-          sub="24-hour sun & UV timeline"
+          title={t("ritual.circadian.title")}
+          sub={t("ritual.circadian.subtitle")}
           open={open.circadian}
           onToggle={() => tog("circadian")}
           accent
@@ -1615,10 +1692,10 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
       <div style={{ backgroundColor:C.card, borderRadius:16, border:`1px solid ${C.border}`, borderTop:`1px solid ${C.muted}`, boxShadow:"0 2px 20px rgba(45,74,62,0.08)", overflow:"hidden", position:"relative" }}>
         <div style={{ padding:"14px 20px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:`1px solid ${C.border}` }}>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <span style={{ fontSize:9, fontWeight:700, color:C.green, textTransform:"uppercase", letterSpacing:"0.12em", fontFamily:sans }}>Daily Challenge</span>
-            {biohack?.category && <span style={{ fontSize:9, fontWeight:600, color:C.muted, backgroundColor:C.bg, border:`1px solid ${C.border}`, borderRadius:20, padding:"2px 8px", textTransform:"capitalize" }}>{biohack.category}</span>}
+            <span style={{ fontSize:9, fontWeight:700, color:C.green, textTransform:"uppercase", letterSpacing:"0.12em", fontFamily:sans }}>{t("ritual.dailyChallenge")}</span>
+            {biohack?.category && <span style={{ fontSize:9, fontWeight:600, color:C.muted, backgroundColor:C.bg, border:`1px solid ${C.border}`, borderRadius:20, padding:"2px 8px", textTransform:"capitalize" }}>{t(`ritual.category.${biohack.category}`, biohack.category)}</span>}
           </div>
-          {ritualStreak > 0 && <span style={{ fontSize:11, color:C.muted, fontFamily:sans }}>{ritualStreak}-day streak {ritualStreak>=7?"🔥":"⚡"}</span>}
+          {ritualStreak > 0 && <span style={{ fontSize:11, color:C.muted, fontFamily:sans }}>{ritualStreak} {t("ritual.dayStreak")} {ritualStreak>=7?"🔥":"⚡"}</span>}
         </div>
         {loading ? (
           <div style={{ padding:"20px 20px 22px" }}>
@@ -1626,12 +1703,14 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
             <div style={{ height:40, backgroundColor:C.track, borderRadius:10, marginTop:8 }}/>
             {loadingStatus && <p style={{ fontSize:11, color:C.muted, margin:"12px 0 0", textAlign:"center", fontFamily:sans, fontStyle:"italic" }}>{loadingStatus}</p>}
           </div>
-        ) : biohack ? (
+        ) : biohack ? (() => {
+          const trBiohack = trChallenge(biohack, language);
+          return (
           <div style={{ padding:"18px 20px 20px", animation:"fadeIn 0.35s ease" }}>
 
             {/* Title */}
             <p style={{ fontFamily:serif, fontSize:20, fontWeight:700, color:C.green, margin:"0 0 8px", lineHeight:1.25, letterSpacing:"-0.01em" }}>
-              {biohack.title || biohack.name}
+              {trBiohack.title || trBiohack.name}
             </p>
 
             {/* Difficulty + Duration chips */}
@@ -1640,7 +1719,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
                 <span style={{ fontSize:10, fontWeight:600, padding:"3px 10px", borderRadius:20, fontFamily:sans,
                   backgroundColor: biohack.difficulty==="Beginner" ? C.greenLight : biohack.difficulty==="Advanced" ? "#FDECEA" : C.goldLight,
                   color:           biohack.difficulty==="Beginner" ? C.green     : biohack.difficulty==="Advanced" ? "#C0392B"  : C.gold }}>
-                  {biohack.difficulty}
+                  {t(`ritual.difficulty.${biohack.difficulty}`)}
                 </span>
               )}
               {biohack.duration && (
@@ -1652,18 +1731,18 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
 
             {/* Instruction */}
             <p style={{ fontSize:13, color:C.text, lineHeight:1.85, margin:"0 0 12px", fontFamily:sans }}>
-              {biohack.instruction || biohack.action}
+              {trBiohack.instruction || trBiohack.action}
             </p>
 
             {/* Science explanation */}
             <div style={{ borderLeft:`2px solid ${C.green}`, paddingLeft:13, margin:"0 0 14px" }}>
               <p style={{ fontSize:12, color:C.muted, lineHeight:1.75, margin:0, fontStyle:"italic", fontFamily:serif }}>
-                {biohack.science || biohack.why}
+                {trBiohack.science || trBiohack.why}
               </p>
             </div>
 
             <p style={{ fontSize:11, color:C.muted, lineHeight:1.6, margin:"0 0 14px", fontFamily:sans }}>
-              Informational only, not medical advice — talk to your doctor before starting anything new, especially supplements.
+              {t("ritual.disclaimer")}
             </p>
 
             {/* PubMed citations */}
@@ -1673,7 +1752,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
                   <>
                     <button onClick={() => setCitOpen(o => !o)} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", padding:0, cursor:"pointer" }}>
                       <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1.5" y="2" width="10" height="9" rx="1.5" stroke={C.muted} strokeWidth="1.1"/><path d="M3.5 5.5h6M3.5 7.5h4" stroke={C.muted} strokeWidth="1" strokeLinecap="round"/></svg>
-                      <span style={{ fontSize:11, color:C.muted, fontFamily:sans }}>Based on {biohack.studies.length} peer-reviewed {biohack.studies.length===1?"study":"studies"}</span>
+                      <span style={{ fontSize:11, color:C.muted, fontFamily:sans }}>{t("ritual.basedOn")} {biohack.studies.length} {t("ritual.peerReviewed")} {biohack.studies.length===1?t("boost.citations.study"):t("boost.citations.studies")}</span>
                       <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ transition:"transform 0.18s", transform:citOpen?"rotate(180deg)":"none" }}><path d="M2 3.5l3 3 3-3" stroke={C.muted} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </button>
                     {citOpen && (
@@ -1692,7 +1771,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
                     )}
                   </>
                 ) : (
-                  <p style={{ fontSize:11, color:C.green, margin:0, fontStyle:"italic", fontFamily:serif, letterSpacing:"0.02em" }}>✦ Based on established clinical research · Always consult your healthcare provider</p>
+                  <p style={{ fontSize:11, color:C.green, margin:0, fontStyle:"italic", fontFamily:serif, letterSpacing:"0.02em" }}>✦ {t("ritual.basedOnClinical")}</p>
                 )}
               </div>
             )}
@@ -1702,19 +1781,19 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
               <div style={{ display:"flex", gap:8 }}>
                 {biohackActive ? (
                   <div style={{ flex:1, padding:"13px 0", textAlign:"center", backgroundColor:C.bg, border:`1px solid ${C.border}`, borderRadius:12, fontSize:12, fontWeight:600, color:C.muted, fontFamily:serif }}>
-                    Already active
+                    {t("ritual.alreadyActive")}
                   </div>
                 ) : (
                   <button onClick={() => setStartModal(biohack)}
                     style={{ flex:1, padding:"13px 0", backgroundColor:C.green, color:"#FDFAF5", border:"none", borderRadius:12, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:serif }}>
-                    Start Challenge →
+                    {t("ritual.startChallenge")} →
                   </button>
                 )}
                 <button onClick={notForMe}
                   style={{ flex:1, padding:"13px 0", backgroundColor:"transparent", color:C.muted, border:`1px solid ${C.border}`, borderRadius:12, fontSize:11, cursor:"pointer", fontFamily:sans }}>
-                  Not for me
+                  {t("ritual.notForMe")}
                 </button>
-                <button onClick={toggleSave} title={isSaved ? "Unsave" : "Save challenge"}
+                <button onClick={toggleSave} title={isSaved ? t("ritual.unsave") : t("ritual.saveChallenge")}
                   style={{ width:46, height:46, display:"flex", alignItems:"center", justifyContent:"center", backgroundColor: isSaved ? C.greenLight : "transparent", border:`1px solid ${isSaved ? C.green : C.border}`, borderRadius:12, cursor:"pointer", flexShrink:0, transition:"background 0.15s,border-color 0.15s" }}>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill={isSaved ? C.green : "none"}>
                     <path d="M3 2h10a1 1 0 0 1 1 1v11l-6-3-6 3V3a1 1 0 0 1 1-1z" stroke={isSaved ? C.green : C.muted} strokeWidth="1.3" strokeLinejoin="round"/>
@@ -1723,42 +1802,44 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
               </div>
             </div>
           </div>
-        ) : null}
+          );
+        })() : null}
       </div>
 
       {/* ─── 3. ACTIVE CHALLENGES — collapsible, compact ────────────────────────── */}
       <div style={{ ...card }}>
-        <SectionHeader title="Active Challenges" sub={activeChallenges.length>0 ? `${activeChallenges.length} in progress` : "None yet — start one above"} open={open.active} onToggle={() => tog("active")} accent/>
+        <SectionHeader title={t("ritual.activeChallenges")} sub={activeChallenges.length>0 ? `${activeChallenges.length} ${t("ritual.inProgress")}` : t("ritual.noneYet")} open={open.active} onToggle={() => tog("active")} accent/>
         <Collapsible open={open.active}>
           <div style={{ padding:"0 18px 18px", display:"flex", flexDirection:"column", gap:8 }}>
             {activeChallenges.length===0 ? (
-              <p style={{ fontSize:12, color:C.muted, fontFamily:sans, margin:0 }}>Start today's challenge above to begin tracking a streak here.</p>
-            ) : activeChallenges.map(ac => {
+              <p style={{ fontSize:12, color:C.muted, fontFamily:sans, margin:0 }}>{t("ritual.startAboveHint")}</p>
+            ) : activeChallenges.map(rawAc => {
+              const ac = trChallenge(rawAc, language);
               const today      = todayStr();
               const checkedIn  = ac.checkIns.includes(today);
               const completed  = ac.checkIns.length >= ac.targetDays;
               const pct        = Math.min(ac.checkIns.length / ac.targetDays, 1);
               const acStreak   = getAcStreak(ac);
               const streakMsg  = completed
-                ? "All done - outstanding commitment."
-                : acStreak >= 14 ? `${acStreak} days in a row - exceptional`
-                : acStreak >= 7  ? `${acStreak}-day streak - you're building a real habit`
-                : acStreak >= 3  ? `${acStreak} days in - keep the momentum`
-                : checkedIn      ? "Checked in today - well done"
-                : acStreak === 1 ? "1-day start - check in tomorrow to build your streak"
-                : "Check in each day to build your streak";
+                ? t("ritual.streak.allDone")
+                : acStreak >= 14 ? `${acStreak} ${t("ritual.streak.daysInARow")}`
+                : acStreak >= 7  ? `${acStreak} ${t("ritual.streak.dayStreakHabit")}`
+                : acStreak >= 3  ? `${acStreak} ${t("ritual.streak.daysInMomentum")}`
+                : checkedIn      ? t("ritual.streak.checkedInToday")
+                : acStreak === 1 ? t("ritual.streak.oneDayStart")
+                : t("ritual.streak.checkInDaily");
               return (
                 <div key={ac.instanceId} style={{ backgroundColor:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:"12px 14px" }}>
                   {completed ? (
                     <div style={{ textAlign:"center", padding:"6px 0 4px" }}>
                       <div style={{ fontSize:26, marginBottom:6 }}>🏆</div>
-                      <p style={{ fontFamily:serif, fontSize:15, fontWeight:700, color:C.gold, margin:"0 0 2px" }}>Challenge Complete!</p>
+                      <p style={{ fontFamily:serif, fontSize:15, fontWeight:700, color:C.gold, margin:"0 0 2px" }}>{t("ritual.challengeComplete")}</p>
                       <p style={{ fontSize:11, color:C.muted, margin:"0 0 12px", fontFamily:sans }}>
-                        {ac.title} · {ac.targetDays} days
+                        {ac.title} · {ac.targetDays} {t("ritual.days")}
                       </p>
                       <button onClick={() => abandonChallenge(ac.instanceId)}
                         style={{ padding:"7px 18px", backgroundColor:"transparent", color:C.muted, border:`1px solid ${C.border}`, borderRadius:9, fontSize:11, cursor:"pointer", fontFamily:sans }}>
-                        Dismiss
+                        {t("ritual.dismiss")}
                       </button>
                     </div>
                   ) : (
@@ -1769,10 +1850,10 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
                             {ac.title}
                           </p>
                           <p style={{ fontSize:10, color:C.muted, margin:0, fontFamily:sans }}>
-                            Day {ac.checkIns.length} of {ac.targetDays} · started {ac.startDate}
+                            {t("ritual.dayOf")} {ac.checkIns.length} {t("ritual.of")} {ac.targetDays} · {t("ritual.started")} {ac.startDate}
                           </p>
                         </div>
-                        <button onClick={() => abandonChallenge(ac.instanceId)} title="Abandon"
+                        <button onClick={() => abandonChallenge(ac.instanceId)} title={t("ritual.abandon")}
                           style={{ background:"none", border:"none", color:C.muted, fontSize:16, cursor:"pointer", padding:"0 2px", flexShrink:0, lineHeight:1 }}>×</button>
                       </div>
 
@@ -1785,14 +1866,14 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
                       </div>
 
                       {checkedIn ? (
-                        <button onClick={() => uncheckInChallenge(ac.instanceId)} title="Tap to undo"
+                        <button onClick={() => uncheckInChallenge(ac.instanceId)} title={t("ritual.tapToUndo")}
                           style={{ width:"100%", padding:"8px 12px", backgroundColor:C.greenLight, borderRadius:9, border:`1px solid ${C.green}30`, textAlign:"center", cursor:"pointer" }}>
-                          <p style={{ fontSize:11, fontWeight:600, color:C.green, margin:0, fontFamily:serif }}>✓ Checked in today <span style={{ fontWeight:400, color:C.muted, fontFamily:sans }}>· tap to undo</span></p>
+                          <p style={{ fontSize:11, fontWeight:600, color:C.green, margin:0, fontFamily:serif }}>✓ {t("ritual.checkedInToday")} <span style={{ fontWeight:400, color:C.muted, fontFamily:sans }}>· {t("ritual.tapToUndo")}</span></p>
                         </button>
                       ) : (
                         <button onClick={() => checkInChallenge(ac.instanceId)}
                           style={{ width:"100%", padding:"10px 0", backgroundColor:C.green, color:"#FDFAF5", border:"none", borderRadius:10, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:serif }}>
-                          Check in today
+                          {t("ritual.checkInToday")}
                         </button>
                       )}
                     </>
@@ -1807,14 +1888,14 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
       {/* ─── 4. WEEKLY BIOHACK REPORT ───────────────────────────────────────────── */}
       <div style={{ ...card, padding:"24px 22px 26px" }}>
         {/* Header — editorial, matches the Circadian Rhythm title language */}
-        <p style={{ fontFamily:serif, fontSize:19, fontWeight:600, color:C.text, margin:"0 0 4px", lineHeight:1.2 }}>Weekly Report</p>
+        <p style={{ fontFamily:serif, fontSize:19, fontWeight:600, color:C.text, margin:"0 0 4px", lineHeight:1.2 }}>{t("ritual.weeklyReport")}</p>
         <p style={{ fontSize:9, color:C.muted, margin:"0 0 26px", fontFamily:sans, textTransform:"uppercase", letterSpacing:"0.14em" }}>{weekRangeLabel}</p>
 
         {/* Grid — dots, generous air, today marked with a thin gold underline (the card's one gold accent) */}
         <div style={{ display:"flex", flexDirection:"column", gap:15, marginBottom:28 }}>
           <div style={{ display:"flex", alignItems:"center" }}>
             <div style={{ width:60 }}/>
-            {["M","T","W","T","F","S","S"].map((d, i) => (
+            {t("ritual.weekdayInitials").split(",").map((d, i) => (
               <div key={i} style={{ flex:1, textAlign:"center", opacity: i > todayIdx ? 0.35 : 1 }}>
                 <span style={{ fontSize:9, color:C.muted, fontFamily:sans, letterSpacing:"0.03em" }}>{d}</span>
                 <div style={{ height:1.5, width:12, backgroundColor: i === todayIdx ? C.gold : "transparent", margin:"4px auto 0", borderRadius:1 }}/>
@@ -1837,23 +1918,26 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
         <div style={{ display:"flex", alignItems:"stretch", marginBottom:26 }}>
           <div style={{ flex:1, textAlign:"center" }}>
             <p style={{ fontFamily:serif, fontSize:27, fontWeight:600, color:C.text, margin:0, lineHeight:1 }}>{challengeDaysThisWeek}</p>
-            <p style={{ fontSize:9, color:C.muted, margin:"7px 0 0", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:sans }}>Days shaped</p>
+            <p style={{ fontSize:9, color:C.muted, margin:"7px 0 0", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:sans }}>{t("ritual.daysShaped")}</p>
           </div>
           <div style={{ width:1, backgroundColor:C.border }}/>
           <div style={{ flex:1, textAlign:"center" }}>
             <p style={{ fontFamily:serif, fontSize:27, fontWeight:600, color:C.text, margin:0, lineHeight:1 }}>{ritualStreak}</p>
-            <p style={{ fontSize:9, color:C.muted, margin:"7px 0 0", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:sans }}>Day streak</p>
+            <p style={{ fontSize:9, color:C.muted, margin:"7px 0 0", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:sans }}>{t("ritual.dayStreakLabel")}</p>
           </div>
         </div>
 
         {/* Active challenges — every one in progress, not just the latest; nothing shown if none */}
         {activeSorted.length > 0 && (
           <div style={{ margin:"-10px 0 26px", display:"flex", flexDirection:"column", gap:6 }}>
-            {activeSorted.map(ac => (
+            {activeSorted.map(rawAc => {
+              const ac = trChallenge(rawAc, language);
+              return (
               <p key={ac.instanceId} style={{ fontSize:11, color:C.muted, margin:0, textAlign:"center", fontFamily:sans, lineHeight:1.6 }}>
-                <span style={{ color:C.text, fontWeight:600 }}>{ac.title}</span> — day {ac.checkIns.length} of {ac.targetDays}
+                <span style={{ color:C.text, fontWeight:600 }}>{ac.title}</span> — {t("ritual.dayOf").toLowerCase()} {ac.checkIns.length} {t("ritual.of")} {ac.targetDays}
               </p>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -1866,34 +1950,41 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
       {/* ─── 5. CYCLE PHASE / HORMONAL RHYTHM — opt-in, mutually exclusive by sex ── */}
       {profile?.sex==="female" && localCyclePhase && (
         <div style={{ ...card }}>
-          <SectionHeader title="Cycle Phase Insights" sub={`${localCyclePhase.label} phase · Day ${localCyclePhase.day}${localCyclePhase.periodLengthEstimated||localCyclePhase.cycleLengthEstimated?" (estimated)":""}`} open={open.cycle} onToggle={() => tog("cycle")} accent/>
+          <SectionHeader title={t("ritual.cycleInsights")} sub={`${localCyclePhase.label} ${t("eat.plan.phase")} · ${t("myday.cycle.day")} ${localCyclePhase.day}${localCyclePhase.periodLengthEstimated||localCyclePhase.cycleLengthEstimated?` (${t("myday.cycle.estimated")})`:""}`} open={open.cycle} onToggle={() => tog("cycle")} accent/>
           <Collapsible open={open.cycle}>
             <div style={{ padding:"0 18px 18px" }}>
               <div style={{ borderLeft:`3px solid ${localCyclePhase.color}`, paddingLeft:12, marginBottom:16 }}>
-                <p style={{ fontSize:13, color:C.text, lineHeight:1.7, margin:0 }}>{getCycleTip(localCyclePhase.phase, "long")}</p>
+                <p style={{ fontSize:13, color:C.text, lineHeight:1.7, margin:0 }}>{getCycleTip(localCyclePhase.phase, "long", language)}</p>
               </div>
-              <p style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 8px" }}>Best foods this phase</p>
-              {(CYCLE_NUTRITION[localCyclePhase.phase]?.foods||[]).map((f,i,arr) => (
-                <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 0", borderBottom:i<arr.length-1?`1px solid ${C.border}`:"none" }}>
-                  <div style={{ width:5, height:5, borderRadius:"50%", backgroundColor:localCyclePhase.color, flexShrink:0 }}/>
-                  <span style={{ fontSize:13, color:C.text }}>{f}</span>
-                </div>
-              ))}
-              {CYCLE_NUTRITION[localCyclePhase.phase]?.avoid && (
-                <div style={{ backgroundColor:C.errorBg, borderRadius:10, padding:"10px 12px", marginTop:12 }}>
-                  <p style={{ fontSize:12, color:C.error, margin:0, lineHeight:1.6 }}><strong>Limit:</strong> {CYCLE_NUTRITION[localCyclePhase.phase].avoid}</p>
-                </div>
-              )}
+              <p style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 8px" }}>{t("ritual.bestFoodsPhase")}</p>
+              {(() => {
+                const cycleNutrition = (language === "ro" ? CYCLE_NUTRITION_RO : CYCLE_NUTRITION)[localCyclePhase.phase];
+                return (
+                <>
+                  {(cycleNutrition?.foods||[]).map((f,i,arr) => (
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 0", borderBottom:i<arr.length-1?`1px solid ${C.border}`:"none" }}>
+                      <div style={{ width:5, height:5, borderRadius:"50%", backgroundColor:localCyclePhase.color, flexShrink:0 }}/>
+                      <span style={{ fontSize:13, color:C.text }}>{f}</span>
+                    </div>
+                  ))}
+                  {cycleNutrition?.avoid && (
+                    <div style={{ backgroundColor:C.errorBg, borderRadius:10, padding:"10px 12px", marginTop:12 }}>
+                      <p style={{ fontSize:12, color:C.error, margin:0, lineHeight:1.6 }}><strong>{t("ritual.limit")}:</strong> {cycleNutrition.avoid}</p>
+                    </div>
+                  )}
+                </>
+                );
+              })()}
             </div>
           </Collapsible>
         </div>
       )}
 
       {profile?.sex==="male" && profile?.biologicalTrackingEnabled && (() => {
-        const maleTip = getMaleTip("long");
+        const maleTip = getMaleTip("long", language);
         return (
           <div style={{ ...card }}>
-            <SectionHeader title="Hormonal Rhythm" sub={`${maleTip.icon} ${maleTip.title}`} open={open.male} onToggle={() => tog("male")} accent/>
+            <SectionHeader title={t("ritual.hormonalRhythm")} sub={`${maleTip.icon} ${maleTip.title}`} open={open.male} onToggle={() => tog("male")} accent/>
             <Collapsible open={open.male}>
               <div style={{ padding:"0 18px 18px" }}>
                 <div style={{ borderLeft:`3px solid ${C.green}`, paddingLeft:12 }}>
@@ -1909,11 +2000,11 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
       <div style={{ display:"flex", gap:8 }}>
         <button onClick={() => setLibraryOpen(true)}
           style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"11px 0", backgroundColor:C.card, border:`1px solid ${C.green}40`, borderRadius:12, cursor:"pointer", fontFamily:serif, fontSize:13, fontWeight:600, color:C.green }}>
-          ✦ Library
+          ✦ {t("ritual.library.title")}
         </button>
         <button onClick={() => setSavedOpen(true)}
           style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"11px 0", backgroundColor: savedChallenges.length > 0 ? C.greenLight : C.card, border:`1px solid ${savedChallenges.length > 0 ? C.green : C.border}`, borderRadius:12, cursor:"pointer", fontFamily:serif, fontSize:13, fontWeight:600, color: savedChallenges.length > 0 ? C.green : C.muted }}>
-          Saved{savedChallenges.length > 0 ? ` (${savedChallenges.length})` : ""}
+          {t("ritual.savedShort")}{savedChallenges.length > 0 ? ` (${savedChallenges.length})` : ""}
         </button>
       </div>
 

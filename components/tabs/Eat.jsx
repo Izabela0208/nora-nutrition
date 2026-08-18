@@ -5,6 +5,17 @@ import { SectionHeader, Collapsible } from "../NoraUI";
 import AtmosphereBackground from "../AtmosphereBackground";
 import juicesData from "../../data/juices.json";
 import dessertsData from "../../data/desserts.json";
+import juicesRo from "../../lib/i18n/content/juices.ro";
+import dessertsRo from "../../lib/i18n/content/desserts.ro";
+import { useLanguage } from "../../lib/i18n/LanguageContext";
+import { supabase } from "../../lib/supabase";
+
+// Merges a Romanian overlay (keyed by recipe id) over the English base recipe. Ingredients
+// and category are intentionally never part of the overlay — see juices.ro.js/desserts.ro.js.
+const trRecipe = (r, dict) => {
+  const tr = dict[r.id];
+  return tr ? { ...r, ...tr } : r;
+};
 
 const JUICE_CATS = ["Detox & Cleanse","Energy & Performance","Anti-Inflammatory","Immunity Boost","Skin & Beauty","Digestive Health","Weight Management","Brain & Focus","Heart Health","Hormonal Balance"];
 const DESSERT_CATS = ["No-Bake","Frozen","Baked","Mousse & Pudding","Energy Balls","Fruit-Based"];
@@ -24,15 +35,17 @@ const G = {
   errorBg:   "#F7EDE9",
 };
 
+// label comes from t(`eat.section.${id}`) at render time — this array only drives
+// ordering and icon selection (same pattern as TABS in NutritionApp.jsx).
 const SECTIONS = [
-  { id: "plan",     label: "Today's Plan",  icon: "🍽️" },
-  { id: "week",     label: "Week Prep",     icon: "📅" },
-  { id: "smoothie", label: "Smoothies",     icon: "🥤" },
-  { id: "shot",     label: "Morning Shots", icon: "⚡" },
-  { id: "juice",    label: "Fresh Juices",  icon: "🍊" },
-  { id: "dessert",  label: "Desserts",      icon: "🍫" },
-  { id: "search",   label: "Search Foods",  icon: "🔍" },
-  { id: "saved",    label: "Saved",         icon: "🔖" },
+  { id: "plan",     icon: "🍽️" },
+  { id: "week",     icon: "📅" },
+  { id: "smoothie", icon: "🥤" },
+  { id: "shot",     icon: "⚡" },
+  { id: "juice",    icon: "🍊" },
+  { id: "dessert",  icon: "🍫" },
+  { id: "search",   icon: "🔍" },
+  { id: "saved",    icon: "🔖" },
 ];
 
 const callClaude = async (sys, user, maxTokens = 1200) => {
@@ -61,7 +74,7 @@ const MEAL_CARD   = {
   Snack:     { accent: "#7A9E8A" },
   Dessert:   { accent: "#2D5A45" },
 };
-const TYPE_LABELS = { day_plan: "Day Plans", meal: "Meals", food: "Foods", smoothie: "Smoothies", shot: "Shots", juice: "Juices", dessert: "Desserts" };
+// Resolved via t(`eat.savedType.${type}`) at render — see the Saved tab below.
 
 const SHOP_CATS = ["Proteins","Vegetables","Fruits","Dairy","Grains","Pantry & Other"];
 const SHOP_CAT_RX = [
@@ -192,6 +205,101 @@ const spoonacularToMeal = (recipe, mealGroup) => ({
   source: "spoonacular",
 });
 
+// Merges translated ingredient display name + metric-converted amount (by position) onto the
+// original ingredient list. meal.ingredients[].item/amount stay English/imperial always —
+// shopping-list matching (normIngKey/categorizIng) and aggregation (combineAmounts) rely on them.
+// itemDisplay/amountDisplay are purely cosmetic, read only at render time.
+const withIngredientDisplay = (ingredients, translated) =>
+  (ingredients || []).map((ing, i) => translated?.[i]
+    ? { ...ing, itemDisplay: translated[i].item, amountDisplay: translated[i].amount }
+    : ing);
+
+// Adds Romanian translations to Spoonacular meals as parallel nameDisplay/stepsDisplay fields —
+// meal.name/meal.steps are NEVER overwritten, so the English original stays retrievable at any
+// time (mirrors the itemDisplay/amountDisplay ingredient pattern above). Cache misses call
+// /api/translate-recipe once per recipe, then best-effort write the result to recipe_translations
+// so every future user (RLS: any authenticated user) reads it from cache instead of paying for
+// another AI call.
+const localizeMeals = async (meals, language) => {
+  if (language !== "ro" || meals.length === 0) return meals;
+  const ids = meals.map(m => m.spoonId).filter(Boolean);
+  const cache = {};
+  try {
+    const { data } = await supabase.from("recipe_translations").select("spoonacular_id,title,steps,ingredients").in("spoonacular_id", ids);
+    (data || []).forEach(row => { cache[row.spoonacular_id] = row; });
+  } catch {}
+
+  return Promise.all(meals.map(async (meal) => {
+    if (!meal.spoonId) return meal;
+    const cached = cache[meal.spoonId];
+    if (cached) return { ...meal, nameDisplay: cached.title, stepsDisplay: cached.steps, ingredients: withIngredientDisplay(meal.ingredients, cached.ingredients) };
+    try {
+      const res = await fetch("/api/translate-recipe", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: meal.name, steps: meal.steps, ingredients: (meal.ingredients || []).map(i => ({ item: i.item, amount: i.amount })) }),
+      });
+      if (!res.ok) return meal;
+      const tr = await res.json();
+      supabase.from("recipe_translations")
+        .upsert({ spoonacular_id: meal.spoonId, title: tr.title, steps: tr.steps, ingredients: tr.ingredients }, { onConflict: "spoonacular_id", ignoreDuplicates: true })
+        .then(() => {}).catch(() => {});
+      return { ...meal, nameDisplay: tr.title, stepsDisplay: tr.steps, ingredients: withIngredientDisplay(meal.ingredients, tr.ingredients) };
+    } catch {
+      return meal;
+    }
+  }));
+};
+
+// Resolves which language variant of a meal to show, without ever mutating the canonical
+// English meal.name/meal.steps. Falls back to English if the Romanian variant isn't cached yet.
+const displayMeal = (meal, language) => {
+  if (!meal || language !== "ro") return meal;
+  return { ...meal, name: meal.nameDisplay || meal.name, steps: meal.stepsDisplay || meal.steps };
+};
+
+// Same idea as localizeMeals, for Search Foods results: ingredients here are stored as one full
+// descriptive line ({original: "2 cups flour, sifted"}), not {item, amount} — so they're
+// translated as whole sentences (recipe_translations.ingredient_lines), not split/matched against
+// a shopping list. Shares the same recipe_translations row (by spoonacular_id) as Today's Plan —
+// a recipe already translated there hits cache here too, just possibly missing ingredient_lines,
+// which is why the cache-hit check requires ingredient_lines specifically, not just title/steps.
+const localizeSearchRecipes = async (recipes, language) => {
+  if (language !== "ro" || recipes.length === 0) return recipes;
+  const ids = recipes.map(r => r.spoonId).filter(Boolean);
+  const cache = {};
+  try {
+    const { data } = await supabase.from("recipe_translations").select("spoonacular_id,title,steps,ingredient_lines").in("spoonacular_id", ids);
+    (data || []).forEach(row => { cache[row.spoonacular_id] = row; });
+  } catch {}
+
+  const applyLines = (r, title, steps, lines) => ({
+    ...r,
+    name: title,
+    recipeSteps: r.recipeSteps.map((s, i) => steps?.[i] ? { ...s, step: steps[i] } : s),
+    recipeIngredients: r.recipeIngredients.map((ing, i) => lines?.[i] ? { original: lines[i] } : ing),
+  });
+
+  return Promise.all(recipes.map(async (r) => {
+    if (!r.spoonId) return r;
+    const cached = cache[r.spoonId];
+    if (cached && cached.ingredient_lines?.length > 0) return applyLines(r, cached.title, cached.steps, cached.ingredient_lines);
+    try {
+      const res = await fetch("/api/translate-recipe", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: r.name, steps: r.recipeSteps.map(s => s.step), ingredientLines: r.recipeIngredients.map(i => i.original) }),
+      });
+      if (!res.ok) return r;
+      const tr = await res.json();
+      supabase.from("recipe_translations")
+        .upsert({ spoonacular_id: r.spoonId, title: tr.title, steps: tr.steps, ingredient_lines: tr.ingredientLines }, { onConflict: "spoonacular_id" })
+        .then(() => {}).catch(() => {});
+      return applyLines(r, tr.title, tr.steps, tr.ingredientLines);
+    } catch {
+      return r;
+    }
+  }));
+};
+
 const QUOTA_ERR = "QUOTA_EXCEEDED";
 const fetchBulk = async (ids) => {
   const map = {};
@@ -225,11 +333,13 @@ const MacroStrip = ({ kcal, pro, carbs, fat }) => (
   </div>
 );
 
-const IngList = ({ ingredients, checked, onToggle, accentColor }) => (
+const IngList = ({ ingredients, checked, onToggle, accentColor }) => {
+  const { language } = useLanguage();
+  return (
   <>
     {(ingredients || []).map((ing, i) => {
-      const item   = typeof ing === "string" ? ing : ing.item;
-      const amount = typeof ing === "string" ? "" : ing.amount;
+      const item   = typeof ing === "string" ? ing : (language === "ro" && ing.itemDisplay ? ing.itemDisplay : ing.item);
+      const amount = typeof ing === "string" ? "" : (language === "ro" && ing.amountDisplay ? ing.amountDisplay : ing.amount);
       const ck = !!checked[i];
       const color = accentColor || G.forest;
       return (
@@ -243,11 +353,13 @@ const IngList = ({ ingredients, checked, onToggle, accentColor }) => (
       );
     })}
   </>
-);
+  );
+};
 
 const DESSERT_CAT_COLORS = { "No-Bake":"#7A9E8A","Frozen":"#1B3A2D","Baked":"#C9A84C","Mousse & Pudding":"#8C9E97","Energy Balls":"#2D5A45","Fruit-Based":"#9A7020" };
 
 const DessertCard = ({ dessert, isSaved, onToggleSave, ingChecked, onIngToggle, isLogged, onLogEaten }) => {
+  const { t } = useLanguage();
   const catColor = DESSERT_CAT_COLORS[dessert.category] || G.forest;
   return (
     <details style={{ backgroundColor:G.card, borderRadius:16, border:`1px solid ${G.border}`, overflow:"hidden", boxShadow:"0 1px 5px rgba(27,58,45,0.05)" }}>
@@ -258,9 +370,9 @@ const DessertCard = ({ dessert, isSaved, onToggleSave, ingChecked, onIngToggle, 
             <span style={{ fontSize:22, flexShrink:0, lineHeight:1.3 }}>{dessert.emoji}</span>
             <div style={{ flex:1, minWidth:0 }}>
               <p style={{ fontFamily:serif, fontSize:15, fontWeight:600, color:G.text, margin:"0 0 2px", lineHeight:1.3 }}>{dessert.name}</p>
-              <p style={{ fontSize:11, color:G.muted, margin:"0 0 5px" }}>{dessert.category} · {dessert.prep_time} min · {dessert.servings} servings</p>
+              <p style={{ fontSize:11, color:G.muted, margin:"0 0 5px" }}>{t(`eat.dessertCat.${dessert.category}`)} · {dessert.prep_time} {t("eat.min")} · {dessert.servings} {t("eat.servings")}</p>
               <MacroStrip kcal={dessert.kcal} pro={dessert.macros.protein_g} carbs={dessert.macros.carbs_g} fat={dessert.macros.fat_g}/>
-              <p style={{ fontSize:9, color:G.muted, margin:"3px 0 0", fontFamily:sans }}>per serving</p>
+              <p style={{ fontSize:9, color:G.muted, margin:"3px 0 0", fontFamily:sans }}>{t("eat.perServing")}</p>
             </div>
           </div>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"0 14px", gap:10, flexShrink:0 }}>
@@ -274,7 +386,7 @@ const DessertCard = ({ dessert, isSaved, onToggleSave, ingChecked, onIngToggle, 
         </div>
       </summary>
       <div style={{ borderTop:`1px solid ${G.border}`, padding:"16px 16px 18px" }}>
-        <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px" }}>Ingredients <span style={{ fontWeight:400, textTransform:"none", letterSpacing:0 }}>({dessert.servings} servings)</span></p>
+        <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px" }}>{t("myday.barcode.ingredients")} <span style={{ fontWeight:400, textTransform:"none", letterSpacing:0 }}>({dessert.servings} {t("eat.servings")})</span></p>
         <div style={{ marginBottom:14 }}>
           {(dessert.ingredients||[]).map((ing, i) => {
             const k = `${dessert.id}_${i}`; const ck = !!(ingChecked[k]);
@@ -291,7 +403,7 @@ const DessertCard = ({ dessert, isSaved, onToggleSave, ingChecked, onIngToggle, 
         </div>
         {(dessert.steps||[]).length > 0 && (
           <div style={{ marginBottom:14 }}>
-            <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px" }}>Instructions</p>
+            <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px" }}>{t("eat.instructions")}</p>
             {dessert.steps.map((step, i) => (
               <div key={i} style={{ display:"flex", gap:11, marginBottom:10 }}>
                 <div style={{ width:22, height:22, borderRadius:"50%", flexShrink:0, backgroundColor:catColor, color:G.ivory, fontSize:11, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{i+1}</div>
@@ -302,7 +414,7 @@ const DessertCard = ({ dessert, isSaved, onToggleSave, ingChecked, onIngToggle, 
         )}
         {(dessert.benefits||[]).length > 0 && (
           <div style={{ marginBottom: dessert.tip ? 14 : 0 }}>
-            <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 8px" }}>Benefits</p>
+            <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 8px" }}>{t("eat.benefits")}</p>
             {dessert.benefits.map((b, i) => (
               <div key={i} style={{ display:"flex", gap:8, marginBottom:5 }}>
                 <span style={{ color:G.forest, flexShrink:0, fontSize:16, marginTop:-2 }}>·</span>
@@ -317,7 +429,7 @@ const DessertCard = ({ dessert, isSaved, onToggleSave, ingChecked, onIngToggle, 
           </div>
         )}
         <button onClick={e => { e.stopPropagation(); e.preventDefault(); if (!isLogged) onLogEaten(); }} style={{ width:"100%", marginTop:14, padding:"11px", backgroundColor: isLogged ? `${G.forest}15` : G.forest, color: isLogged ? G.forest : G.ivory, border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor: isLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
-          {isLogged ? <><CheckIcon size={12} color={G.forest}/>Logged</> : "Log this"}
+          {isLogged ? <><CheckIcon size={12} color={G.forest}/>{t("eat.logged")}</> : t("eat.logThis")}
         </button>
       </div>
     </details>
@@ -342,10 +454,11 @@ const getFoodMeta = (name) => {
 };
 
 const FoodResultCard = ({ food, onClick }) => {
+  const { t } = useLanguage();
   const meta = getFoodMeta(food.name);
   const p = food.per100g || {};
   const srcColor = food.source === "USDA" ? G.forest : food.source === "Recipe" ? G.forestMid : G.amber;
-  const srcLabel = food.source === "USDA" ? "USDA" : food.source === "Recipe" ? "Recipe" : "Open Food Facts";
+  const srcLabel = food.source === "USDA" ? "USDA" : food.source === "Recipe" ? t("eat.recipe") : "Open Food Facts";
   return (
     <div onClick={onClick} style={{ backgroundColor:G.card, borderRadius:16, border:`1px solid ${G.border}`, overflow:"hidden", cursor:"pointer", boxShadow:"0 2px 10px rgba(27,58,45,0.08)", display:"flex", flexDirection:"column" }}>
       {/* Image */}
@@ -372,26 +485,28 @@ const FoodResultCard = ({ food, onClick }) => {
           {p.carbs != null && <span style={{ fontSize:11, fontWeight:600, color:G.forest, backgroundColor:G.border, borderRadius:6, padding:"3px 7px" }}>{p.carbs}g C</span>}
           {p.fat != null && <span style={{ fontSize:11, fontWeight:600, color:G.forest, backgroundColor:G.border, borderRadius:6, padding:"3px 7px" }}>{p.fat}g F</span>}
         </div>
-        <p style={{ fontSize:9, color:G.muted, margin:"5px 0 0", letterSpacing:"0.02em" }}>{food.perLabel || "per 100g"}</p>
+        <p style={{ fontSize:9, color:G.muted, margin:"5px 0 0", letterSpacing:"0.02em" }}>{food.source === "Recipe" ? t("eat.perServing") : t("myday.barcode.per100g")}</p>
       </div>
     </div>
   );
 };
 
 
-const JuiceCard = ({ juice, isSaved, onToggleSave, ingChecked, onIngToggle, isLogged, onLogEaten }) => (
+const JuiceCard = ({ juice, isSaved, onToggleSave, ingChecked, onIngToggle, isLogged, onLogEaten }) => {
+  const { t } = useLanguage();
+  return (
   <details style={{ backgroundColor:G.card, borderRadius:16, border:`1px solid ${G.border}`, overflow:"hidden", boxShadow:"0 1px 5px rgba(27,58,45,0.05)" }}>
     <summary style={{ display:"flex", alignItems:"stretch", listStyle:"none", cursor:"pointer" }}>
       <div style={{ flex:1, padding:"14px 0 14px 16px", display:"flex", alignItems:"flex-start", gap:12 }}>
         <span style={{ fontSize:24, flexShrink:0, lineHeight:1.2 }}>{juice.emoji}</span>
         <div style={{ flex:1, minWidth:0 }}>
           <p style={{ fontFamily:serif, fontSize:16, fontWeight:600, color:G.text, margin:"0 0 3px", lineHeight:1.3 }}>{juice.name}</p>
-          <p style={{ fontSize:11, color:G.muted, margin:"0 0 5px" }}>{juice.category} · {juice.prep_time} min</p>
+          <p style={{ fontSize:11, color:G.muted, margin:"0 0 5px" }}>{t(`eat.juiceCat.${juice.category}`)} · {juice.prep_time} {t("eat.min")}</p>
           <MacroStrip kcal={juice.kcal} pro={(juice.macros||{}).protein_g||0} carbs={(juice.macros||{}).carbs_g||0} fat={(juice.macros||{}).fat_g||0}/>
         </div>
       </div>
       <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"0 14px", gap:10, flexShrink:0 }}>
-        <button onClick={e => { e.stopPropagation(); e.preventDefault(); onToggleSave(); }} title={isSaved ? "Remove" : "Save"} style={{ background:"none", border:"none", cursor:"pointer", padding:4 }}>
+        <button onClick={e => { e.stopPropagation(); e.preventDefault(); onToggleSave(); }} title={isSaved ? t("common.remove") : t("common.save")} style={{ background:"none", border:"none", cursor:"pointer", padding:4 }}>
           <HeartIcon size={18} color={isSaved ? G.forest : G.muted} filled={isSaved}/>
         </button>
         <svg className="card-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -400,7 +515,7 @@ const JuiceCard = ({ juice, isSaved, onToggleSave, ingChecked, onIngToggle, isLo
       </div>
     </summary>
     <div style={{ borderTop:`1px solid ${G.border}`, padding:"16px 16px 18px" }}>
-      <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px" }}>Ingredients</p>
+      <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px" }}>{t("myday.barcode.ingredients")}</p>
       <div style={{ marginBottom:16 }}>
         {(juice.ingredients || []).map((ing, i) => {
           const ck = !!(ingChecked[`${juice.id}_${i}`]);
@@ -417,7 +532,7 @@ const JuiceCard = ({ juice, isSaved, onToggleSave, ingChecked, onIngToggle, isLo
       </div>
       {(juice.vitamins_minerals || []).length > 0 && (
         <div style={{ marginBottom:14 }}>
-          <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 8px" }}>Key Nutrients</p>
+          <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 8px" }}>{t("eat.keyNutrients")}</p>
           <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
             {juice.vitamins_minerals.map((v, i) => (
               <span key={i} style={{ fontSize:11, color:G.forest, backgroundColor:`${G.forest}10`, border:`1px solid ${G.forest}20`, borderRadius:6, padding:"3px 8px", fontWeight:500 }}>{v}</span>
@@ -427,7 +542,7 @@ const JuiceCard = ({ juice, isSaved, onToggleSave, ingChecked, onIngToggle, isLo
       )}
       {(juice.benefits || []).length > 0 && (
         <div style={{ marginBottom: juice.tip ? 14 : 0 }}>
-          <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 8px" }}>Benefits</p>
+          <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 8px" }}>{t("eat.benefits")}</p>
           {juice.benefits.map((b, i) => (
             <div key={i} style={{ display:"flex", gap:9, marginBottom:6 }}>
               <span style={{ color:G.forest, flexShrink:0, fontSize:16, marginTop:-2 }}>·</span>
@@ -442,13 +557,15 @@ const JuiceCard = ({ juice, isSaved, onToggleSave, ingChecked, onIngToggle, isLo
         </div>
       )}
       <button onClick={e => { e.stopPropagation(); e.preventDefault(); if (!isLogged) onLogEaten(); }} style={{ width:"100%", marginTop:14, padding:"11px", backgroundColor: isLogged ? `${G.forest}15` : G.forest, color: isLogged ? G.forest : G.ivory, border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor: isLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
-        {isLogged ? <><CheckIcon size={12} color={G.forest}/>Logged</> : "Log this"}
+        {isLogged ? <><CheckIcon size={12} color={G.forest}/>{t("eat.logged")}</> : t("eat.logThis")}
       </button>
     </div>
   </details>
-);
+  );
+};
 
 export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) {
+  const { t, language } = useLanguage();
   const toastTimer = useRef(null);
 
   const [activeSection, setActiveSection] = useState(null);
@@ -552,6 +669,11 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
       const sh = localStorage.getItem("nora_shot");
       if (sh) { const d = JSON.parse(sh); if (d.date === localDateStr()) { const s = d.data; if (s?.ingredients && typeof s.ingredients[0] === "string") s.ingredients = s.ingredients.map(x => ({ item: x, amount: "" })); setCurrentShot(s); } }
 
+      // Today's Plan/Week Plan meals carry both name/steps (English) and nameDisplay/stepsDisplay
+      // (Romanian, once translated) side by side — see displayMeal() — so the cached plan is
+      // always safe to restore regardless of the current language; a language switch re-renders
+      // it in the right variant, translating on the spot anything not yet cached (see the
+      // language-effect below), no discarding/regeneration needed.
       const wp = localStorage.getItem("nora_week_plan");
       if (wp) setWeekPlan(JSON.parse(wp));
 
@@ -572,6 +694,42 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
     } catch {}
   }, []);
 
+  // Switching to Romanian re-displays the current plan(s) in place (via displayMeal, at render
+  // time) — this effect only fills in the rare gap: a meal that has never been seen in Romanian
+  // yet, so it has no nameDisplay/stepsDisplay cached. It reuses localizeMeals (same
+  // /api/translate-recipe + recipe_translations cache as generation), never a fresh Spoonacular
+  // fetch. Runs once per switch to "ro" — once every meal has nameDisplay, needsTr is false for
+  // all of them and this becomes a no-op.
+  useEffect(() => {
+    if (language !== "ro") return;
+    const needsTr = (m) => m && m.spoonId && !m.nameDisplay;
+    (async () => {
+      if ((mealPlan || []).some(needsTr)) {
+        const translated = await localizeMeals(mealPlan, language);
+        setMealPlan(translated);
+        try {
+          const tp = localStorage.getItem("nora_today_plan");
+          if (tp) { const d = JSON.parse(tp); localStorage.setItem("nora_today_plan", JSON.stringify({ ...d, plan: translated })); }
+        } catch {}
+      }
+      if ((weekPlan?.days || []).some(d => [d.breakfast, d.lunch, d.dinner].some(needsTr))) {
+        const flat = weekPlan.days.flatMap(d => [d.breakfast, d.lunch, d.dinner]).filter(Boolean);
+        const translatedFlat = await localizeMeals(flat, language);
+        let li = 0;
+        const days = weekPlan.days.map(d => ({
+          ...d,
+          breakfast: d.breakfast ? translatedFlat[li++] : null,
+          lunch:     d.lunch     ? translatedFlat[li++] : null,
+          dinner:    d.dinner    ? translatedFlat[li++] : null,
+        }));
+        const result = { ...weekPlan, days };
+        setWeekPlan(result);
+        try { localStorage.setItem("nora_week_plan", JSON.stringify(result)); } catch {}
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language]);
+
   useEffect(() => { setJuiceLimit(5); }, [juiceCat, juiceSearch]);
   useEffect(() => { setDessertLimit(5); }, [dessertCatFilter, dessertSearch]);
 
@@ -583,7 +741,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
 
   const showToast = (calories) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    setLogToast(`Added to today's log! +${calories} kcal`);
+    setLogToast(`${t("eat.toast.added")} +${calories} kcal`);
     toastTimer.current = setTimeout(() => setLogToast(null), 3000);
   };
 
@@ -594,7 +752,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
       type: "food", name: item.name, source: "search",
       mealGroup: mg, calories: item.calories || 0, protein_g: item.protein_g || 0,
       carbs_g: item.carbs_g || 0, fat_g: item.fat_g || 0, fiber_g: item.fiber_g || 0,
-      notes: item.notes || "From Nora", estimated: true,
+      notes: item.notes || t("eat.notes.fromNora"), estimated: true,
     });
     showToast(item.calories || 0);
   };
@@ -634,7 +792,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
 
   const logJuiceEaten = (juice) => {
     const m = juice.macros || {};
-    addToLog({ name: juice.name, calories: juice.kcal, protein_g: m.protein_g || 0, carbs_g: m.carbs_g || 0, fat_g: m.fat_g || 0, fiber_g: juice.fiber_g || 0, notes: "Juice" });
+    addToLog({ name: juice.name, calories: juice.kcal, protein_g: m.protein_g || 0, carbs_g: m.carbs_g || 0, fat_g: m.fat_g || 0, fiber_g: juice.fiber_g || 0, notes: t("eat.notes.juice") });
     setLoggedJuices(p => ({ ...p, [juice.id]: true }));
   };
 
@@ -648,7 +806,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
   };
 
   const logDessertEaten = (dessert) => {
-    addToLog({ name: dessert.name, calories: dessert.kcal, protein_g: dessert.macros.protein_g || 0, carbs_g: dessert.macros.carbs_g || 0, fat_g: dessert.macros.fat_g || 0, fiber_g: dessert.fiber_g || 0, notes: "Dessert" });
+    addToLog({ name: dessert.name, calories: dessert.kcal, protein_g: dessert.macros.protein_g || 0, carbs_g: dessert.macros.carbs_g || 0, fat_g: dessert.macros.fat_g || 0, fiber_g: dessert.fiber_g || 0, notes: t("eat.notes.dessert") });
     setLoggedDesserts(p => ({ ...p, [dessert.id]: true }));
   };
 
@@ -670,15 +828,31 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
       return n ? Math.round(n.amount * 10) / 10 : null;
     };
     try {
-      const res  = await fetch(`/api/recipes?query=${encodeURIComponent(query)}&number=12&cuisine=mediterranean,french,italian,greek,spanish,american,british,german,nordic&_t=${Date.now()}`);
+      let spoonQuery = query;
+      if (language === "ro") {
+        try {
+          const translated = await callClaude(
+            "Translate this food or recipe search query from Romanian to English, for use against a recipe search API. Return ONLY the translated query — no punctuation, no quotes, no explanation.",
+            query,
+            30
+          );
+          if (translated && translated.trim()) spoonQuery = translated.trim();
+        } catch {}
+      }
+      const res  = await fetch(`/api/recipes?query=${encodeURIComponent(spoonQuery)}&number=12&cuisine=mediterranean,french,italian,greek,spanish,american,british,german,nordic&_t=${Date.now()}`);
+      if (res.status === 402) {
+        setFoodSearchError(t("eat.search.quotaError"));
+        setFoodSearchLoad(false);
+        return;
+      }
       const data = await res.json();
       const recipes = (data.results || []).filter(r => r.id).map(r => ({
         id:                `recipe_${r.id}`,
+        spoonId:           r.id,
         name:              r.title || "",
         source:            "Recipe",
         image:             r.image || null,
         brand:             null,
-        perLabel:          "per serving",
         readyMinutes:      r.readyInMinutes || null,
         servings:          r.servings || null,
         recipeIngredients: (r.extendedIngredients || []).map(i => ({
@@ -695,10 +869,10 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
           fat:     getNutr(r, "Fat"),
         },
       }));
-      setFoodResults(recipes);
+      setFoodResults(await localizeSearchRecipes(recipes, language));
       setFoodSearchDone(true);
     } catch {
-      setFoodSearchError("Search failed. Please try again.");
+      setFoodSearchError(t("eat.search.genericError"));
     }
     setFoodSearchLoad(false);
   };
@@ -731,7 +905,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
     const adjCal  = planUseCustom && planCustomKcal
       ? Math.max(800, parseInt(planCustomKcal) || baseCal)
       : Math.max(1200, baseCal + (GOAL_ADJ[planGoal] || 0));
-    const meta    = { planGoal, goalLabel: GOAL_LABELS[planGoal], goalDesc: planUseCustom ? "custom target" : GOAL_DESC[planGoal], adjCal, baseCal };
+    const meta    = { planGoal, goalLabel: t(`eat.plan.goalNoun.${planGoal}`), goalDesc: planUseCustom ? t("eat.plan.goalDesc.custom") : t(`eat.plan.goalDesc.${planGoal}`), adjCal, baseCal };
     try {
       const planParams = new URLSearchParams({ mealplan: "true", timeFrame: "day", targetCalories: String(adjCal), _t: String(Date.now()) });
       if (diet) planParams.set("diet", diet);
@@ -743,17 +917,18 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
       const meals = planData.meals || [];
       if (!meals.length) throw new Error("empty");
       const recipeMap = await fetchBulk(meals.map(m => m.id));
-      const plan = meals.map((m, idx) => {
+      const rawPlan = meals.map((m, idx) => {
         const recipe = recipeMap[m.id];
         return recipe ? spoonacularToMeal(recipe, PLAN_GROUPS_DAY[idx] || "Dinner") : null;
       }).filter(Boolean);
+      const plan = await localizeMeals(rawPlan, language);
       if (plan.length >= 2) {
         setMealPlan(plan);
         setPlanMeta(meta);
         setIngChecked({});
-        try { localStorage.setItem("nora_today_plan", JSON.stringify({ date: localDateStr(), plan, loggedMeals: {}, planSaved: false, planGoal, planMeta: meta })); } catch {}
+        try { localStorage.setItem("nora_today_plan", JSON.stringify({ date: localDateStr(), language, plan, loggedMeals: {}, planSaved: false, planGoal, planMeta: meta })); } catch {}
       } else {
-        setMealPlanError("Meal plan generation temporarily unavailable, please try again later.");
+        setMealPlanError(t("eat.plan.error"));
       }
     } catch {
       setMealPlanError("Meal plan generation temporarily unavailable, please try again later.");
@@ -763,7 +938,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
 
   const savePlan = () => {
     if (!mealPlan || planSaved) return;
-    saveItem("day_plan", `Plan — ${new Date().toLocaleDateString()}`, mealPlan);
+    saveItem("day_plan", `${t("eat.savedPlan.label")} — ${new Date().toLocaleDateString()}`, mealPlan);
     setPlanSaved(true);
     try { const tp = localStorage.getItem("nora_today_plan"); if (tp) localStorage.setItem("nora_today_plan", JSON.stringify({ ...JSON.parse(tp), planSaved: true })); } catch {}
   };
@@ -772,14 +947,14 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
   const genWeek = async () => {
     if (weekPlanLoad) return;
     setWeekPlanLoad(true); setOpenWeekDay(null); setShopChecked({});
-    setWeekError(""); setWeekProgress("Generating meal plan…"); setWeekPlan(null); setWeekMeta(null);
+    setWeekError(""); setWeekProgress(t("eat.week.progressGenerating")); setWeekPlan(null); setWeekMeta(null);
     try { localStorage.removeItem("nora_week_plan"); } catch {}
     const diet    = parseDiet(profile?.preferences || "");
     const baseCal = Math.round(targets?.calories || 2000);
     const adjCal  = weekUseCustom && weekCustomKcal
       ? Math.max(800, parseInt(weekCustomKcal) || baseCal)
       : Math.max(1200, baseCal + (GOAL_ADJ[weekGoal] || 0));
-    const meta    = { weekGoal, goalLabel: GOAL_LABELS[weekGoal], goalDesc: weekUseCustom ? "custom target" : GOAL_DESC[weekGoal], adjCal, baseCal };
+    const meta    = { weekGoal, goalLabel: t(`eat.plan.goalNoun.${weekGoal}`), goalDesc: weekUseCustom ? t("eat.plan.goalDesc.custom") : t(`eat.plan.goalDesc.${weekGoal}`), adjCal, baseCal };
     try {
       const planParams = new URLSearchParams({ mealplan: "true", timeFrame: "week", targetCalories: String(adjCal), _t: String(Date.now()) });
       if (diet) planParams.set("diet", diet);
@@ -792,32 +967,40 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
       const allIds = [];
       DAY_KEYS.forEach(key => (week[key]?.meals || []).forEach(m => allIds.push(m.id)));
       if (!allIds.length) throw new Error("empty");
-      setWeekProgress("Fetching recipe details…");
+      setWeekProgress(t("eat.week.progressFetching"));
       const recipeMap = await fetchBulk(allIds);
-      const days = DAY_KEYS.map((key, di) => {
+      const rawDays = DAY_KEYS.map((key, di) => {
         const planMeals = week[key]?.meals || [];
         const [b, l, d] = planMeals.map((m, mi) => {
           const r = recipeMap[m.id];
           return r ? spoonacularToMeal(r, PLAN_GROUPS_DAY[mi] || "Dinner") : null;
         });
+        return { day: t(`eat.day.${DAY_NAMES[di]}`, DAY_NAMES[di]), breakfast: b || null, lunch: l || null, dinner: d || null };
+      });
+      const flatMeals = rawDays.flatMap(d => [d.breakfast, d.lunch, d.dinner]).filter(Boolean);
+      const localizedFlat = await localizeMeals(flatMeals, language);
+      let li = 0;
+      const days = rawDays.map(d => {
+        const breakfast = d.breakfast ? localizedFlat[li++] : null;
+        const lunch     = d.lunch     ? localizedFlat[li++] : null;
+        const dinner    = d.dinner    ? localizedFlat[li++] : null;
         return {
-          day: DAY_NAMES[di],
-          breakfast: b || null,
-          lunch:     l || null,
-          dinner:    d || null,
-          snack:     null,
-          calories_est: (b?.calories||0) + (l?.calories||0) + (d?.calories||0),
+          day: d.day,
+          breakfast, lunch, dinner,
+          snack: null,
+          calories_est: (breakfast?.calories||0) + (lunch?.calories||0) + (dinner?.calories||0),
         };
       });
       const shopping_categories = buildShopCats(days);
       const result = { days, shopping_categories, prep_tips: [] };
-      setWeekPlan(result);
+      const resultWithLang = { ...result, language };
+      setWeekPlan(resultWithLang);
       setWeekMeta(meta);
       setWeekProgress("");
-      try { localStorage.setItem("nora_week_plan", JSON.stringify(result)); } catch {}
-      try { localStorage.setItem("nora_week_meta", JSON.stringify({ weekGoal, weekMeta: meta })); } catch {}
+      try { localStorage.setItem("nora_week_plan", JSON.stringify(resultWithLang)); } catch {}
+      try { localStorage.setItem("nora_week_meta", JSON.stringify({ weekGoal, weekMeta: meta, language })); } catch {}
     } catch {
-      setWeekError("Meal plan generation temporarily unavailable, please try again later.");
+      setWeekError(t("eat.plan.error"));
       setWeekProgress("");
     }
     setWeekPlanLoad(false);
@@ -839,7 +1022,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
       const results = (data.results || []).filter(x => x.id);
       if (!results.length) throw new Error("empty");
       const chosen  = results[Math.floor(Math.random() * results.length)];
-      const newMeal = spoonacularToMeal(chosen, group);
+      const [newMeal] = await localizeMeals([spoonacularToMeal(chosen, group)], language);
       setMealPlan(prev => {
         const updated = prev.map(m => m.mealGroup === group ? newMeal : m);
         try {
@@ -870,7 +1053,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
       if (!results.length) throw new Error("empty");
       const chosen  = results[Math.floor(Math.random() * results.length)];
       const mgMap   = { breakfast:"Breakfast", lunch:"Lunch", dinner:"Dinner", snack:"Snack" };
-      const newMeal = spoonacularToMeal(chosen, mgMap[mealType] || "Dinner");
+      const [newMeal] = await localizeMeals([spoonacularToMeal(chosen, mgMap[mealType] || "Dinner")], language);
       setWeekPlan(prev => {
         const days = prev.days.map(d => {
           if (d.day !== dayName) return d;
@@ -899,12 +1082,12 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
     setSmoothieLoad(true); setSmoothieLogged(false); setSmoothieSaved(false); setSmoothieIngChk({});
     try {
       const excl = shownSmoothies.length > 0 ? ` Not:[${shownSmoothies.slice(-5).join(",")}].` : "";
-      const t = await callClaude(
+      const raw = await callClaude(
         "Return ONLY valid JSON, no markdown.",
         `One smoothie recipe. Goals:${goalsStr||"balanced"}. Prefs:${profile?.preferences||"none"}. ${cycleCtx}${excl}Return: {"name":"str","emoji":"🥤","ingredients":[{"item":"str","amount":"str"}],"method":"str","calories":num,"protein_g":num,"carbs_g":num,"fat_g":num,"tip":"str"}`,
         480
       );
-      const data = parseJSON(t);
+      const data = parseJSON(raw);
       if (data.ingredients && typeof data.ingredients[0] === "string") data.ingredients = data.ingredients.map(s => ({ item: s, amount: "" }));
       setSmoothie(data);
       setShownSmoothies(prev => [...prev, data.name]);
@@ -918,20 +1101,20 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
     setShotLoad(true); setShotLogged(false); setShotSaved(false); setShotIngChk({}); setShotError("");
     try {
       const excl = shownShots.length > 0 ? ` Not:[${shownShots.slice(-5).join(",")}].` : "";
-      const t = await callClaude(
+      const raw = await callClaude(
         "Return ONLY valid JSON, no markdown, no extra text.",
         `One morning wellness shot. Goals:${goalsStr||"energy"}. Prefs:${profile?.preferences||"none"}. ${cycleCtx}${excl}Return exactly: {"name":"str","emoji":"str","ingredients":[{"item":"str","amount":"str"}],"benefit":"str","calories":num,"protein_g":num,"carbs_g":num,"fat_g":num}`,
         500
       );
-      if (!t || !t.trim()) throw new Error("empty");
-      const data = parseJSON(t);
+      if (!raw || !raw.trim()) throw new Error("empty");
+      const data = parseJSON(raw);
       if (!data || !data.name) throw new Error("invalid");
       if (data.ingredients && typeof data.ingredients[0] === "string") data.ingredients = data.ingredients.map(s => ({ item: s, amount: "" }));
       setCurrentShot(data);
       setShownShots(prev => [...prev, data.name]);
       try { localStorage.setItem("nora_shot", JSON.stringify({ date: today(), data })); } catch {}
     } catch {
-      setShotError("Couldn't generate a shot right now. Please try again.");
+      setShotError(t("eat.shot.error"));
     }
     setShotLoad(false);
   };
@@ -941,12 +1124,12 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
     setDessertLoad(true); setDessertLogged(false); setDessertSaved(false); setDessertIngChk({});
     try {
       const excl = shownDesserts.length > 0 ? ` Not:[${shownDesserts.slice(-5).join(",")}].` : "";
-      const t = await callClaude(
+      const raw = await callClaude(
         "Return ONLY valid JSON, no markdown.",
         `One healthy dessert using only natural sweeteners (honey, dates, maple syrup, or fruit). Goals:${goalsStr||"balanced"}. Prefs:${profile?.preferences||"none"}. ${cycleCtx}${excl}Return: {"name":"str","emoji":"str","ingredients":[{"item":"str","amount":"str"}],"steps":["str"],"calories":num,"protein_g":num,"carbs_g":num,"fat_g":num,"fiber_g":num,"tip":"str"}`,
         600
       );
-      const data = parseJSON(t);
+      const data = parseJSON(raw);
       setDessert(data);
       setShownDesserts(prev => [...prev, data.name]);
     } catch {}
@@ -958,8 +1141,9 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
   }, {});
 
   // ── RENDER ────────────────────────────────────────────────────────
+  const juicesLocalized = language === "ro" ? juicesData.map(j => trRecipe(j, juicesRo)) : juicesData;
   const juiceQ = juiceSearch.toLowerCase();
-  const filteredJuices = juicesData.filter(j => {
+  const filteredJuices = juicesLocalized.filter(j => {
     const matchCat = juiceCat === "all" || j.category === juiceCat;
     const matchQ = !juiceQ || j.name.toLowerCase().includes(juiceQ) || j.category.toLowerCase().includes(juiceQ) || (j.benefits||[]).some(b => b.toLowerCase().includes(juiceQ)) || (j.ingredients||[]).some(i => i.item.toLowerCase().includes(juiceQ));
     return matchCat && matchQ;
@@ -997,19 +1181,21 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
       )}
 
       {/* Recipe modal */}
-      {recipeModal && (
+      {recipeModal && (() => {
+        const rmDm = displayMeal(recipeModal.meal, language);
+        return (
         <div onClick={() => setRecipeModal(null)} style={{ position:"fixed", inset:0, backgroundColor:"rgba(27,58,45,0.55)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
           <div onClick={e => e.stopPropagation()} style={{ width:"100%", maxWidth:480, backgroundColor:G.card, borderRadius:"20px 20px 0 0", maxHeight:"90vh", display:"flex", flexDirection:"column", overflow:"hidden" }}>
             {recipeModal.meal.image && (
               <div style={{ width:"100%", height:200, overflow:"hidden", position:"relative", flexShrink:0 }}>
-                <img src={recipeModal.meal.image} alt={recipeModal.meal.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} loading="lazy"/>
+                <img src={recipeModal.meal.image} alt={rmDm.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} loading="lazy"/>
                 <button onClick={() => setRecipeModal(null)} style={{ position:"absolute", top:10, right:10, width:32, height:32, borderRadius:"50%", border:"none", backgroundColor:"rgba(0,0,0,0.45)", cursor:"pointer", fontSize:18, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
               </div>
             )}
             <div style={{ padding:"16px 20px 14px", borderBottom:`1px solid ${G.border}`, display:"flex", alignItems:"flex-start", gap:12, flexShrink:0 }}>
               <div style={{ flex:1, minWidth:0 }}>
-                <span style={{ fontSize:10, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em" }}>{recipeModal.dayName} · {recipeModal.mealType}</span>
-                <p style={{ fontFamily:serif, fontSize:17, fontWeight:600, color:G.text, margin:"3px 0 2px", lineHeight:1.2 }}>{recipeModal.meal.emoji} {recipeModal.meal.name}</p>
+                <span style={{ fontSize:10, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em" }}>{recipeModal.dayName} · {t(`eat.mealType.${recipeModal.mealType.charAt(0).toUpperCase()}${recipeModal.mealType.slice(1)}`)}</span>
+                <p style={{ fontFamily:serif, fontSize:17, fontWeight:600, color:G.text, margin:"3px 0 2px", lineHeight:1.2 }}>{recipeModal.meal.emoji} {rmDm.name}</p>
                 <p style={{ fontSize:11, color:G.muted, margin:0 }}>~{recipeModal.meal.calories} kcal · ~{recipeModal.meal.protein_g}g protein</p>
               </div>
               {!recipeModal.meal.image && (
@@ -1020,20 +1206,20 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
               {recipeModal.loading ? (
                 <div style={{ textAlign:"center", padding:"32px 0" }}>
                   <div style={{ width:28, height:28, border:`2.5px solid ${G.border}`, borderTopColor:G.forest, borderRadius:"50%", animation:"spin 0.9s linear infinite", margin:"0 auto 12px" }}/>
-                  <p style={{ fontSize:13, color:G.muted, margin:0 }}>Fetching recipe…</p>
+                  <p style={{ fontSize:13, color:G.muted, margin:0 }}>{t("eat.fetchingRecipe")}</p>
                 </div>
               ) : (
                 <>
                   {(recipeModal.ingredients || []).length > 0 && (
                     <div style={{ marginBottom:20 }}>
-                      <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 10px" }}>Ingredients</p>
+                      <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 10px" }}>{t("myday.barcode.ingredients")}</p>
                       <IngList ingredients={recipeModal.ingredients} checked={recipeIngChk} onToggle={i => setRecipeIngChk(p => ({ ...p, [`${recipeModal.key}_${i}`]: !p[`${recipeModal.key}_${i}`] }))} accentColor={G.forest}/>
                     </div>
                   )}
-                  {(recipeModal.steps || []).length > 0 && (
+                  {(rmDm.steps || []).length > 0 && (
                     <div style={{ marginBottom:20 }}>
-                      <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 10px" }}>Instructions</p>
-                      {recipeModal.steps.map((step, i) => (
+                      <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 10px" }}>{t("eat.instructions")}</p>
+                      {rmDm.steps.map((step, i) => (
                         <div key={i} style={{ display:"flex", gap:12, marginBottom:12 }}>
                           <div style={{ width:24, height:24, borderRadius:"50%", flexShrink:0, marginTop:1, backgroundColor:G.forest, color:G.ivory, fontSize:11, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{i+1}</div>
                           <p style={{ fontSize:14, color:G.text, lineHeight:1.65, margin:0, paddingTop:2 }}>{step}</p>
@@ -1041,21 +1227,22 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                       ))}
                     </div>
                   )}
-                  {(recipeModal.ingredients||[]).length===0 && (recipeModal.steps||[]).length===0 && (
-                    <p style={{ fontSize:13, color:G.muted, textAlign:"center", padding:"20px 0" }}>Recipe not available.</p>
+                  {(recipeModal.ingredients||[]).length===0 && (rmDm.steps||[]).length===0 && (
+                    <p style={{ fontSize:13, color:G.muted, textAlign:"center", padding:"20px 0" }}>{t("eat.recipeNotAvailable")}</p>
                   )}
                 </>
               )}
               {!recipeModal.loading && (
-                <button onClick={() => { addToLog({ name:recipeModal.meal.name, calories:recipeModal.meal.calories||0, protein_g:recipeModal.meal.protein_g||0, carbs_g:recipeModal.meal.carbs_g||0, fat_g:recipeModal.meal.fat_g||0, fiber_g:0, notes:`Week prep — ${recipeModal.dayName}` }); setWeekMealLogged(p => ({ ...p, [`${recipeModal.dayName}_${recipeModal.mealType}`]:true })); setRecipeModal(null); }} style={{ width:"100%", padding:"14px", backgroundColor:G.forest, color:G.ivory, border:"none", borderRadius:12, fontSize:14, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+                <button onClick={() => { addToLog({ name:recipeModal.meal.name, calories:recipeModal.meal.calories||0, protein_g:recipeModal.meal.protein_g||0, carbs_g:recipeModal.meal.carbs_g||0, fat_g:recipeModal.meal.fat_g||0, fiber_g:0, notes:`${t("eat.notes.weekPrep")} — ${recipeModal.dayName}` }); setWeekMealLogged(p => ({ ...p, [`${recipeModal.dayName}_${recipeModal.mealType}`]:true })); setRecipeModal(null); }} style={{ width:"100%", padding:"14px", backgroundColor:G.forest, color:G.ivory, border:"none", borderRadius:12, fontSize:14, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-6" stroke={G.ivory} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  Log this meal
+                  {t("myday.plate.logMeal")}
                 </button>
               )}
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Food Detail Modal */}
       {selectedFood && (() => {
@@ -1085,7 +1272,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
               <div style={{ padding:"14px 20px 12px", borderBottom:`1px solid ${G.border}`, flexShrink:0 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <span style={{ fontSize:10, fontWeight:700, color: sf.source==="USDA" ? G.forest : sf.source==="Recipe" ? G.forestMid : G.amber, backgroundColor: sf.source==="USDA" ? `${G.forest}12` : sf.source==="Recipe" ? `${G.forestMid}12` : `${G.amber}18`, borderRadius:4, padding:"2px 7px" }}>{sf.source==="USDA" ? "USDA FoodData" : sf.source==="Recipe" ? "Recipe" : "Open Food Facts"}</span>
+                    <span style={{ fontSize:10, fontWeight:700, color: sf.source==="USDA" ? G.forest : sf.source==="Recipe" ? G.forestMid : G.amber, backgroundColor: sf.source==="USDA" ? `${G.forest}12` : sf.source==="Recipe" ? `${G.forestMid}12` : `${G.amber}18`, borderRadius:4, padding:"2px 7px" }}>{sf.source==="USDA" ? "USDA FoodData" : sf.source==="Recipe" ? t("eat.recipe") : "Open Food Facts"}</span>
                     {sf.brand && <span style={{ fontSize:11, color:G.muted, marginLeft:8 }}>{sf.brand}</span>}
                     <p style={{ fontFamily:serif, fontSize:17, fontWeight:600, color:G.text, margin:"6px 0 0", lineHeight:1.25 }}>{sf.name}</p>
                     {sf.category && <p style={{ fontSize:11, color:G.muted, margin:"3px 0 0" }}>{sf.category}</p>}
@@ -1094,12 +1281,12 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                 </div>
                 {/* Serving size selector */}
                 {sf.source !== "Recipe" && <div style={{ marginTop:14 }}>
-                  <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 8px" }}>Serving size</p>
+                  <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 8px" }}>{t("eat.servingSize")}</p>
                   <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                     {SERVING_PRESETS.map(g => (
                       <button key={g} onClick={() => { setServingSize(g); setIsCustomServing(false); setCustomServingInput(""); }} style={{ padding:"6px 13px", borderRadius:8, border:`1.5px solid ${!isCustomServing && servingSize===g ? G.forest : G.border}`, backgroundColor: !isCustomServing && servingSize===g ? G.forest : "transparent", color: !isCustomServing && servingSize===g ? G.ivory : G.text, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:sans }}>{g}g</button>
                     ))}
-                    <button onClick={() => { setIsCustomServing(true); setCustomServingInput(String(servingSize)); }} style={{ padding:"6px 13px", borderRadius:8, border:`1.5px solid ${isCustomServing ? G.forest : G.border}`, backgroundColor: isCustomServing ? G.forest : "transparent", color: isCustomServing ? G.ivory : G.text, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:sans }}>Custom</button>
+                    <button onClick={() => { setIsCustomServing(true); setCustomServingInput(String(servingSize)); }} style={{ padding:"6px 13px", borderRadius:8, border:`1.5px solid ${isCustomServing ? G.forest : G.border}`, backgroundColor: isCustomServing ? G.forest : "transparent", color: isCustomServing ? G.ivory : G.text, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:sans }}>{t("eat.custom")}</button>
                     {isCustomServing && (
                       <input type="number" min="1" max="2000" value={customServingInput} onChange={e => { setCustomServingInput(e.target.value); const v = parseInt(e.target.value); if (v > 0) setServingSize(v); }} style={{ width:70, padding:"6px 10px", borderRadius:8, border:`1.5px solid ${G.forest}`, fontSize:12, color:G.text, fontFamily:sans, textAlign:"center", outline:"none" }} placeholder="g"/>
                     )}
@@ -1111,22 +1298,22 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                 {sf.loadingDetail ? (
                   <div style={{ textAlign:"center", padding:"32px 0" }}>
                     <div style={{ width:26, height:26, border:`2.5px solid ${G.border}`, borderTopColor:G.forest, borderRadius:"50%", animation:"spin 0.9s linear infinite", margin:"0 auto 12px" }}/>
-                    <p style={{ fontSize:13, color:G.muted, margin:0 }}>Fetching full nutrition data…</p>
+                    <p style={{ fontSize:13, color:G.muted, margin:0 }}>{t("eat.fetchingNutrition")}</p>
                   </div>
                 ) : (
                   <>
                     {/* Big kcal */}
                     <div style={{ textAlign:"center", padding:"18px 0 16px", borderBottom:`1px solid ${G.border}`, marginBottom:16 }}>
                       <p style={{ fontFamily:serif, fontSize:44, fontWeight:700, color:G.forest, margin:0, lineHeight:1 }}>{calc(p.kcal) ?? 0}</p>
-                      <p style={{ fontSize:12, color:G.muted, margin:"4px 0 0" }}>kcal · {sf.source === "Recipe" ? "per serving" : `${servingSize}g serving`}</p>
+                      <p style={{ fontSize:12, color:G.muted, margin:"4px 0 0" }}>kcal · {sf.source === "Recipe" ? t("eat.perServing") : `${servingSize}g ${t("eat.serving")}`}</p>
                     </div>
                     {/* Macros row */}
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:8, marginBottom:20 }}>
                       {[
-                        { label:"Protein",  value:calc(p.protein),  unit:"g", color:G.forest    },
-                        { label:"Carbs",    value:calc(p.carbs),    unit:"g", color:G.gold       },
-                        { label:"Fat",      value:calc(p.fat),      unit:"g", color:G.amber      },
-                        { label:"Fibre",    value:calc(p.fiber),    unit:"g", color:G.sage       },
+                        { label:t("me.targets.protein"),  value:calc(p.protein),  unit:"g", color:G.forest    },
+                        { label:t("me.targets.carbs"),    value:calc(p.carbs),    unit:"g", color:G.gold       },
+                        { label:t("me.targets.fat"),      value:calc(p.fat),      unit:"g", color:G.amber      },
+                        { label:t("me.targets.fibre"),    value:calc(p.fiber),    unit:"g", color:G.sage       },
                       ].map(({ label, value, unit, color }) => (
                         <div key={label} style={{ backgroundColor:G.card, borderRadius:12, padding:"11px 8px", textAlign:"center", border:`1px solid ${G.border}` }}>
                           <p style={{ fontSize:18, fontWeight:700, color, margin:"0 0 2px" }}>{value ?? "—"}<span style={{ fontSize:11 }}>{value != null ? unit : ""}</span></p>
@@ -1137,14 +1324,14 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                     {/* Recipe meta row */}
                     {sf.source === "Recipe" && (sf.readyMinutes || sf.servings) && (
                       <div style={{ display:"flex", gap:8, marginBottom:18, flexWrap:"wrap" }}>
-                        {sf.readyMinutes && <span style={{ fontSize:12, color:G.forest, backgroundColor:`${G.forest}10`, borderRadius:8, padding:"5px 12px", fontWeight:500 }}>⏱ {sf.readyMinutes} min</span>}
-                        {sf.servings && <span style={{ fontSize:12, color:G.forest, backgroundColor:`${G.forest}10`, borderRadius:8, padding:"5px 12px", fontWeight:500 }}>🍽 {sf.servings} servings</span>}
+                        {sf.readyMinutes && <span style={{ fontSize:12, color:G.forest, backgroundColor:`${G.forest}10`, borderRadius:8, padding:"5px 12px", fontWeight:500 }}>⏱ {sf.readyMinutes} {t("eat.min")}</span>}
+                        {sf.servings && <span style={{ fontSize:12, color:G.forest, backgroundColor:`${G.forest}10`, borderRadius:8, padding:"5px 12px", fontWeight:500 }}>🍽 {sf.servings} {t("eat.servings")}</span>}
                       </div>
                     )}
                     {/* Recipe structured ingredients */}
                     {sf.source === "Recipe" && sf.recipeIngredients?.length > 0 && (
                       <div style={{ marginBottom:18 }}>
-                        <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 10px" }}>Ingredients</p>
+                        <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 10px" }}>{t("myday.barcode.ingredients")}</p>
                         <div style={{ backgroundColor:G.card, borderRadius:12, border:`1px solid ${G.border}`, overflow:"hidden" }}>
                           {sf.recipeIngredients.map((ing, i) => (
                             <div key={i} style={{ padding:"9px 14px", borderBottom: i < sf.recipeIngredients.length - 1 ? `1px solid ${G.border}` : "none", display:"flex", alignItems:"center", gap:10 }}>
@@ -1158,7 +1345,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                     {/* USDA / OFF plain-text ingredients */}
                     {sf.source !== "Recipe" && sf.ingredients && (
                       <div style={{ marginBottom:18 }}>
-                        <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 10px" }}>Ingredients</p>
+                        <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 10px" }}>{t("myday.barcode.ingredients")}</p>
                         <div style={{ backgroundColor:G.card, borderRadius:12, border:`1px solid ${G.border}`, padding:"12px 14px" }}>
                           <p style={{ fontSize:12, color:G.text, margin:0, lineHeight:1.7 }}>{sf.ingredients}</p>
                         </div>
@@ -1167,7 +1354,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                     {/* Recipe cooking steps */}
                     {sf.source === "Recipe" && sf.recipeSteps?.length > 0 && (
                       <div style={{ marginBottom:18 }}>
-                        <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 12px" }}>Instructions</p>
+                        <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 12px" }}>{t("eat.instructions")}</p>
                         <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                           {sf.recipeSteps.map((s, i) => (
                             <div key={i} style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
@@ -1193,7 +1380,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                       { label:"Zinc",      value:calc(p.zinc),      unit:"mg" },
                     ].filter(n => n.value != null && n.value > 0).length > 0 && (
                       <div style={{ marginBottom:18 }}>
-                        <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 10px" }}>Vitamins & Minerals</p>
+                        <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 10px" }}>{t("eat.vitaminsMinerals")}</p>
                         <div style={{ backgroundColor:G.card, borderRadius:12, border:`1px solid ${G.border}`, overflow:"hidden" }}>
                           {[
                             { label:"Sugar",     value:calc(p.sugar),     unit:"g"  },
@@ -1208,7 +1395,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                             { label:"Zinc",      value:calc(p.zinc),      unit:"mg" },
                           ].filter(n => n.value != null && n.value > 0).map((n, i, arr) => (
                             <div key={n.label} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 14px", borderBottom: i < arr.length-1 ? `1px solid ${G.border}` : "none" }}>
-                              <span style={{ fontSize:13, color:G.text }}>{n.label}</span>
+                              <span style={{ fontSize:13, color:G.text }}>{t(`eat.nutrient.${n.label}`)}</span>
                               <span style={{ fontSize:13, fontWeight:600, color:G.forest }}>{n.value}{n.unit}</span>
                             </div>
                           ))}
@@ -1225,9 +1412,9 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                           </button>
                         );
                       })()}
-                      <button onClick={() => { addToLog({ name:sf.name, calories:calc(p.kcal)||0, protein_g:calc(p.protein)||0, carbs_g:calc(p.carbs)||0, fat_g:calc(p.fat)||0, fiber_g:calc(p.fiber)||0, notes: sf.source === "Recipe" ? "1 serving · recipe" : `Food search — ${servingSize}g` }); setSelectedFood(null); }} style={{ flex:1, padding:"14px", backgroundColor:G.forest, color:G.ivory, border:"none", borderRadius:13, fontSize:14, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+                      <button onClick={() => { addToLog({ name:sf.name, calories:calc(p.kcal)||0, protein_g:calc(p.protein)||0, carbs_g:calc(p.carbs)||0, fat_g:calc(p.fat)||0, fiber_g:calc(p.fiber)||0, notes: sf.source === "Recipe" ? t("eat.notes.oneServingRecipe") : `${t("eat.notes.foodSearch")} — ${servingSize}g` }); setSelectedFood(null); }} style={{ flex:1, padding:"14px", backgroundColor:G.forest, color:G.ivory, border:"none", borderRadius:13, fontSize:14, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-6" stroke={G.ivory} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                        {sf.source === "Recipe" ? "Log to diary" : `Log ${servingSize}g to diary`}
+                        {sf.source === "Recipe" ? t("eat.logToDiary") : `${t("eat.log")} ${servingSize}g ${t("eat.toDiary")}`}
                       </button>
                     </div>
                   </>
@@ -1242,8 +1429,8 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
       <div style={{ background:`linear-gradient(160deg,${C.greenDark} 0%,${C.green} 100%)`, padding:"20px 20px 18px", position:"relative", overflow:"hidden" }}>
         <div style={{ display:"flex", alignItems:"center", gap:12, flex:1 }}>
           <div style={{ flex:1 }}>
-            <h2 style={{ fontFamily:serif, fontSize:21, color:"#FDFAF5", fontWeight:700, margin:0, lineHeight:1.2, letterSpacing:"-0.01em" }}>Eat</h2>
-            <p style={{ fontSize:11, color:"rgba(253,250,245,0.55)", margin:0, fontFamily:sans }}>Nourishment · Wellness · Vitality</p>
+            <h2 style={{ fontFamily:serif, fontSize:21, color:"#FDFAF5", fontWeight:700, margin:0, lineHeight:1.2, letterSpacing:"-0.01em" }}>{t("nav.eat")}</h2>
+            <p style={{ fontSize:11, color:"rgba(253,250,245,0.55)", margin:0, fontFamily:sans }}>{t("eat.header.subtitle")}</p>
           </div>
         </div>
       </div>
@@ -1254,7 +1441,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
           const isActive = activeSection === s.id;
           return (
             <button key={s.id} onClick={() => setSection(s.id)} style={{ flexShrink:0, display:"flex", alignItems:"center", gap:5, padding:"8px 15px", borderRadius:50, border:`1.5px solid ${isActive ? G.forest : G.border}`, backgroundColor: isActive ? G.forest : G.card, color: isActive ? G.ivory : G.text, fontSize:12, fontWeight: isActive ? 600 : 400, fontFamily:sans, cursor:"pointer", transition:"all 0.18s ease", whiteSpace:"nowrap", boxShadow: isActive ? "0 3px 10px rgba(27,58,45,0.22)" : "none" }}>
-              <span style={{ fontSize:13 }}>{s.icon}</span>{s.label}
+              <span style={{ fontSize:13 }}>{s.icon}</span>{t(`eat.section.${s.id}`)}
             </button>
           );
         })}
@@ -1269,8 +1456,8 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
             <div style={{ width:72, height:72, borderRadius:"50%", backgroundColor:`${G.forest}0D`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 20px" }}>
               <LeafDecor size={32}/>
             </div>
-            <p style={{ fontFamily:serif, fontSize:20, color:G.text, margin:"0 0 10px", fontWeight:600 }}>What would you like today?</p>
-            <p style={{ fontSize:13, color:C.muted, margin:0, lineHeight:1.8 }}>Select a category above to explore your<br/>personalised nutrition options.</p>
+            <p style={{ fontFamily:serif, fontSize:20, color:G.text, margin:"0 0 10px", fontWeight:600 }}>{t("eat.empty.title")}</p>
+            <p style={{ fontSize:13, color:C.muted, margin:0, lineHeight:1.8 }}>{t("eat.empty.line1")}<br/>{t("eat.empty.line2")}</p>
           </div>
         )}
 
@@ -1278,17 +1465,18 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
         {activeSection === "plan" && (
           <div style={{ display:"flex", flexDirection:"column", gap:16, animation:"sectionIn 0.22s ease", paddingBottom:28 }}>
           <div style={{ ...card, padding:"20px 18px 22px" }}>
-            <p style={STitleStyle}>Today's Plan</p>
-            <p style={SDescStyle}>Personalised meals for your day{cyclePhase ? `, ${cyclePhase.label.toLowerCase()} phase` : ""}.</p>
+            <p style={STitleStyle}>{t("eat.plan.title")}</p>
+            <p style={SDescStyle}>{t("eat.plan.desc")}{cyclePhase ? `, ${cyclePhase.label.toLowerCase()} ${t("eat.plan.phase")}` : ""}.</p>
 
-            {/* Goal selector */}
+            {/* Goal selector — id is stored in planGoal state and fed to the AI prompt in
+                English; only the button's displayed label is translated */}
             {!mealPlanLoad && (
               <>
                 <div style={{ display:"flex", gap:7, marginBottom:8 }}>
                   {[
-                    { id:"lose",     label:"Lose weight" },
-                    { id:"maintain", label:"Maintain"    },
-                    { id:"gain",     label:"Gain muscle" },
+                    { id:"lose",     label:t("eat.plan.goal.lose") },
+                    { id:"maintain", label:t("eat.plan.goal.maintain") },
+                    { id:"gain",     label:t("eat.plan.goal.gain") },
                   ].map(g => {
                     const active = planGoal === g.id;
                     return (
@@ -1302,11 +1490,11 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                 <div style={{ marginBottom:14 }}>
                   <button onClick={() => { setPlanUseCustom(s => !s); if (planUseCustom) setPlanCustomKcal(""); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:planUseCustom ? G.forest : G.muted, fontFamily:sans, padding:"2px 0 6px", display:"flex", alignItems:"center", gap:5 }}>
                     <span style={{ fontSize:13 }}>{planUseCustom ? "▾" : "▸"}</span>
-                    {planUseCustom ? "Custom kcal target active" : "Set custom kcal target"}
+                    {planUseCustom ? t("eat.plan.customActive") : t("eat.plan.customSet")}
                   </button>
                   {planUseCustom && (
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <input type="number" min="800" max="6000" step="50" value={planCustomKcal} onChange={e => setPlanCustomKcal(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && planCustomKcal) genPlan(); }} placeholder={`Default: ${Math.max(1200, tCal + (GOAL_ADJ[planGoal]||0))}`} style={{ flex:1, padding:"9px 12px", border:`1.5px solid ${G.forest}`, borderRadius:9, fontSize:13, color:G.text, fontFamily:sans, outline:"none", backgroundColor:G.card }}/>
+                      <input type="number" min="800" max="6000" step="50" value={planCustomKcal} onChange={e => setPlanCustomKcal(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && planCustomKcal) genPlan(); }} placeholder={`${t("eat.plan.default")}: ${Math.max(1200, tCal + (GOAL_ADJ[planGoal]||0))}`} style={{ flex:1, padding:"9px 12px", border:`1.5px solid ${G.forest}`, borderRadius:9, fontSize:13, color:G.text, fontFamily:sans, outline:"none", backgroundColor:G.card }}/>
                       <button onClick={() => { if (planCustomKcal) genPlan(); }} disabled={!planCustomKcal} style={{ padding:"9px 13px", borderRadius:9, border:"none", backgroundColor: planCustomKcal ? G.forest : G.border, color: planCustomKcal ? G.ivory : G.muted, fontSize:13, fontWeight:600, cursor: planCustomKcal ? "pointer" : "not-allowed", fontFamily:sans, flexShrink:0, transition:"all 0.15s" }}>✓</button>
                     </div>
                   )}
@@ -1315,7 +1503,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
             )}
 
             {!mealPlan && !mealPlanLoad && !mealPlanError && (
-              <GBtn onClick={genPlan}><SparkleIcon size={15} color={G.ivory}/>Generate today's plan</GBtn>
+              <GBtn onClick={genPlan}><SparkleIcon size={15} color={G.ivory}/>{t("eat.plan.generate")}</GBtn>
             )}
             {mealPlanLoad && (
               <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:8 }}>
@@ -1325,16 +1513,16 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
             {mealPlanError && !mealPlanLoad && (
               <div style={{ padding:"16px", backgroundColor:G.errorBg, border:`1px solid ${G.error}25`, borderRadius:14, margin:"4px 0" }}>
                 <p style={{ fontSize:13, color:G.error, margin:"0 0 12px", lineHeight:1.6, textAlign:"center" }}>{mealPlanError}</p>
-                <button onClick={genPlan} style={{ width:"100%", padding:"11px", backgroundColor:"transparent", color:G.forest, border:`1.5px solid ${G.forest}`, borderRadius:10, fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:sans }}>Try again</button>
+                <button onClick={genPlan} style={{ width:"100%", padding:"11px", backgroundColor:"transparent", color:G.forest, border:`1.5px solid ${G.forest}`, borderRadius:10, fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:sans }}>{t("boost.tryAgain")}</button>
               </div>
             )}
             {mealPlan && !mealPlanLoad && (
               <div style={{ display:"flex", gap:8, marginTop:4 }}>
                 <button onClick={genPlan} style={{ flex:1, padding:"12px", backgroundColor:"transparent", color:G.forest, border:`1.5px solid ${G.forest}`, borderRadius:12, fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
-                  <SparkleIcon size={13} color={G.forest}/>New plan
+                  <SparkleIcon size={13} color={G.forest}/>{t("eat.plan.newPlan")}
                 </button>
                 <button onClick={savePlan} style={{ flex:1, padding:"12px", backgroundColor: planSaved ? `${G.forest}14` : G.forest, color: planSaved ? G.forest : G.ivory, border:"none", borderRadius:12, fontSize:13, fontWeight:500, cursor: planSaved ? "default" : "pointer", fontFamily:sans }}>
-                  {planSaved ? "Saved ✓" : "Save plan"}
+                  {planSaved ? `${t("eat.plan.saved")} ✓` : t("eat.plan.savePlan")}
                 </button>
               </div>
             )}
@@ -1350,15 +1538,15 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                   return (
                     <div style={{ ...card, padding:"14px 16px" }}>
                       <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:12 }}>
-                        <span style={{ fontFamily:serif, fontSize:14, fontWeight:600, color:G.forest }}>Daily total</span>
-                        <span style={{ fontSize:10, color:G.muted, fontFamily:sans }}>{mealPlan.length} meals</span>
+                        <span style={{ fontFamily:serif, fontSize:14, fontWeight:600, color:G.forest }}>{t("eat.plan.dailyTotal")}</span>
+                        <span style={{ fontSize:10, color:G.muted, fontFamily:sans }}>{mealPlan.length} {t("eat.plan.meals")}</span>
                       </div>
                       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:6 }}>
                         {[
                           { label:"kcal",    value:Math.round(totalKcal),           color:G.forest    },
-                          { label:"protein", value:`${Math.round(totalPro)}g`,      color:G.forestMid },
-                          { label:"carbs",   value:`${Math.round(totalCarbs)}g`,    color:G.gold      },
-                          { label:"fat",     value:`${Math.round(totalFat)}g`,      color:G.amber     },
+                          { label:t("me.targets.protein").toLowerCase(), value:`${Math.round(totalPro)}g`,      color:G.forestMid },
+                          { label:t("me.targets.carbs").toLowerCase(),   value:`${Math.round(totalCarbs)}g`,    color:G.gold      },
+                          { label:t("me.targets.fat").toLowerCase(),     value:`${Math.round(totalFat)}g`,      color:G.amber     },
                         ].map(({ label, value, color }) => (
                           <div key={label} style={{ backgroundColor:G.ivory, borderRadius:9, padding:"9px 5px", textAlign:"center", border:`1px solid ${G.border}` }}>
                             <p style={{ fontFamily:serif, fontSize:15, fontWeight:700, color, margin:"0 0 2px", lineHeight:1 }}>{value}</p>
@@ -1379,17 +1567,18 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                     const ingState = ingChecked[mealKey] || {};
                     const isLogged = !!loggedMeals[group];
                     const isFav    = savedItems.some(i => i.type === "meal" && i.data?.name === meal.name);
+                    const dm       = displayMeal(meal, language);
                     return (
                       <div key={group} style={{ backgroundColor:G.card, borderRadius:18, overflow:"hidden", border:`1px solid ${G.border}`, boxShadow:"0 1px 6px rgba(27,58,45,0.05)" }}>
                         <div style={{ height:3, backgroundColor:color }}/>
                         <div style={{ padding:"13px 16px 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                          <span style={{ fontSize:10, fontWeight:700, color, textTransform:"uppercase", letterSpacing:"0.12em" }}>{group}</span>
+                          <span style={{ fontSize:10, fontWeight:700, color, textTransform:"uppercase", letterSpacing:"0.12em" }}>{t(`eat.mealType.${group}`)}</span>
                           <button onClick={() => toggleMealFavourite(meal)} style={{ border:"none", background:"none", cursor:"pointer", padding:4 }}>
                             <HeartIcon size={17} color={isFav ? G.forest : G.muted} filled={isFav}/>
                           </button>
                         </div>
                         <div style={{ padding:"5px 16px 3px" }}>
-                          <p style={{ fontFamily:serif, fontSize:19, fontWeight:600, color:G.text, margin:0, lineHeight:1.25 }}>{meal.name}</p>
+                          <p style={{ fontFamily:serif, fontSize:19, fontWeight:600, color:G.text, margin:0, lineHeight:1.25 }}>{dm.name}</p>
                         </div>
                         <div style={{ padding:"3px 16px 13px" }}>
                           <MacroStrip kcal={meal.calories} pro={meal.protein_g} carbs={meal.carbs_g} fat={meal.fat_g}/>
@@ -1397,29 +1586,29 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                         </div>
                         {meal.image && !isOpen && (
                           <div style={{ height:180, overflow:"hidden" }}>
-                            <img src={meal.image} alt={meal.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} loading="lazy"/>
+                            <img src={meal.image} alt={dm.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} loading="lazy"/>
                           </div>
                         )}
                         <div style={{ padding: isOpen ? "13px 16px 0" : "14px 16px 16px", display:"flex", gap:8 }}>
                           <button onClick={() => setExpandedMeal(isOpen ? null : group)} style={{ flex:1, padding:"11px", backgroundColor: isOpen ? G.forest : "transparent", color: isOpen ? G.ivory : G.forest, border:`1.5px solid ${G.forest}`, borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:sans, transition:"all 0.15s" }}>
-                            {isOpen ? "Close" : "View Recipe"}
+                            {isOpen ? t("common.close") : t("eat.plan.viewRecipe")}
                           </button>
-                          <button onClick={() => { if (!isLogged) { addToLog({ ...meal, notes:"From Nora's plan" }); setLoggedMeals(p => ({ ...p, [group]:true })); }}} style={{ flex:1, padding:"11px", backgroundColor: isLogged ? `${G.forest}18` : G.forest, color: isLogged ? G.forest : G.ivory, border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor: isLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6, transition:"all 0.2s" }}>
-                            {isLogged ? <><CheckIcon size={12} color={G.forest}/>Logged</> : "Log meal"}
+                          <button onClick={() => { if (!isLogged) { addToLog({ ...meal, notes:t("eat.notes.fromPlan") }); setLoggedMeals(p => ({ ...p, [group]:true })); }}} style={{ flex:1, padding:"11px", backgroundColor: isLogged ? `${G.forest}18` : G.forest, color: isLogged ? G.forest : G.ivory, border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor: isLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6, transition:"all 0.2s" }}>
+                            {isLogged ? <><CheckIcon size={12} color={G.forest}/>{t("eat.logged")}</> : t("eat.logMeal")}
                           </button>
-                          <button onClick={() => genMealAlt(group)} disabled={!!altLoading[group]} title="Generate alternative" style={{ width:44, padding:"11px", borderRadius:10, border:`1.5px solid ${G.border}`, background:"none", cursor: altLoading[group] ? "not-allowed" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:17, color:G.muted, opacity: altLoading[group] ? 0.5 : 1 }}>
+                          <button onClick={() => genMealAlt(group)} disabled={!!altLoading[group]} title={t("eat.generateAlt")} style={{ width:44, padding:"11px", borderRadius:10, border:`1.5px solid ${G.border}`, background:"none", cursor: altLoading[group] ? "not-allowed" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:17, color:G.muted, opacity: altLoading[group] ? 0.5 : 1 }}>
                             {altLoading[group] ? <Spinner/> : "↻"}
                           </button>
                         </div>
                         {isOpen && (
                           <div style={{ margin:"13px 16px 16px", padding:"16px", backgroundColor:G.ivory, borderRadius:12, border:`1px solid ${G.border}` }}>
-                            {meal.image && <div style={{ height:200, borderRadius:10, overflow:"hidden", marginBottom:22 }}><img src={meal.image} alt={meal.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} loading="lazy"/></div>}
+                            {meal.image && <div style={{ height:200, borderRadius:10, overflow:"hidden", marginBottom:22 }}><img src={meal.image} alt={dm.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} loading="lazy"/></div>}
                             {(meal.ingredients||[]).length > 0 && (
                               <div style={{ marginBottom:18 }}>
-                                <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px" }}>Ingredients</p>
+                                <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px" }}>{t("myday.barcode.ingredients")}</p>
                                 {(meal.ingredients||[]).map((ing, i) => {
-                                  const item = typeof ing === "string" ? ing : ing.item;
-                                  const amt  = typeof ing === "string" ? "" : ing.amount;
+                                  const item = typeof ing === "string" ? ing : (language === "ro" && ing.itemDisplay ? ing.itemDisplay : ing.item);
+                                  const amt  = typeof ing === "string" ? "" : (language === "ro" && ing.amountDisplay ? ing.amountDisplay : ing.amount);
                                   const ck   = !!(ingState[i]);
                                   return (
                                     <div key={i} onClick={() => toggleIng(mealKey, i)} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 0", cursor:"pointer", borderBottom: i < meal.ingredients.length-1 ? `1px solid ${G.border}` : "none", opacity: ck ? 0.45 : 1 }}>
@@ -1433,10 +1622,10 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                                 })}
                               </div>
                             )}
-                            {(meal.steps||[]).length > 0 && (
+                            {(dm.steps||[]).length > 0 && (
                               <div style={{ marginBottom:16 }}>
-                                <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 12px" }}>Instructions</p>
-                                {meal.steps.map((step, i) => (
+                                <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 12px" }}>{t("eat.instructions")}</p>
+                                {dm.steps.map((step, i) => (
                                   <div key={i} style={{ display:"flex", gap:14, marginBottom:14 }}>
                                     <div style={{ width:24, height:24, borderRadius:"50%", flexShrink:0, backgroundColor:color, color:G.ivory, fontSize:12, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{i+1}</div>
                                     <p style={{ fontSize:14, color:G.text, lineHeight:1.65, margin:0, paddingTop:2 }}>{step}</p>
@@ -1449,7 +1638,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                                 <p style={{ fontSize:12, color:G.amber, margin:0, lineHeight:1.55 }}>💡 {meal.tip}</p>
                               </div>
                             )}
-                            <button onClick={() => setExpandedMeal(null)} style={{ width:"100%", padding:"11px", backgroundColor:"transparent", color:G.muted, border:`1px solid ${G.border}`, borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:sans, marginTop:4 }}>Close</button>
+                            <button onClick={() => setExpandedMeal(null)} style={{ width:"100%", padding:"11px", backgroundColor:"transparent", color:G.muted, border:`1px solid ${G.border}`, borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:sans, marginTop:4 }}>{t("common.close")}</button>
                           </div>
                         )}
                       </div>
@@ -1465,17 +1654,17 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
         {activeSection === "week" && (
           <div style={{ display:"flex", flexDirection:"column", gap:16, animation:"sectionIn 0.22s ease", paddingBottom:28 }}>
           <div style={{ ...card, padding:"20px 18px 22px" }}>
-            <p style={STitleStyle}>7-Day Prep</p>
-            <p style={SDescStyle}>Personalised to your calorie target{profile?.preferences ? ` · ${profile.preferences}` : ""}. Breakfast, lunch & dinner for 7 days.</p>
+            <p style={STitleStyle}>{t("eat.week.title")}</p>
+            <p style={SDescStyle}>{t("eat.week.desc")}{profile?.preferences ? ` · ${profile.preferences}` : ""}. {t("eat.week.desc2")}</p>
 
             {/* Goal selector */}
             {!weekPlanLoad && (
               <>
                 <div style={{ display:"flex", gap:7, marginBottom:8 }}>
                   {[
-                    { id:"lose",     label:"Lose weight" },
-                    { id:"maintain", label:"Maintain"    },
-                    { id:"gain",     label:"Gain muscle" },
+                    { id:"lose",     label:t("eat.plan.goal.lose") },
+                    { id:"maintain", label:t("eat.plan.goal.maintain") },
+                    { id:"gain",     label:t("eat.plan.goal.gain") },
                   ].map(g => {
                     const active = weekGoal === g.id;
                     return (
@@ -1489,11 +1678,11 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                 <div style={{ marginBottom:14 }}>
                   <button onClick={() => { setWeekUseCustom(s => !s); if (weekUseCustom) setWeekCustomKcal(""); }} style={{ background:"none", border:"none", cursor:"pointer", fontSize:11, color:weekUseCustom ? G.forest : G.muted, fontFamily:sans, padding:"2px 0 6px", display:"flex", alignItems:"center", gap:5 }}>
                     <span style={{ fontSize:13 }}>{weekUseCustom ? "▾" : "▸"}</span>
-                    {weekUseCustom ? "Custom kcal target active" : "Set custom kcal target"}
+                    {weekUseCustom ? t("eat.plan.customActive") : t("eat.plan.customSet")}
                   </button>
                   {weekUseCustom && (
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <input type="number" min="800" max="6000" step="50" value={weekCustomKcal} onChange={e => setWeekCustomKcal(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && weekCustomKcal) genWeek(); }} placeholder={`Default: ${Math.max(1200, tCal + (GOAL_ADJ[weekGoal]||0))}`} style={{ flex:1, padding:"9px 12px", border:`1.5px solid ${G.forest}`, borderRadius:9, fontSize:13, color:G.text, fontFamily:sans, outline:"none", backgroundColor:G.card }}/>
+                      <input type="number" min="800" max="6000" step="50" value={weekCustomKcal} onChange={e => setWeekCustomKcal(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && weekCustomKcal) genWeek(); }} placeholder={`${t("eat.plan.default")}: ${Math.max(1200, tCal + (GOAL_ADJ[weekGoal]||0))}`} style={{ flex:1, padding:"9px 12px", border:`1.5px solid ${G.forest}`, borderRadius:9, fontSize:13, color:G.text, fontFamily:sans, outline:"none", backgroundColor:G.card }}/>
                       <button onClick={() => { if (weekCustomKcal) genWeek(); }} disabled={!weekCustomKcal} style={{ padding:"9px 13px", borderRadius:9, border:"none", backgroundColor: weekCustomKcal ? G.forest : G.border, color: weekCustomKcal ? G.ivory : G.muted, fontSize:13, fontWeight:600, cursor: weekCustomKcal ? "pointer" : "not-allowed", fontFamily:sans, flexShrink:0, transition:"all 0.15s" }}>✓</button>
                     </div>
                   )}
@@ -1502,7 +1691,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
             )}
 
             <GBtn onClick={genWeek} disabled={weekPlanLoad}>
-              {weekPlanLoad ? <><Spinner/>Building your week…</> : <><SparkleIcon size={15} color={G.ivory}/>{weekPlan ? "New week plan" : "Generate week plan"}</>}
+              {weekPlanLoad ? <><Spinner/>{t("eat.week.building")}</> : <><SparkleIcon size={15} color={G.ivory}/>{weekPlan ? t("eat.week.newPlan") : t("eat.week.generate")}</>}
             </GBtn>
             {weekError && <p style={{ fontSize:12, color:G.error, textAlign:"center", margin:"10px 0 0" }}>{weekError}</p>}
             {weekPlanLoad && weekProgress && <p style={{ fontSize:12, color:G.muted, textAlign:"center", margin:"10px 0 0", fontStyle:"italic" }}>{weekProgress}</p>}
@@ -1524,15 +1713,15 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                   return (
                     <div style={{ ...card, padding:"14px 16px" }}>
                       <div style={{ display:"flex", alignItems:"baseline", gap:8, marginBottom:12 }}>
-                        <span style={{ fontFamily:serif, fontSize:14, fontWeight:600, color:G.forest }}>Daily average</span>
-                        <span style={{ fontSize:10, color:G.muted, fontFamily:sans }}>{days.length} days</span>
+                        <span style={{ fontFamily:serif, fontSize:14, fontWeight:600, color:G.forest }}>{t("eat.week.dailyAverage")}</span>
+                        <span style={{ fontSize:10, color:G.muted, fontFamily:sans }}>{days.length} {t("eat.week.days")}</span>
                       </div>
                       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:6, marginBottom:12 }}>
                         {[
                           { label:"kcal",    value:avgKcal,           color:G.forest    },
-                          { label:"protein", value:`${avgPro}g`,      color:G.forestMid },
-                          { label:"carbs",   value:`${avgCarbs}g`,    color:G.gold      },
-                          { label:"fat",     value:`${avgFat}g`,      color:G.amber     },
+                          { label:t("me.targets.protein").toLowerCase(), value:`${avgPro}g`,      color:G.forestMid },
+                          { label:t("me.targets.carbs").toLowerCase(),   value:`${avgCarbs}g`,    color:G.gold      },
+                          { label:t("me.targets.fat").toLowerCase(),     value:`${avgFat}g`,      color:G.amber     },
                         ].map(({ label, value, color }) => (
                           <div key={label} style={{ backgroundColor:G.ivory, borderRadius:9, padding:"9px 5px", textAlign:"center", border:`1px solid ${G.border}` }}>
                             <p style={{ fontFamily:serif, fontSize:15, fontWeight:700, color, margin:"0 0 2px", lineHeight:1 }}>{value}</p>
@@ -1541,7 +1730,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                         ))}
                       </div>
                       <p style={{ fontSize:11, color:G.amber, margin:0, lineHeight:1.55, fontFamily:sans }}>
-                        Based on your profile: <b>{weekMeta.adjCal} kcal</b> target for {weekMeta.goalLabel} — {weekMeta.goalDesc}
+                        {t("eat.week.basedOnProfile")} <b>{weekMeta.adjCal} kcal</b> {t("eat.week.targetFor")} {weekMeta.goalLabel} — {weekMeta.goalDesc}
                       </p>
                     </div>
                   );
@@ -1572,20 +1761,21 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                               const logKey = `${day.day}_${mk}`;
                               const logged = !!weekMealLogged[logKey];
                               const isFav = savedItems.some(i => i.type === "meal" && i.data?.name === m.name);
+                              const dm = displayMeal(m, language);
                               return (
                                 <div key={mk} style={{ backgroundColor:G.ivory, borderRadius:12, border:`1px solid ${G.border}`, overflow:"hidden" }}>
-                                  {m.image && <div style={{ width:"100%", height:160, overflow:"hidden" }}><img src={m.image} alt={m.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} loading="lazy"/></div>}
+                                  {m.image && <div style={{ width:"100%", height:160, overflow:"hidden" }}><img src={m.image} alt={dm.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} loading="lazy"/></div>}
                                   <div style={{ padding:"11px 13px" }}>
-                                    <span style={{ fontSize:10, fontWeight:700, color:col, textTransform:"capitalize", letterSpacing:"0.04em" }}>{mk}</span>
-                                    <p style={{ fontFamily:serif, fontSize:14, fontWeight:600, color:G.text, margin:"3px 0 3px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m.emoji} {m.name}</p>
+                                    <span style={{ fontSize:10, fontWeight:700, color:col, textTransform:"capitalize", letterSpacing:"0.04em" }}>{t(`eat.mealType.${mk.charAt(0).toUpperCase()}${mk.slice(1)}`)}</span>
+                                    <p style={{ fontFamily:serif, fontSize:14, fontWeight:600, color:G.text, margin:"3px 0 3px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m.emoji} {dm.name}</p>
                                     <MacroStrip kcal={m.calories} pro={m.protein_g} carbs={m.carbs_g} fat={m.fat_g}/>
                                     <div style={{ display:"flex", gap:8, marginTop:8 }}>
-                                      <button onClick={() => openWeekRecipe(day.day, mk, m)} style={{ fontSize:11, color:G.forest, background:"none", border:`1.5px solid ${G.forest}40`, borderRadius:7, padding:"5px 10px", cursor:"pointer", fontWeight:600, fontFamily:sans }}>Recipe</button>
-                                      <button onClick={() => { if (!logged) { addToLog({ name:m.name, calories:m.calories||0, protein_g:m.protein_g||0, carbs_g:m.carbs_g||0, fat_g:m.fat_g||0, fiber_g:0, notes:`Week prep — ${day.day}` }); setWeekMealLogged(p => ({ ...p, [logKey]:true })); } }} style={{ fontSize:11, color: logged ? G.sage : G.forest, background:"none", border:`1.5px solid ${logged ? G.sage : G.forest}40`, borderRadius:7, padding:"5px 10px", cursor: logged ? "default" : "pointer", fontWeight:600, fontFamily:sans }}>{logged ? "✓ Logged" : "Log"}</button>
-                                      <button onClick={() => genWeekMealAlt(day.day, mk)} disabled={!!weekAltLoading[`${day.day}_${mk}`]} title="Generate alternative" style={{ width:34, borderRadius:7, border:`1.5px solid ${G.border}`, background:"none", cursor: weekAltLoading[`${day.day}_${mk}`] ? "not-allowed" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:15, color:G.muted, opacity: weekAltLoading[`${day.day}_${mk}`] ? 0.5 : 1, padding:"5px" }}>
+                                      <button onClick={() => openWeekRecipe(day.day, mk, m)} style={{ fontSize:11, color:G.forest, background:"none", border:`1.5px solid ${G.forest}40`, borderRadius:7, padding:"5px 10px", cursor:"pointer", fontWeight:600, fontFamily:sans }}>{t("eat.recipe")}</button>
+                                      <button onClick={() => { if (!logged) { addToLog({ name:m.name, calories:m.calories||0, protein_g:m.protein_g||0, carbs_g:m.carbs_g||0, fat_g:m.fat_g||0, fiber_g:0, notes:`${t("eat.notes.weekPrep")} — ${day.day}` }); setWeekMealLogged(p => ({ ...p, [logKey]:true })); } }} style={{ fontSize:11, color: logged ? G.sage : G.forest, background:"none", border:`1.5px solid ${logged ? G.sage : G.forest}40`, borderRadius:7, padding:"5px 10px", cursor: logged ? "default" : "pointer", fontWeight:600, fontFamily:sans }}>{logged ? `✓ ${t("eat.logged")}` : t("eat.log")}</button>
+                                      <button onClick={() => genWeekMealAlt(day.day, mk)} disabled={!!weekAltLoading[`${day.day}_${mk}`]} title={t("eat.generateAlt")} style={{ width:34, borderRadius:7, border:`1.5px solid ${G.border}`, background:"none", cursor: weekAltLoading[`${day.day}_${mk}`] ? "not-allowed" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:15, color:G.muted, opacity: weekAltLoading[`${day.day}_${mk}`] ? 0.5 : 1, padding:"5px" }}>
                                         {weekAltLoading[`${day.day}_${mk}`] ? <Spinner/> : "↻"}
                                       </button>
-                                      <button onClick={() => toggleMealFavourite(m)} title={isFav ? "Remove" : "Save"} style={{ width:34, borderRadius:7, border:`1.5px solid ${G.border}`, background:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, padding:"5px" }}>
+                                      <button onClick={() => toggleMealFavourite(m)} title={isFav ? t("common.remove") : t("common.save")} style={{ width:34, borderRadius:7, border:`1.5px solid ${G.border}`, background:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, padding:"5px" }}>
                                         <HeartIcon size={14} color={isFav ? G.forest : G.muted} filled={isFav}/>
                                       </button>
                                     </div>
@@ -1603,23 +1793,23 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                 {weekPlan.shopping_categories && Object.keys(weekPlan.shopping_categories).length > 0 && (
                   <div style={{ marginTop:24 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-                      <p style={{ fontFamily:serif, fontSize:18, fontWeight:600, color:G.text, margin:0 }}>Shopping List</p>
+                      <p style={{ fontFamily:serif, fontSize:18, fontWeight:600, color:G.text, margin:0 }}>{t("eat.shopping.title")}</p>
                       <div style={{ display:"flex", gap:6 }}>
-                        <button onClick={() => setShopChecked({})} style={{ fontSize:11, color:G.forest, background:"none", border:`1px solid ${G.forest}`, borderRadius:8, padding:"5px 10px", cursor:"pointer", fontFamily:sans }}>Clear</button>
+                        <button onClick={() => setShopChecked({})} style={{ fontSize:11, color:G.forest, background:"none", border:`1px solid ${G.forest}`, borderRadius:8, padding:"5px 10px", cursor:"pointer", fontFamily:sans }}>{t("eat.shopping.clear")}</button>
                         <button onClick={() => {
                           const cats = weekPlan.shopping_categories;
                           const text = SHOP_CATS.filter(c => cats[c]?.length).map(cat =>
-                            `${cat}:\n${cats[cat].map(i => `  • ${i.name}${i.qty ? " — "+i.qty : ""}`).join("\n")}`
+                            `${t(`eat.shopCat.${cat}`)}:\n${cats[cat].map(i => `  • ${i.name}${i.qty ? " — "+i.qty : ""}`).join("\n")}`
                           ).join("\n\n");
                           try { navigator.clipboard.writeText(text); } catch {}
-                        }} style={{ fontSize:11, color:G.forest, background:"none", border:`1px solid ${G.forest}`, borderRadius:8, padding:"5px 10px", cursor:"pointer", fontFamily:sans }}>Copy</button>
+                        }} style={{ fontSize:11, color:G.forest, background:"none", border:`1px solid ${G.forest}`, borderRadius:8, padding:"5px 10px", cursor:"pointer", fontFamily:sans }}>{t("eat.shopping.copy")}</button>
                       </div>
                     </div>
                     {SHOP_CATS.filter(cat => weekPlan.shopping_categories[cat]?.length > 0).map(cat => {
                       const items = weekPlan.shopping_categories[cat];
                       return (
                         <div key={cat} style={{ marginBottom:14 }}>
-                          <p style={{ fontSize:10, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.09em", margin:"0 0 7px 2px" }}>{cat}</p>
+                          <p style={{ fontSize:10, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.09em", margin:"0 0 7px 2px" }}>{t(`eat.shopCat.${cat}`)}</p>
                           <div style={{ backgroundColor:G.card, borderRadius:12, border:`1px solid ${G.border}`, overflow:"hidden" }}>
                             {items.map((item, i) => {
                               const k = `shop_${cat}_${item.name}`; const checked = !!shopChecked[k];
@@ -1648,10 +1838,10 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
         {activeSection === "smoothie" && (
           <div style={{ display:"flex", flexDirection:"column", gap:16, animation:"sectionIn 0.22s ease", paddingBottom:28 }}>
           <div style={{ ...card, padding:"20px 18px 22px" }}>
-            <p style={STitleStyle}>Smoothies</p>
-            <p style={SDescStyle}>Personalised to your goals{cyclePhase ? ` and your ${cyclePhase.label.toLowerCase()} phase` : ""}.</p>
+            <p style={STitleStyle}>{t("eat.section.smoothie")}</p>
+            <p style={SDescStyle}>{t("eat.smoothie.desc")}{cyclePhase ? ` ${t("eat.smoothie.andPhase")} ${cyclePhase.label.toLowerCase()} ${t("eat.plan.phase")}` : ""}.</p>
             {!smoothie && !smoothieLoad && (
-              <GBtn onClick={genSmoothie}><span style={{ fontSize:16 }}>🥤</span>Generate smoothie</GBtn>
+              <GBtn onClick={genSmoothie}><span style={{ fontSize:16 }}>🥤</span>{t("eat.smoothie.generate")}</GBtn>
             )}
             {smoothieLoad && <div style={{ height:120, backgroundColor:G.border, borderRadius:18, marginTop:8, opacity:0.4 }}/>}
           </div>
@@ -1661,19 +1851,19 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                   <p style={{ fontFamily:serif, fontSize:19, fontWeight:600, color:G.forest, margin:"0 0 3px" }}>{smoothie.emoji} {smoothie.name}</p>
                   <MacroStrip kcal={smoothie.calories} pro={smoothie.protein_g} carbs={smoothie.carbs_g||0} fat={smoothie.fat_g||0}/>
                 </div>
-                <p style={{ fontSize:11, fontWeight:700, color:G.sage, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 10px" }}>Ingredients</p>
+                <p style={{ fontSize:11, fontWeight:700, color:G.sage, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 10px" }}>{t("myday.barcode.ingredients")}</p>
                 <IngList ingredients={smoothie.ingredients||[]} checked={smoothieIngChk} onToggle={i => setSmoothieIngChk(p => ({ ...p, [i]:!p[i] }))} accentColor={G.forest}/>
                 {smoothie.method && <div style={{ marginTop:12, padding:"10px 13px", backgroundColor:`${G.forest}0C`, borderRadius:10 }}><p style={{ fontSize:13, color:G.forest, margin:0, lineHeight:1.55 }}>{smoothie.method}</p></div>}
                 {smoothie.tip && <div style={{ marginTop:10, padding:"9px 13px", backgroundColor:"#F4F2ED", borderLeft:`3px solid ${G.forest}`, borderRadius:"0 9px 9px 0" }}><p style={{ fontSize:12, color:G.amber, margin:0, lineHeight:1.55 }}>💡 {smoothie.tip}</p></div>}
                 <div style={{ display:"flex", gap:8, marginTop:14 }}>
-                  <button onClick={() => { if (!smoothieLogged) { addToLog({ name:smoothie.name, calories:smoothie.calories, protein_g:smoothie.protein_g, carbs_g:smoothie.carbs_g||0, fat_g:smoothie.fat_g||0, fiber_g:0, notes:"Smoothie" }); setSmoothieLogged(true); } }} style={{ flex:2, padding:"11px", backgroundColor: smoothieLogged ? `${G.forest}15` : G.forest, color: smoothieLogged ? G.forest : G.ivory, border:"none", borderRadius:11, fontSize:13, fontWeight:600, cursor: smoothieLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
-                    {smoothieLogged ? <><CheckIcon size={12} color={G.forest}/>Logged</> : "Log this"}
+                  <button onClick={() => { if (!smoothieLogged) { addToLog({ name:smoothie.name, calories:smoothie.calories, protein_g:smoothie.protein_g, carbs_g:smoothie.carbs_g||0, fat_g:smoothie.fat_g||0, fiber_g:0, notes:t("eat.notes.smoothie") }); setSmoothieLogged(true); } }} style={{ flex:2, padding:"11px", backgroundColor: smoothieLogged ? `${G.forest}15` : G.forest, color: smoothieLogged ? G.forest : G.ivory, border:"none", borderRadius:11, fontSize:13, fontWeight:600, cursor: smoothieLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                    {smoothieLogged ? <><CheckIcon size={12} color={G.forest}/>{t("eat.logged")}</> : t("eat.logThis")}
                   </button>
                   <button onClick={() => { toggleMealFavourite({ ...smoothie, mealGroup:"Smoothie", type:"smoothie" }); setSmoothieSaved(!smoothieSaved); }} style={{ width:44, padding:"11px", backgroundColor: smoothieSaved ? G.ivory : "transparent", border:`1.5px solid ${smoothieSaved ? `${G.forest}40` : G.border}`, borderRadius:11, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
                     <HeartIcon size={16} color={smoothieSaved ? G.forest : G.muted} filled={smoothieSaved}/>
                   </button>
                   <button onClick={genSmoothie} style={{ flex:1, padding:"11px", backgroundColor:"transparent", color:G.forest, border:`1.5px solid ${G.forest}`, borderRadius:11, fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
-                    <SparkleIcon size={12} color={G.forest}/>New
+                    <SparkleIcon size={12} color={G.forest}/>{t("eat.new")}
                   </button>
                 </div>
               </div>
@@ -1685,16 +1875,16 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
         {activeSection === "shot" && (
           <div style={{ display:"flex", flexDirection:"column", gap:16, animation:"sectionIn 0.22s ease", paddingBottom:28 }}>
           <div style={{ ...card, padding:"20px 18px 22px" }}>
-            <p style={STitleStyle}>Morning Shots</p>
-            <p style={SDescStyle}>A concentrated wellness shot for energy, immunity or focus.</p>
+            <p style={STitleStyle}>{t("eat.section.shot")}</p>
+            <p style={SDescStyle}>{t("eat.shot.desc")}</p>
             {!currentShot && !shotLoad && !shotError && (
-              <GBtn onClick={genShot}><span style={{ fontSize:16 }}>⚡</span>Generate shot recipe</GBtn>
+              <GBtn onClick={genShot}><span style={{ fontSize:16 }}>⚡</span>{t("eat.shot.generate")}</GBtn>
             )}
             {shotLoad && <div style={{ height:90, backgroundColor:G.border, borderRadius:18, marginTop:8, opacity:0.4 }}/>}
             {shotError && !shotLoad && !currentShot && (
               <div style={{ padding:"14px 16px", backgroundColor:G.errorBg, borderRadius:14, marginTop:8 }}>
                 <p style={{ fontSize:13, color:G.error, margin:"0 0 12px", lineHeight:1.6 }}>{shotError}</p>
-                <button onClick={genShot} style={{ width:"100%", padding:"11px", backgroundColor:"transparent", color:G.forest, border:`1.5px solid ${G.forest}`, borderRadius:10, fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:sans }}>Try again</button>
+                <button onClick={genShot} style={{ width:"100%", padding:"11px", backgroundColor:"transparent", color:G.forest, border:`1.5px solid ${G.forest}`, borderRadius:10, fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:sans }}>{t("boost.tryAgain")}</button>
               </div>
             )}
           </div>
@@ -1707,18 +1897,18 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                   </div>
                   <MacroStrip kcal={currentShot.calories||25} pro={currentShot.protein_g||0} carbs={currentShot.carbs_g||0} fat={currentShot.fat_g||0}/>
                 </div>
-                <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 10px" }}>Ingredients</p>
+                <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 10px" }}>{t("myday.barcode.ingredients")}</p>
                 <IngList ingredients={currentShot.ingredients||[]} checked={shotIngChk} onToggle={i => setShotIngChk(p => ({ ...p, [i]:!p[i] }))} accentColor={G.forest}/>
                 {currentShot.benefit && <p style={{ fontSize:13, color:G.forest, margin:"10px 0 0", lineHeight:1.55, fontStyle:"italic" }}>{currentShot.benefit}</p>}
                 <div style={{ display:"flex", gap:8, marginTop:14 }}>
-                  <button onClick={() => { if (!shotLogged) { addToLog({ name:currentShot.name, calories:currentShot.calories||25, protein_g:currentShot.protein_g||0, carbs_g:currentShot.carbs_g||0, fat_g:currentShot.fat_g||0, fiber_g:0, notes:"Morning shot" }); setShotLogged(true); } }} style={{ flex:2, padding:"11px", backgroundColor: shotLogged ? `${G.forest}15` : G.forest, color: shotLogged ? G.forest : G.ivory, border:"none", borderRadius:11, fontSize:13, fontWeight:600, cursor: shotLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
-                    {shotLogged ? <><CheckIcon size={12} color={G.forest}/>Logged</> : "Log this"}
+                  <button onClick={() => { if (!shotLogged) { addToLog({ name:currentShot.name, calories:currentShot.calories||25, protein_g:currentShot.protein_g||0, carbs_g:currentShot.carbs_g||0, fat_g:currentShot.fat_g||0, fiber_g:0, notes:t("eat.notes.morningShot") }); setShotLogged(true); } }} style={{ flex:2, padding:"11px", backgroundColor: shotLogged ? `${G.forest}15` : G.forest, color: shotLogged ? G.forest : G.ivory, border:"none", borderRadius:11, fontSize:13, fontWeight:600, cursor: shotLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                    {shotLogged ? <><CheckIcon size={12} color={G.forest}/>{t("eat.logged")}</> : t("eat.logThis")}
                   </button>
                   <button onClick={() => { toggleMealFavourite({ ...currentShot, mealGroup:"Shot", type:"shot" }); setShotSaved(!shotSaved); }} style={{ width:44, padding:"11px", backgroundColor: shotSaved ? G.ivory : "transparent", border:`1.5px solid ${shotSaved ? `${G.forest}40` : G.border}`, borderRadius:11, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
                     <HeartIcon size={16} color={shotSaved ? G.forest : G.muted} filled={shotSaved}/>
                   </button>
                   <button onClick={genShot} style={{ flex:1, padding:"11px", backgroundColor:"transparent", color:G.forest, border:`1.5px solid ${G.forest}`, borderRadius:11, fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
-                    <SparkleIcon size={12} color={G.forest}/>New
+                    <SparkleIcon size={12} color={G.forest}/>{t("eat.new")}
                   </button>
                 </div>
               </div>
@@ -1731,12 +1921,12 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
           <div style={{ display:"flex", flexDirection:"column", gap:16, animation:"sectionIn 0.22s ease", paddingBottom:28 }}>
 
           <div style={{ ...card, padding:"20px 18px 22px" }}>
-            <p style={STitleStyle}>Fresh Juices</p>
+            <p style={STitleStyle}>{t("eat.section.juice")}</p>
             <div style={{ position:"relative", marginBottom:12 }}>
               <svg style={{ position:"absolute", left:13, top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }} width="15" height="15" viewBox="0 0 15 15" fill="none">
                 <circle cx="6.5" cy="6.5" r="5" stroke={G.muted} strokeWidth="1.5"/><path d="M10.5 10.5l3 3" stroke={G.muted} strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
-              <input type="text" placeholder="Search juices, ingredients or benefits…" value={juiceSearch} onChange={e => setJuiceSearch(e.target.value)} style={{ width:"100%", boxSizing:"border-box", paddingLeft:38, paddingRight: juiceSearch ? 36 : 14, paddingTop:11, paddingBottom:11, border:`1.5px solid ${G.border}`, borderRadius:12, fontSize:13, color:G.text, backgroundColor:G.card, fontFamily:sans, outline:"none" }}/>
+              <input type="text" placeholder={t("eat.juice.searchPlaceholder")} value={juiceSearch} onChange={e => setJuiceSearch(e.target.value)} style={{ width:"100%", boxSizing:"border-box", paddingLeft:38, paddingRight: juiceSearch ? 36 : 14, paddingTop:11, paddingBottom:11, border:`1.5px solid ${G.border}`, borderRadius:12, fontSize:13, color:G.text, backgroundColor:G.card, fontFamily:sans, outline:"none" }}/>
               {juiceSearch && <button onClick={() => setJuiceSearch("")} style={{ position:"absolute", right:11, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", fontSize:16, color:G.muted, padding:2 }}>×</button>}
             </div>
 
@@ -1745,7 +1935,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                 const active = juiceCat === cat;
                 return (
                   <button key={cat} onClick={() => setJuiceCat(cat)} style={{ flexShrink:0, padding:"6px 12px", borderRadius:50, fontSize:11, fontWeight: active ? 600 : 400, cursor:"pointer", border:`1.5px solid ${active ? G.forest : G.border}`, backgroundColor: active ? G.forest : "transparent", color: active ? G.ivory : G.muted, fontFamily:sans, whiteSpace:"nowrap", transition:"all 0.15s" }}>
-                    {cat === "all" ? "All" : cat}
+                    {cat === "all" ? t("eat.filter.all") : t(`eat.juiceCat.${cat}`)}
                   </button>
                 );
               })}
@@ -1754,8 +1944,8 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
 
             {filteredJuices.length === 0 ? (
               <div style={{ ...card, textAlign:"center", padding:"28px 0" }}>
-                <p style={{ fontSize:14, color:G.muted }}>No juices match your search.</p>
-                <button onClick={() => { setJuiceSearch(""); setJuiceCat("all"); }} style={{ marginTop:12, fontSize:12, color:G.forest, background:"none", border:`1.5px solid ${G.forest}`, borderRadius:9, padding:"7px 16px", cursor:"pointer", fontFamily:sans }}>Clear filters</button>
+                <p style={{ fontSize:14, color:G.muted }}>{t("eat.juice.noMatch")}</p>
+                <button onClick={() => { setJuiceSearch(""); setJuiceCat("all"); }} style={{ marginTop:12, fontSize:12, color:G.forest, background:"none", border:`1.5px solid ${G.forest}`, borderRadius:9, padding:"7px 16px", cursor:"pointer", fontFamily:sans }}>{t("eat.filter.clear")}</button>
               </div>
             ) : (
               <>
@@ -1766,7 +1956,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                 </div>
                 {filteredJuices.length > juiceLimit && (
                   <button onClick={() => setJuiceLimit(n => n + 6)} style={{ width:"100%", marginTop:10, padding:"12px", backgroundColor:"transparent", color:G.forest, border:`1.5px solid ${G.forest}`, borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:sans }}>
-                    Generate more ({filteredJuices.length - juiceLimit} remaining)
+                    {t("eat.dessert.generateMore")} ({filteredJuices.length - juiceLimit} {t("eat.dessert.remaining")})
                   </button>
                 )}
               </>
@@ -1776,8 +1966,9 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
 
         {/* ── DESSERTS ── */}
         {activeSection === "dessert" && (() => {
+          const dessertsLocalized = language === "ro" ? dessertsData.map(d => trRecipe(d, dessertsRo)) : dessertsData;
           const dQ = dessertSearch.toLowerCase();
-          const filteredDesserts = dessertsData.filter(d => {
+          const filteredDesserts = dessertsLocalized.filter(d => {
             const matchCat = dessertCatFilter === "all" || d.category === dessertCatFilter;
             const matchQ = !dQ || d.name.toLowerCase().includes(dQ) || d.category.toLowerCase().includes(dQ) || (d.benefits||[]).some(b => b.toLowerCase().includes(dQ)) || (d.ingredients||[]).some(i => i.item.toLowerCase().includes(dQ));
             return matchCat && matchQ;
@@ -1786,15 +1977,15 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
             <div style={{ display:"flex", flexDirection:"column", gap:16, animation:"sectionIn 0.22s ease", paddingBottom:28 }}>
 
             <div style={{ ...card, padding:"20px 18px 22px" }}>
-              <p style={STitleStyle}>Desserts</p>
-              <p style={SDescStyle}>80+ healthy recipes naturally sweetened with dates, honey, fruit or maple syrup.</p>
+              <p style={STitleStyle}>{t("eat.section.dessert")}</p>
+              <p style={SDescStyle}>{t("eat.dessert.desc")}</p>
 
               {/* Search */}
               <div style={{ position:"relative", marginBottom:10 }}>
                 <svg style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }} width="15" height="15" viewBox="0 0 15 15" fill="none">
                   <circle cx="6.5" cy="6.5" r="5" stroke={G.muted} strokeWidth="1.5"/><path d="M10.5 10.5l3 3" stroke={G.muted} strokeWidth="1.5" strokeLinecap="round"/>
                 </svg>
-                <input type="text" placeholder="Search desserts…" value={dessertSearch} onChange={e => setDessertSearch(e.target.value)} style={{ width:"100%", boxSizing:"border-box", paddingLeft:36, paddingRight: dessertSearch ? 34 : 12, paddingTop:11, paddingBottom:11, border:`1.5px solid ${G.border}`, borderRadius:12, fontSize:13, color:G.text, backgroundColor:G.card, fontFamily:sans, outline:"none" }}/>
+                <input type="text" placeholder={t("eat.dessert.searchPlaceholder")} value={dessertSearch} onChange={e => setDessertSearch(e.target.value)} style={{ width:"100%", boxSizing:"border-box", paddingLeft:36, paddingRight: dessertSearch ? 34 : 12, paddingTop:11, paddingBottom:11, border:`1.5px solid ${G.border}`, borderRadius:12, fontSize:13, color:G.text, backgroundColor:G.card, fontFamily:sans, outline:"none" }}/>
                 {dessertSearch && <button onClick={() => setDessertSearch("")} style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", fontSize:17, color:G.muted, padding:2 }}>×</button>}
               </div>
 
@@ -1804,7 +1995,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                   const active = dessertCatFilter === cat;
                   return (
                     <button key={cat} onClick={() => setDessertCatFilter(cat)} style={{ flexShrink:0, padding:"6px 12px", borderRadius:50, fontSize:11, fontWeight: active ? 600 : 400, cursor:"pointer", border:`1.5px solid ${active ? G.forest : G.border}`, backgroundColor: active ? G.forest : "transparent", color: active ? G.ivory : G.muted, fontFamily:sans, whiteSpace:"nowrap", transition:"all 0.15s" }}>
-                      {cat === "all" ? "All" : cat}
+                      {cat === "all" ? t("eat.filter.all") : t(`eat.dessertCat.${cat}`)}
                     </button>
                   );
                 })}
@@ -1813,8 +2004,8 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
 
               {filteredDesserts.length === 0 ? (
                 <div style={{ ...card, textAlign:"center", padding:"24px 0" }}>
-                  <p style={{ fontSize:14, color:G.muted }}>No desserts match your search.</p>
-                  <button onClick={() => { setDessertSearch(""); setDessertCatFilter("all"); }} style={{ marginTop:10, fontSize:12, color:G.forest, background:"none", border:`1.5px solid ${G.forest}`, borderRadius:9, padding:"7px 16px", cursor:"pointer", fontFamily:sans }}>Clear filters</button>
+                  <p style={{ fontSize:14, color:G.muted }}>{t("eat.dessert.noMatch")}</p>
+                  <button onClick={() => { setDessertSearch(""); setDessertCatFilter("all"); }} style={{ marginTop:10, fontSize:12, color:G.forest, background:"none", border:`1.5px solid ${G.forest}`, borderRadius:9, padding:"7px 16px", cursor:"pointer", fontFamily:sans }}>{t("eat.filter.clear")}</button>
                 </div>
               ) : (
                 <>
@@ -1825,7 +2016,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                   </div>
                   {filteredDesserts.length > dessertLimit && (
                     <button onClick={() => setDessertLimit(n => n + 6)} style={{ width:"100%", padding:"12px", backgroundColor:"transparent", color:G.forest, border:`1.5px solid ${G.forest}`, borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:sans }}>
-                      Generate more ({filteredDesserts.length - dessertLimit} remaining)
+                      {t("eat.dessert.generateMore")} ({filteredDesserts.length - dessertLimit} {t("eat.dessert.remaining")})
                     </button>
                   )}
                 </>
@@ -1836,7 +2027,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                 <button onClick={() => setShowAIDessert(s => !s)} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", width:"100%", background:"none", border:"none", borderRadius:12, padding:0, cursor:"pointer", textAlign:"left" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                     <SparkleIcon size={14} color={G.forest}/>
-                    <span style={{ fontSize:13, fontWeight:500, color:G.text, fontFamily:sans }}>Generate a custom AI dessert</span>
+                    <span style={{ fontSize:13, fontWeight:500, color:G.text, fontFamily:sans }}>{t("eat.dessert.generateCustom")}</span>
                   </div>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ transition:"transform 0.2s", transform: showAIDessert ? "rotate(180deg)" : "rotate(0deg)", flexShrink:0 }}>
                     <path d="M2 5l5 5 5-5" stroke={G.muted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -1845,7 +2036,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                 {showAIDessert && (
                   <div style={{ marginTop:12 }}>
                     {!dessert && !dessertLoad && (
-                      <GBtn onClick={genDessert}><span style={{ fontSize:15 }}>🍫</span>Generate dessert</GBtn>
+                      <GBtn onClick={genDessert}><span style={{ fontSize:15 }}>🍫</span>{t("eat.dessert.generate")}</GBtn>
                     )}
                     {dessertLoad && <div style={{ height:90, backgroundColor:G.border, borderRadius:16, opacity:0.4 }}/>}
                     {dessert && !dessertLoad && (
@@ -1853,17 +2044,17 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                         <div style={{ marginBottom:12 }}>
                           <p style={{ fontFamily:serif, fontSize:17, fontWeight:600, color:G.text, margin:"0 0 4px" }}>{dessert.emoji} {dessert.name}</p>
                           <MacroStrip kcal={dessert.calories} pro={dessert.protein_g||0} carbs={dessert.carbs_g||0} fat={dessert.fat_g||0}/>
-                          <p style={{ fontSize:9, color:G.muted, margin:"3px 0 0", fontFamily:sans }}>per serving</p>
+                          <p style={{ fontSize:9, color:G.muted, margin:"3px 0 0", fontFamily:sans }}>{t("eat.perServing")}</p>
                         </div>
                         {(dessert.ingredients||[]).length > 0 && (
                           <div style={{ marginBottom:12 }}>
-                            <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 8px" }}>Ingredients</p>
+                            <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 8px" }}>{t("myday.barcode.ingredients")}</p>
                             <IngList ingredients={dessert.ingredients} checked={dessertIngChk} onToggle={i => setDessertIngChk(p => ({ ...p, [i]:!p[i] }))} accentColor={G.forest}/>
                           </div>
                         )}
                         {(dessert.steps||[]).length > 0 && (
                           <div style={{ marginBottom:12 }}>
-                            <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 8px" }}>Instructions</p>
+                            <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em", margin:"0 0 8px" }}>{t("eat.instructions")}</p>
                             {dessert.steps.map((step, i) => (
                               <div key={i} style={{ display:"flex", gap:10, marginBottom:8 }}>
                                 <div style={{ width:20, height:20, borderRadius:"50%", flexShrink:0, backgroundColor:G.forest, color:G.ivory, fontSize:10, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{i+1}</div>
@@ -1874,11 +2065,11 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                         )}
                         {dessert.tip && <div style={{ padding:"9px 13px", backgroundColor:"#F4F2ED", borderLeft:`3px solid ${G.forest}`, borderRadius:"0 9px 9px 0", marginBottom:12 }}><p style={{ fontSize:12, color:G.amber, margin:0 }}>💡 {dessert.tip}</p></div>}
                         <div style={{ display:"flex", gap:8 }}>
-                          <button onClick={() => { if (!dessertLogged) { addToLog({ name:dessert.name, calories:dessert.calories, protein_g:dessert.protein_g||0, carbs_g:dessert.carbs_g||0, fat_g:dessert.fat_g||0, fiber_g:dessert.fiber_g||0, notes:"AI Dessert" }); setDessertLogged(true); } }} style={{ flex:2, padding:"11px", backgroundColor: dessertLogged ? `${G.forest}15` : G.forest, color: dessertLogged ? G.forest : G.ivory, border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor: dessertLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
-                            {dessertLogged ? <><CheckIcon size={12} color={G.forest}/>Logged</> : "Log this"}
+                          <button onClick={() => { if (!dessertLogged) { addToLog({ name:dessert.name, calories:dessert.calories, protein_g:dessert.protein_g||0, carbs_g:dessert.carbs_g||0, fat_g:dessert.fat_g||0, fiber_g:dessert.fiber_g||0, notes:t("eat.notes.aiDessert") }); setDessertLogged(true); } }} style={{ flex:2, padding:"11px", backgroundColor: dessertLogged ? `${G.forest}15` : G.forest, color: dessertLogged ? G.forest : G.ivory, border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor: dessertLogged ? "default" : "pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                            {dessertLogged ? <><CheckIcon size={12} color={G.forest}/>{t("eat.logged")}</> : t("eat.logThis")}
                           </button>
                           <button onClick={genDessert} style={{ flex:1, padding:"11px", backgroundColor:"transparent", color:G.forest, border:`1.5px solid ${G.forest}`, borderRadius:10, fontSize:13, fontWeight:500, cursor:"pointer", fontFamily:sans, display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
-                            <SparkleIcon size={12} color={G.forest}/>New
+                            <SparkleIcon size={12} color={G.forest}/>{t("eat.new")}
                           </button>
                         </div>
                       </div>
@@ -1894,8 +2085,8 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
         {activeSection === "search" && (
           <div style={{ display:"flex", flexDirection:"column", gap:16, animation:"sectionIn 0.22s ease", paddingBottom:28 }}>
           <div style={{ ...card, padding:"20px 18px 22px" }}>
-            <p style={STitleStyle}>Search Foods</p>
-            <p style={SDescStyle}>Search any dish or ingredient — returns matching recipes with full ingredients list and step-by-step cooking instructions.</p>
+            <p style={STitleStyle}>{t("eat.section.search")}</p>
+            <p style={SDescStyle}>{t("eat.search.desc")}</p>
 
             {/* Search input */}
             <div style={{ display:"flex", gap:8 }}>
@@ -1903,11 +2094,11 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                 <svg style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }} width="15" height="15" viewBox="0 0 15 15" fill="none">
                   <circle cx="6.5" cy="6.5" r="5" stroke={G.muted} strokeWidth="1.5"/><path d="M10.5 10.5l3 3" stroke={G.muted} strokeWidth="1.5" strokeLinecap="round"/>
                 </svg>
-                <input type="text" placeholder="e.g. chicken pasta, banana bread, salmon…" value={foodQuery} onChange={e => setFoodQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && searchFoods()} style={{ width:"100%", boxSizing:"border-box", paddingLeft:36, paddingRight:12, paddingTop:12, paddingBottom:12, border:`1.5px solid ${G.border}`, borderRadius:12, fontSize:13, color:G.text, backgroundColor:G.card, fontFamily:sans, outline:"none" }}/>
+                <input type="text" placeholder={t("eat.search.placeholder")} value={foodQuery} onChange={e => setFoodQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && searchFoods()} style={{ width:"100%", boxSizing:"border-box", paddingLeft:36, paddingRight:12, paddingTop:12, paddingBottom:12, border:`1.5px solid ${G.border}`, borderRadius:12, fontSize:13, color:G.text, backgroundColor:G.card, fontFamily:sans, outline:"none" }}/>
               </div>
               <button onClick={() => searchFoods()} disabled={foodSearchLoad || !foodQuery.trim()} style={{ padding:"12px 16px", backgroundColor: (!foodQuery.trim() || foodSearchLoad) ? `${G.forest}60` : G.forest, color:G.ivory, border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor: (!foodQuery.trim() || foodSearchLoad) ? "not-allowed" : "pointer", fontFamily:sans, flexShrink:0, display:"flex", alignItems:"center", gap:6 }}>
                 {foodSearchLoad ? <Spinner/> : <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke={G.ivory} strokeWidth="1.8"/><path d="M10.5 10.5l3 3" stroke={G.ivory} strokeWidth="1.8" strokeLinecap="round"/></svg>}
-                Search
+                {t("eat.search.button")}
               </button>
             </div>
           </div>
@@ -1941,15 +2132,15 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
             {/* No results */}
             {foodSearchDone && !foodSearchLoad && foodResults.length === 0 && !foodSearchError && (
               <div style={{ ...card, textAlign:"center", padding:"28px 0" }}>
-                <p style={{ fontSize:14, color:G.muted, margin:0 }}>No recipes found for "{foodQuery}".</p>
-                <p style={{ fontSize:12, color:G.muted, margin:"6px 0 0" }}>Try terms like "chicken pasta", "chocolate cake" or "salmon".</p>
+                <p style={{ fontSize:14, color:G.muted, margin:0 }}>{t("eat.search.noResults")} "{foodQuery}".</p>
+                <p style={{ fontSize:12, color:G.muted, margin:"6px 0 0" }}>{t("eat.search.tryTerms")}</p>
               </div>
             )}
 
             {/* Results */}
             {!foodSearchLoad && foodResults.length > 0 && (
               <>
-                <p style={{ fontSize:11, color:G.muted, margin:"0 0 12px", textAlign:"right" }}>{foodResults.length} recipe{foodResults.length !== 1 ? "s" : ""} found — tap to view full recipe</p>
+                <p style={{ fontSize:11, color:G.muted, margin:"0 0 12px", textAlign:"right" }}>{foodResults.length} {t("eat.search.resultsFound")}</p>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                   {foodResults.map(food => (
                     <FoodResultCard key={food.id} food={food} onClick={() => openFoodDetail(food)}/>
@@ -1964,8 +2155,8 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                 <div style={{ width:64, height:64, borderRadius:"50%", backgroundColor:`${G.forest}0D`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
                   <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="12" cy="12" r="9" stroke={G.forest} strokeWidth="1.8"/><path d="M19 19l6 6" stroke={G.forest} strokeWidth="1.8" strokeLinecap="round"/></svg>
                 </div>
-                <p style={{ fontFamily:serif, fontSize:16, color:G.text, margin:"0 0 6px", fontWeight:600 }}>Search any food</p>
-                <p style={{ fontSize:13, color:G.muted, margin:0, lineHeight:1.7 }}>Search any dish or ingredient — e.g. "chicken pasta", "chocolate cake", "banana bread". Get matching recipes with full ingredients and step-by-step instructions.</p>
+                <p style={{ fontFamily:serif, fontSize:16, color:G.text, margin:"0 0 6px", fontWeight:600 }}>{t("eat.search.emptyTitle")}</p>
+                <p style={{ fontSize:13, color:G.muted, margin:0, lineHeight:1.7 }}>{t("eat.search.emptyDesc")}</p>
               </div>
             )}
           </div>
@@ -1975,11 +2166,11 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
         {activeSection === "saved" && savedItems.length > 0 && (
           <div style={{ display:"flex", flexDirection:"column", gap:16, animation:"sectionIn 0.22s ease", paddingBottom:28 }}>
           <div style={{ ...card, padding:"18px 18px 14px" }}>
-            <p style={{ ...STitleStyle, margin:0 }}>Saved</p>
+            <p style={{ ...STitleStyle, margin:0 }}>{t("eat.section.saved")}</p>
           </div>
             {Object.entries(savedByType).map(([type, items]) => (
               <div key={type}>
-                <p style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px" }}>{TYPE_LABELS[type] || type}</p>
+                <p style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 10px" }}>{t(`eat.savedType.${type}`)}</p>
                 <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                   {items.map(item => {
                     const isExp = !!expandedSaved[item.id];
@@ -1993,7 +2184,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                         <div style={{ display:"flex", alignItems:"center", padding:"11px 14px", gap:10 }}>
                           <div style={{ flex:1, minWidth:0, cursor: hasDetail ? "pointer" : "default" }} onClick={() => hasDetail && setExpandedSaved(p => ({ ...p, [item.id]:!p[item.id] }))}>
                             <p style={{ fontSize:14, fontWeight:600, color:G.text, margin:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.label}</p>
-                            <p style={{ fontSize:11, color:G.muted, margin:"2px 0 0" }}>{item.date}{hasDetail ? (isExp ? " · collapse" : " · expand") : ""}</p>
+                            <p style={{ fontSize:11, color:G.muted, margin:"2px 0 0" }}>{item.date}{hasDetail ? ` · ${isExp ? t("eat.collapse") : t("eat.expand")}` : ""}</p>
                           </div>
                           {hasDetail && (
                             <button onClick={() => setExpandedSaved(p => ({ ...p, [item.id]:!p[item.id] }))} style={{ background:"none", border:"none", cursor:"pointer", padding:2, flexShrink:0 }}>
@@ -2007,15 +2198,17 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                         {isExp && hasDetail && (
                           <div style={{ padding:"0 14px 14px", borderTop:`1px solid ${G.border}` }}>
                             {item.type === "day_plan" && Array.isArray(d) ? (
-                              d.map((meal, mi) => (
+                              d.map((meal, mi) => {
+                                const dm = displayMeal(meal, language);
+                                return (
                                 <div key={mi} style={{ marginTop:14 }}>
-                                  <p style={{ fontFamily:serif, fontSize:14, fontWeight:600, color:G.text, margin:"0 0 8px" }}>{meal.emoji} {meal.name}</p>
+                                  <p style={{ fontFamily:serif, fontSize:14, fontWeight:600, color:G.text, margin:"0 0 8px" }}>{meal.emoji} {dm.name}</p>
                                   {(meal.ingredients||[]).length > 0 && (
                                     <div style={{ marginBottom:10 }}>
-                                      <p style={{ fontSize:10, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 6px" }}>Ingredients</p>
+                                      <p style={{ fontSize:10, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 6px" }}>{t("myday.barcode.ingredients")}</p>
                                       {(meal.ingredients||[]).map((ing, i) => {
-                                        const nm = typeof ing === "string" ? ing : ing.item;
-                                        const am = typeof ing === "string" ? "" : ing.amount;
+                                        const nm = typeof ing === "string" ? ing : (language === "ro" && ing.itemDisplay ? ing.itemDisplay : ing.item);
+                                        const am = typeof ing === "string" ? "" : (language === "ro" && ing.amountDisplay ? ing.amountDisplay : ing.amount);
                                         return (
                                           <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"4px 0", borderBottom: i < meal.ingredients.length-1 ? `1px solid ${G.border}` : "none" }}>
                                             <span style={{ fontSize:12, color:G.text }}>{nm}</span>
@@ -2026,12 +2219,13 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                                     </div>
                                   )}
                                 </div>
-                              ))
+                                );
+                              })
                             ) : (
                               <>
                                 {(d.ingredients||[]).length > 0 && (
                                   <div style={{ marginTop:12, marginBottom:12 }}>
-                                    <p style={{ fontSize:10, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 8px" }}>Ingredients</p>
+                                    <p style={{ fontSize:10, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 8px" }}>{t("myday.barcode.ingredients")}</p>
                                     {(d.ingredients||[]).map((ing, i) => {
                                       const nm = typeof ing === "string" ? ing : ing.item;
                                       const am = typeof ing === "string" ? "" : (ing.amount_display || ing.amount);
@@ -2046,7 +2240,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                                 )}
                                 {(d.steps||[]).length > 0 && (
                                   <div style={{ marginTop: d.ingredients?.length ? 0 : 12 }}>
-                                    <p style={{ fontSize:10, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 8px" }}>Instructions</p>
+                                    <p style={{ fontSize:10, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 8px" }}>{t("eat.instructions")}</p>
                                     {d.steps.map((step, i) => (
                                       <div key={i} style={{ display:"flex", gap:10, marginBottom:8 }}>
                                         <span style={{ fontSize:11, fontWeight:700, color:G.forest, minWidth:16, flexShrink:0 }}>{i+1}.</span>

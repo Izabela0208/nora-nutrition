@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import Head from "next/head";
 import "../styles/globals.css";
 import { serif as SERIF, sans as SANS } from "../components/noraTokens";
+import { LanguageProvider } from "../lib/i18n/LanguageContext";
 
 const AUTH_KEY = "nora_auth_ok";
 const GREEN  = "#2D4A3E";
@@ -165,5 +166,5 @@ export default function App({ Component, pageProps }) {
     );
   }
 
-  return <>{favicon}<Component {...pageProps}/></>;
+  return <>{favicon}<LanguageProvider><Component {...pageProps}/></LanguageProvider></>;
 }

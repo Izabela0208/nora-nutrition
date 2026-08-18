@@ -223,6 +223,9 @@ Notat 21.07, backlog — NU implementa acum. Evaluează trecerea la un model mai
 ## G6 — Suport multi-limbă
 Notat 27.07, idee de arhitectură pentru viitor — backlog, NU implementa acum. Aplicația ar avea nevoie de două straturi separate: UI static (etichete, butoane, texte fixe din interfață) și vocea Norei generată dinamic (comentarii, insight-uri, răspunsuri Ask Nora — deja generate live prin Claude, deci ar putea primi limba dorită direct în prompt, fără traducere separată). De decis ulterior: câte limbi, ce mecanism pentru UI static (fișiere de traducere vs. altă abordare), și cum rămâne consistentă vocea Norei (`lib/nora-voice.md`) across limbi.
 
+## G7 — Library: cărți disponibile efectiv în română
+Notat 18.08, backlog — NU implementa acum. Extinde lista de cărți din Library (mai multe titluri). Când aplicația e pe română, adaugă cărți/conținut disponibil efectiv în limba română (nu doar titluri englezești netraduse) — necesită curatoriere de conținut nouă, posibil și un câmp de filtrare pe limbă (`availableInRo`). Temă pentru sesiune de conținut viitoare.
+
 ---
 
 # ORDINEA ELEMENTELOR PE FIECARE TAB (referință permanentă)

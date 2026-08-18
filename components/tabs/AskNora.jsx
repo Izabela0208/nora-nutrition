@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { C, card, serif, sans } from "../noraTokens";
 import { NoraAvatar } from "../NoraIcons";
 import AtmosphereBackground from "../AtmosphereBackground";
+import { LANGUAGE_NAMES, useLanguage } from "../../lib/i18n/LanguageContext";
 
 async function callClaude(msgs, sys, maxTokens = 1000) {
   const res = await fetch("/api/chat", {
@@ -20,26 +21,28 @@ async function callClaude(msgs, sys, maxTokens = 1000) {
 }
 
 // Generic fallback pool — fills any pills left after context-specific candidates are applied.
+// "key" is a translation key (asknora.suggest.<key>) resolved in getContextualSuggestions,
+// since this pool is module-level and has no access to the t() hook itself.
 const FALLBACK_POOL = [
-  { q: "How can I improve my energy?",    icon: "⚡" },
-  { q: "What supplements do I need?",     icon: "💊" },
-  { q: "Am I hitting my protein goals?",  icon: "💪" },
-  { q: "Give me a healthy snack idea",    icon: "🍎" },
-  { q: "What am I missing nutritionally?",icon: "🔍" },
-  { q: "What should I eat today?",        icon: "🥗" },
+  { key: "energy",     icon: "⚡" },
+  { key: "supplements",icon: "💊" },
+  { key: "protein",    icon: "💪" },
+  { key: "snack",      icon: "🍎" },
+  { key: "missing",    icon: "🔍" },
+  { key: "eatToday",   icon: "🥗" },
 ];
 
 // Rotated per day so the same condition doesn't show the same sentence every time.
 const MORNING_EMPTY_LOG = [
-  { q: "What should I eat today?",        icon: "🥗" },
-  { q: "Where should I start today?",     icon: "🥗" },
-  { q: "What's a good first meal today?", icon: "🥗" },
+  { key: "morning.eatToday",  icon: "🥗" },
+  { key: "morning.start",     icon: "🥗" },
+  { key: "morning.firstMeal", icon: "🥗" },
 ];
 
 const EVENING_EMPTY_LOG = [
-  { q: "I haven't logged anything today — where should I start?", icon: "🥗" },
-  { q: "What should I eat for the rest of today?",                icon: "🥗" },
-  { q: "How do I catch up on today's nutrition?",                 icon: "🥗" },
+  { key: "evening.start",   icon: "🥗" },
+  { key: "evening.rest",    icon: "🥗" },
+  { key: "evening.catchUp", icon: "🥗" },
 ];
 
 const daySeed = () => Math.floor(Date.now() / 86400000);
@@ -47,7 +50,7 @@ const pickRotating = (pool, seed) => pool[seed % pool.length];
 
 // Builds exactly 3 suggested pills, prioritising what's actually true right now
 // over the generic fallback pool.
-function getContextualSuggestions(ctx) {
+function getContextualSuggestions(ctx, t) {
   const {
     hasLoggedToday, hour, challengeTitle, cyclePhase,
     deficiency, proteinRemainingHigh, waterBelowHalfTarget,
@@ -56,32 +59,35 @@ function getContextualSuggestions(ctx) {
   const candidates = [];
 
   if (challengeTitle) {
-    candidates.push({ q: `How does today's challenge — ${challengeTitle} — fit into this?`, icon: "🌿" });
+    candidates.push({ q: `${t("asknora.suggest.challenge")} — ${challengeTitle} — ${t("asknora.suggest.challengeSuffix")}`, icon: "🌿" });
   }
   if (cyclePhase) {
-    candidates.push({ q: "How is my cycle affecting nutrition today?", icon: "🌙" });
+    candidates.push({ q: t("asknora.suggest.cycle"), icon: "🌙" });
   }
   if (deficiency) {
-    candidates.push({ q: `Why is Boost flagging ${deficiency} today?`, icon: "💊" });
+    candidates.push({ q: `${t("asknora.suggest.boostPrefix")} ${deficiency} ${t("asknora.suggest.boostSuffix")}`, icon: "💊" });
   }
   if (!hasLoggedToday && hour < 12) {
-    candidates.push(pickRotating(MORNING_EMPTY_LOG, seed));
+    const item = pickRotating(MORNING_EMPTY_LOG, seed);
+    candidates.push({ q: t(`asknora.suggest.${item.key}`), icon: item.icon });
   } else if (!hasLoggedToday) {
-    candidates.push(pickRotating(EVENING_EMPTY_LOG, seed));
+    const item = pickRotating(EVENING_EMPTY_LOG, seed);
+    candidates.push({ q: t(`asknora.suggest.${item.key}`), icon: item.icon });
   }
   if (proteinRemainingHigh && hour >= 12) {
-    candidates.push({ q: "How can I hit my protein target today?", icon: "💪" });
+    candidates.push({ q: t("asknora.suggest.proteinTarget"), icon: "💪" });
   }
   if (waterBelowHalfTarget && hour >= 18) {
-    candidates.push({ q: "How does hydration affect energy this late in the day?", icon: "💧" });
+    candidates.push({ q: t("asknora.suggest.hydration"), icon: "💧" });
   }
 
   const picked = candidates.slice(0, 3);
   if (picked.length < 3) {
     const offset = seed % FALLBACK_POOL.length;
     const rotated = [...FALLBACK_POOL.slice(offset), ...FALLBACK_POOL.slice(0, offset)];
-    for (const item of rotated) {
+    for (const raw of rotated) {
       if (picked.length >= 3) break;
+      const item = { q: t(`asknora.suggest.${raw.key}`), icon: raw.icon };
       if (!picked.some(p => p.q === item.q)) picked.push(item);
     }
   }
@@ -94,6 +100,7 @@ function getContextualSuggestions(ctx) {
 const CONTEXT_MESSAGE_LIMIT = 20;
 
 export default function AskNora({ profile, targets, entries, waterMl, cyclePhase, activeChallenges, messages, sendMessage, clearMessages }) {
+  const { t } = useLanguage();
   const [input,     setInput]     = useState("");
   const [loading,   setLoading]   = useState(false);
   const [supps,     setSupps]     = useState([]);
@@ -162,9 +169,9 @@ export default function AskNora({ profile, targets, entries, waterMl, cyclePhase
     const timeOfDay = hour < 5 ? "night" : hour < 12 ? "morning" : hour < 17 ? "afternoon" : hour < 21 ? "evening" : "night";
     const localTime = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-    const lang = (profile?.language || "English").trim();
-    const langLine = lang.toLowerCase() !== "english"
-      ? `\nCRITICAL: Respond entirely in ${lang}. Do not use English unless a word has absolutely no translation.`
+    const langName = LANGUAGE_NAMES[profile?.language] || "English";
+    const langLine = profile?.language && profile.language !== "en"
+      ? `\nCRITICAL: Respond entirely in ${langName}. Do not use English unless a word has absolutely no translation.`
       : "";
 
     let boostSection = "";
@@ -237,7 +244,7 @@ RESPONSE STYLE:
       const reply = await callClaude(context, buildSystem(), 1000);
       await sendMessage("assistant", reply);
     } catch {
-      await sendMessage("assistant", "I'm having a little trouble right now. Please try again in a moment.");
+      await sendMessage("assistant", t("asknora.error"));
     }
     setLoading(false);
   };
@@ -260,8 +267,8 @@ RESPONSE STYLE:
       deficiency: firstDeficiency?.name || null,
       proteinRemainingHigh: (tPro - totalPro) > tPro * 0.5,
       waterBelowHalfTarget: waterMl < tWat * 0.5,
-    });
-  }, [entries, targets, waterMl, cyclePhase, boostRecs, activeChallenges]);
+    }, t);
+  }, [entries, targets, waterMl, cyclePhase, boostRecs, activeChallenges, t]);
 
   const showSuggestions = messages.length === 0;
 
@@ -280,12 +287,12 @@ RESPONSE STYLE:
         <div style={{ background: `linear-gradient(160deg,${C.greenDark} 0%,${C.green} 100%)`, padding: "20px 20px 18px", position: "relative", overflow: "hidden" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
             <div style={{ flex: 1 }}>
-              <h2 style={{ fontFamily: serif, fontSize: 21, color: "#FDFAF5", fontWeight: 700, margin: 0, lineHeight: 1.2, letterSpacing: "-0.01em" }}>Ask Nora</h2>
-              <p style={{ fontSize: 11, color: "rgba(253,250,245,0.55)", margin: 0, fontFamily: sans }}>Your personal nutrition companion</p>
+              <h2 style={{ fontFamily: serif, fontSize: 21, color: "#FDFAF5", fontWeight: 700, margin: 0, lineHeight: 1.2, letterSpacing: "-0.01em" }}>{t("nav.asknora")}</h2>
+              <p style={{ fontSize: 11, color: "rgba(253,250,245,0.55)", margin: 0, fontFamily: sans }}>{t("onboarding.tagline")}</p>
             </div>
             {messages.length > 0 && (
               <button onClick={clearMessages} style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "6px 12px", fontSize: 11, color: "rgba(253,250,245,0.8)", cursor: "pointer", fontFamily: sans, letterSpacing: "0.03em", flexShrink: 0 }}>
-                Clear
+                {t("asknora.clear")}
               </button>
             )}
           </div>
@@ -302,14 +309,14 @@ RESPONSE STYLE:
                   <NoraAvatar size={48}/>
                 </div>
                 <p style={{ fontFamily: serif, fontSize: 19, color: C.green, fontWeight: 700, margin: "0 0 6px" }}>
-                  Hello, {profile?.name || "there"} ✦
+                  {t("asknora.hello")}, {profile?.name || t("asknora.there")} ✦
                 </p>
                 <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.7, margin: 0, fontFamily: sans }}>
-                  I know your goals, today's food log, and your targets.<br/>Ask me anything about your nutrition.
+                  {t("asknora.welcome.line1")}<br/>{t("asknora.welcome.line2")}
                 </p>
               </div>
 
-              <p style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, margin: "0 0 10px", paddingLeft: 2, fontFamily: sans }}>Suggested questions</p>
+              <p style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 700, margin: "0 0 10px", paddingLeft: 2, fontFamily: sans }}>{t("asknora.suggestedQuestions")}</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {suggestions.map((s, i) => (
                   <button key={i} onClick={() => send(s.q)}
@@ -377,7 +384,7 @@ RESPONSE STYLE:
             value={input}
             onChange={e => { setInput(e.target.value); e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 108) + "px"; }}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-            placeholder={`Ask Nora anything${profile?.language && profile.language.toLowerCase() !== "english" ? ` — replies in ${profile.language}` : ""}…`}
+            placeholder={`${t("asknora.inputPlaceholder")}${profile?.language && profile.language !== "en" ? ` — ${t("asknora.repliesIn")} ${LANGUAGE_NAMES[profile.language] || "English"}` : ""}…`}
             rows={1}
             style={{ flex:1, border:`1px solid ${C.border}`, borderRadius:12, padding:"11px 14px", fontSize:14, color:C.text, backgroundColor:"#FDFAF5", outline:"none", resize:"none", fontFamily:sans, lineHeight:1.5, overflow:"hidden", minHeight:44, maxHeight:108, boxSizing:"border-box" }}
           />
@@ -388,8 +395,8 @@ RESPONSE STYLE:
             </svg>
           </button>
         </div>
-        <p style={{ fontSize: 10, color: C.muted, textAlign: "center", margin: "5px 0 0", fontFamily: sans }}>Enter to send · Shift+Enter for new line</p>
-        <p style={{ fontSize: 10, color: C.muted, textAlign: "center", margin: "2px 0 0", fontFamily: sans }}>Informational only, not medical advice — talk to your doctor for guidance specific to you.</p>
+        <p style={{ fontSize: 10, color: C.muted, textAlign: "center", margin: "5px 0 0", fontFamily: sans }}>{t("asknora.inputHint")}</p>
+        <p style={{ fontSize: 10, color: C.muted, textAlign: "center", margin: "2px 0 0", fontFamily: sans }}>{t("common.disclaimer")}</p>
       </div>
     </>
   );

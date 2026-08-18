@@ -13,14 +13,17 @@ import { C, card, serif, sans, localDateStr, getCyclePhase } from "./noraTokens"
 import { NoraAvatar, TabIcon } from "./NoraIcons";
 import { useAuthSession } from "../lib/useAuthSession";
 import { supabase } from "../lib/supabase";
+import { useLanguage } from "../lib/i18n/LanguageContext";
 
+// label comes from t(`nav.${id}`) at render time (see tab bar below) — this array only
+// drives ordering and icon selection.
 const TABS = [
-  { id:"myday",   label:"My Day"  },
-  { id:"eat",     label:"Eat"     },
-  { id:"ritual",  label:"Ritual"  },
-  { id:"boost",   label:"Boost"   },
-  { id:"asknora", label:"Ask Nora"},
-  { id:"me",      label:"Me"      },
+  { id:"myday"   },
+  { id:"eat"     },
+  { id:"ritual"  },
+  { id:"boost"   },
+  { id:"asknora" },
+  { id:"me"      },
 ];
 
 // profile (JS, camelCase) ⇄ profiles row (Supabase, snake_case)
@@ -183,6 +186,13 @@ export default function NutritionApp() {
   const [history,    setHistory]    = useState({});
   const [profileLoading,  setProfileLoading]  = useState(true);
   const [localImportData, setLocalImportData] = useState(null);
+  const { t, language, setLanguage } = useLanguage();
+
+  // Keeps the UI dictionary (lib/i18n) in sync with the user's saved preference —
+  // profile.language is always "en" or "ro" (see Me.jsx language selector).
+  useEffect(() => {
+    if (profile?.language) setLanguage(profile.language);
+  }, [profile?.language, setLanguage]);
 
   // Restore today's water + history (still localStorage — migrates in a later sub-step)
   useEffect(()=>{
@@ -336,6 +346,7 @@ export default function NutritionApp() {
           todayMeals,
           goal: (profile?.goals || [])[0] || null,
           cyclePhase: cyclePhase ? { label: cyclePhase.label, day: cyclePhase.day } : null,
+          language: profile?.language || "en",
         }),
       });
       const data = await res.json();
@@ -517,7 +528,7 @@ export default function NutritionApp() {
   };
 
   const saveCommunityBarcode = async (barcode, { name, kcal, protein_g, carbs_g, fat_g }) => {
-    if(!session?.user?.id) return { ok: false, error: "No active session." };
+    if(!session?.user?.id) return { ok: false, error: t("app.error.noSession") };
     const { error } = await supabase.from("community_barcodes").insert({
       barcode, name, kcal, protein_g, carbs_g, fat_g, created_by: session.user.id,
     });
@@ -526,18 +537,18 @@ export default function NutritionApp() {
   };
 
   const deleteAccount = async () => {
-    if(!session?.access_token) return { ok: false, error: "No active session." };
+    if(!session?.access_token) return { ok: false, error: t("app.error.noSession") };
     try {
       const res = await fetch("/api/delete-account", {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const data = await res.json();
-      if(!res.ok) return { ok: false, error: data.error || "Something went wrong." };
+      if(!res.ok) return { ok: false, error: data.error || t("app.error.generic") };
       await signOut();
       return { ok: true };
     } catch {
-      return { ok: false, error: "Something went wrong." };
+      return { ok: false, error: t("app.error.generic") };
     }
   };
 
@@ -551,7 +562,7 @@ export default function NutritionApp() {
   };
 
   const handleOnboardingComplete=(finalProfile,data)=>{
-    setWelcomeMsg(data.welcome_message||`Welcome, ${finalProfile.name}. Let's build great habits together.`);
+    setWelcomeMsg(data.welcome_message||`${t("app.welcome.title")} ${finalProfile.name}. ${t("app.welcome.fallbackMessage")}`);
     saveProfile(finalProfile, data);
     setPhase("welcome");
   };
@@ -575,12 +586,12 @@ export default function NutritionApp() {
 
   const resetProfile=()=>{
     ["nora_today_water","nora_today_entries","nora_sleep","nora_history","nora_supps_list","nora_supps_taken","nora_boost_recs","nora_smoothie","nora_evening_reflection"].forEach(k=>{try{localStorage.removeItem(k);}catch{}});
-    setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setActiveChallenges([]);setCompletionDates([]);setPeriodLogs([]);setNotificationsEnabled(true);setFastingEnabled(false);setFastingStart("09:00");setFastingEnd("21:00");setFastingMode("recurring");setFastingExtendedStartAt(null);setFastingExtendedHours(null);setWaterMl(0);setHistory({});setPhase("onboarding");
+    setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setActiveChallenges([]);setCompletionDates([]);setPeriodLogs([]);setNotificationsEnabled(true);setFastingEnabled(false);setFastingStart("09:00");setFastingEnd("21:00");setFastingMode("recurring");setFastingExtendedStartAt(null);setFastingExtendedHours(null);setWaterMl(0);setHistory({});setPhase("onboarding");setLanguage("en");
   };
 
   // Cycle phase — only when the user opted in and chose "Menstruation" as context
   const cyclePhase = (profile?.sex === "female" && profile?.biologicalTrackingEnabled && profile?.biologicalContext === "cycle")
-    ? getCyclePhase(periodLogs, profile?.cycleLength || 28)
+    ? getCyclePhase(periodLogs, profile?.cycleLength || 28, language)
     : null;
 
   // ── Auth ────────────────────────────────────────────────────────
@@ -593,15 +604,15 @@ export default function NutritionApp() {
     <div style={{minHeight:"100vh",backgroundColor:C.bg,fontFamily:sans,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
       <div style={{width:"100%",maxWidth:400}}>
         <div style={{...card,padding:"32px 28px",textAlign:"center"}}>
-          <h2 style={{fontFamily:serif,fontSize:22,color:C.green,margin:"0 0 10px",fontWeight:600}}>Welcome back</h2>
+          <h2 style={{fontFamily:serif,fontSize:22,color:C.green,margin:"0 0 10px",fontWeight:600}}>{t("app.import.title")}</h2>
           <p style={{color:C.muted,fontSize:14,lineHeight:1.7,marginBottom:24}}>
-            We found data from a previous session on this device. Would you like to bring it into your account?
+            {t("app.import.desc")}
           </p>
           <button onClick={handleImportLocalData} style={{width:"100%",backgroundColor:C.green,color:C.bg,border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:500,cursor:"pointer",letterSpacing:"0.03em",marginBottom:10}}>
-            Import my data
+            {t("app.import.importButton")}
           </button>
           <button onClick={()=>{setLocalImportData(null);setPhase("onboarding");}} style={{width:"100%",backgroundColor:"transparent",color:C.muted,border:"none",borderRadius:12,padding:"12px",fontSize:13,cursor:"pointer"}}>
-            Start fresh instead
+            {t("app.import.startFresh")}
           </button>
         </div>
       </div>
@@ -622,11 +633,11 @@ export default function NutritionApp() {
       <div style={{display:"flex",justifyContent:"center",padding:"0 20px 48px"}}>
       <div style={{width:"100%",maxWidth:400}}>
         <div style={{...card,padding:"24px 28px 28px",textAlign:"center"}}>
-          <h2 style={{fontFamily:serif,fontSize:24,color:C.green,margin:"0 0 10px",fontWeight:600}}>Welcome, {profile?.name}</h2>
+          <h2 style={{fontFamily:serif,fontSize:24,color:C.green,margin:"0 0 10px",fontWeight:600}}>{t("app.welcome.title")} {profile?.name}</h2>
           <p style={{color:C.muted,fontSize:14,lineHeight:1.7,marginBottom:24}}>{welcomeMsg}</p>
           {targets&&(
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:24}}>
-              {[["Energy",`${targets.calories} kcal`],["Protein",`${targets.protein_g} g`],["Carbs",`${targets.carbs_g} g`],["Fat",`${targets.fat_g} g`],["Fibre",`${targets.fiber_g} g`],["Water",`${Math.round(targets.water_ml/100)/10} L`]].map(([l,v])=>(
+              {[[t("me.targets.energy"),`${targets.calories} kcal`],[t("me.targets.protein"),`${targets.protein_g} g`],[t("me.targets.carbs"),`${targets.carbs_g} g`],[t("me.targets.fat"),`${targets.fat_g} g`],[t("me.targets.fibre"),`${targets.fiber_g} g`],[t("me.targets.water"),`${Math.round(targets.water_ml/100)/10} L`]].map(([l,v])=>(
                 <div key={l} style={{backgroundColor:C.greenLight,borderRadius:12,padding:"12px 14px",textAlign:"left"}}>
                   <div style={{fontSize:11,color:C.muted,fontWeight:500,letterSpacing:"0.05em",textTransform:"uppercase",marginBottom:3}}>{l}</div>
                   <div style={{fontSize:15,fontWeight:600,color:C.green}}>{v}</div>
@@ -634,7 +645,7 @@ export default function NutritionApp() {
               ))}
             </div>
           )}
-          <button onClick={()=>setPhase("app")} style={{width:"100%",backgroundColor:C.green,color:C.bg,border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:500,cursor:"pointer",letterSpacing:"0.03em"}}>Begin tracking</button>
+          <button onClick={()=>setPhase("app")} style={{width:"100%",backgroundColor:C.green,color:C.bg,border:"none",borderRadius:12,padding:"15px",fontSize:15,fontWeight:500,cursor:"pointer",letterSpacing:"0.03em"}}>{t("app.welcome.beginButton")}</button>
         </div>
       </div>
       </div>
@@ -665,7 +676,7 @@ export default function NutritionApp() {
           return(
             <button key={tab.id} onClick={()=>setActiveTab(tab.id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"4px 2px",borderRadius:10,border:"none",backgroundColor:"transparent",cursor:"pointer",transition:"all 0.15s",flex:1,minWidth:0}}>
               <TabIcon id={tab.id} active={active}/>
-              <span style={{fontSize:8,fontWeight:active?600:400,color:active?C.green:C.muted,letterSpacing:"0.02em",whiteSpace:"nowrap"}}>{tab.label}</span>
+              <span style={{fontSize:8,fontWeight:active?600:400,color:active?C.green:C.muted,letterSpacing:"0.02em",whiteSpace:"nowrap"}}>{t(`nav.${tab.id}`)}</span>
               {active&&<div style={{width:14,height:2,borderRadius:2,backgroundColor:C.gold}}/>}
             </button>
           );

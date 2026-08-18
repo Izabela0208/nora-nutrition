@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { supabase } from "../../lib/supabase";
 import { C, serif, sans, inp } from "../noraTokens";
+import { useLanguage } from "../../lib/i18n/LanguageContext";
 
 export default function AuthScreen() {
+  const { t } = useLanguage();
   const [mode, setMode] = useState("login"); // "login" | "register"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,14 +42,14 @@ export default function AuthScreen() {
       if (isRegister) {
         const { error: signUpError } = await supabase.auth.signUp({ email: email.trim(), password });
         if (signUpError) throw signUpError;
-        setInfo("Check your inbox to confirm your email, then log in.");
+        setInfo(t("auth.info.checkEmail"));
         setMode("login");
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (signInError) throw signInError;
       }
     } catch (err) {
-      setError(err.message || "Something went wrong. Please try again.");
+      setError(err.message || t("auth.error.generic"));
     } finally {
       setLoading(false);
     }
@@ -72,17 +74,17 @@ export default function AuthScreen() {
       <div style={{ position: "relative", zIndex: 2, width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", alignItems: "center" }}>
         <h1 style={{ fontFamily: serif, fontSize: 46, fontWeight: 600, color: C.ivory, letterSpacing: "0.02em", margin: "0 0 8px", lineHeight: 1, textShadow: "0 2px 14px rgba(8,13,10,0.85), 0 1px 4px rgba(8,13,10,1)" }}>nora</h1>
         <p style={{ fontFamily: sans, fontSize: 11, color: C.ivory, opacity: 0.9, letterSpacing: "0.07em", margin: "0 0 40px", textAlign: "center", textShadow: "0 2px 10px rgba(8,13,10,0.85), 0 1px 4px rgba(8,13,10,1)" }}>
-          a quieter way to take care
+          {t("auth.tagline")}
         </p>
 
         <div style={{ width: "100%", boxSizing: "border-box", backgroundColor: "rgba(255,255,255,0.10)", backdropFilter: "blur(40px) brightness(1.2)", WebkitBackdropFilter: "blur(40px) brightness(1.2)", border: "1px solid rgba(255,255,255,0.5)", borderRadius: 20, boxShadow: "0 20px 60px rgba(10,16,13,0.35)", padding: "32px 28px 28px", textAlign: "center" }}>
           <p style={{ color: C.ivory, fontSize: 13, lineHeight: 1.6, margin: "0 0 24px", textShadow: "0 1px 4px rgba(10,16,13,0.6)" }}>
-            {isRegister ? "Create your account to begin." : "Welcome back."}
+            {isRegister ? t("auth.subtitle.register") : t("auth.subtitle.login")}
           </p>
 
           <form onSubmit={handleSubmit} style={{ textAlign: "left" }}>
             <label style={{ display: "block", fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.ivory, marginBottom: 6, textShadow: "0 1px 3px rgba(10,16,13,0.6)" }}>
-              Email
+              {t("auth.email.label")}
             </label>
             <input
               type="email"
@@ -95,14 +97,14 @@ export default function AuthScreen() {
             />
 
             <label style={{ display: "block", fontSize: 11, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: C.ivory, marginBottom: 6, textShadow: "0 1px 3px rgba(10,16,13,0.6)" }}>
-              Password
+              {t("auth.password.label")}
             </label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               style={{ ...inp, marginBottom: isRegister ? 16 : 20 }}
-              placeholder="At least 6 characters"
+              placeholder={t("auth.password.placeholder")}
               autoComplete={isRegister ? "new-password" : "current-password"}
               minLength={6}
               required
@@ -117,11 +119,11 @@ export default function AuthScreen() {
                   style={{ marginTop: 3, width: 16, height: 16, accentColor: C.green, cursor: "pointer", flexShrink: 0 }}
                 />
                 <span style={{ fontSize: 12, color: C.ivory, lineHeight: 1.6, textShadow: "0 1px 3px rgba(10,16,13,0.6)" }}>
-                  I agree to the processing of my data as described in the{" "}
+                  {t("auth.consent.prefix")}{" "}
                   <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: C.ivory, textDecoration: "underline", fontWeight: 600 }}>
-                    Privacy Policy
+                    {t("auth.consent.privacyPolicy")}
                   </a>
-                  , so Nora can personalise my experience.
+                  {t("auth.consent.suffix")}
                 </span>
               </label>
             )}
@@ -154,7 +156,7 @@ export default function AuthScreen() {
                 transition: "all 0.3s ease",
               }}
             >
-              {loading ? "Please wait…" : isRegister ? "Create account" : "Log in"}
+              {loading ? t("auth.submit.wait") : isRegister ? t("auth.submit.register") : t("auth.submit.login")}
             </button>
           </form>
 
@@ -162,7 +164,7 @@ export default function AuthScreen() {
             onClick={() => switchMode(isRegister ? "login" : "register")}
             style={{ marginTop: 20, background: "none", border: "none", color: C.ivory, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: sans, textDecoration: "underline", textUnderlineOffset: 3, textShadow: "0 1px 3px rgba(10,16,13,0.6)" }}
           >
-            {isRegister ? "Already have an account? Log in" : "New here? Create an account"}
+            {isRegister ? t("auth.switch.toLogin") : t("auth.switch.toRegister")}
           </button>
         </div>
       </div>

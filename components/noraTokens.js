@@ -140,8 +140,75 @@ const CYCLE_TIP_POOLS = {
   },
 };
 
-export const getCycleTip = (phase, style = "short") => {
-  const meta = CYCLE_TIP_POOLS[phase];
+const CYCLE_TIP_POOLS_RO = {
+  menstrual: { label:"Menstruală",
+    short:[
+      "Spanacul, lintea și carnea roșie refac rezervele de fier. Evită cofeina; ceaiul din plante e liniștitor. Doar mișcare ușoară.",
+      "Prostaglandinele ating acum un vârf, provocând crampe — peștele bogat în omega-3 sau o gustare bogată în magneziu pot atenua disconfortul.",
+      "Pierderile de fier sunt cele mai mari în aceste zile. Combinarea fierului din plante cu vitamina C — linte cu citrice — îmbunătățește absorbția.",
+      "Mișcarea blândă, precum mersul pe jos sau stretchingul, tinde să calmeze crampele mai bine decât un antrenament intens.",
+      "Căldura — o sticlă cu apă caldă sau o baie — relaxează musculatura uterină și poate reduce semnificativ durerile menstruale.",
+    ],
+    long:[
+      "Pierderea de sânge menstrual reduce rezervele de fier, iar nivelul scăzut de fier se manifestă prin oboseală înainte să apară într-un test de sânge. Fierul din plante — linte, spanac — se absoarbe mult mai bine alături de vitamina C, absorbția triplându-se aproximativ. Cofeina face exact opusul: leagă fierul în intestin, motiv pentru care ceaiul din plante e alegerea mai bună în această săptămână.",
+      "Prostaglandinele sunt compuși asemănători hormonilor care determină uterul să se contracte și să elimine mucoasa — cu cât corpul produce mai multe, cu atât crampele sunt mai puternice. Grăsimile omega-3 concurează cu aceeași cale care produce prostaglandinele, mecanism prin care peștele sau semințele de in reduc durerea menstruală în timp, nu doar pe moment.",
+      "Pentru că absorbția fierului lucrează deja împotriva ta în zilele cu flux mai abundent, combinarea surselor contează mai mult decât de obicei. Vitamina C transformă fierul într-o formă pe care intestinul o absoarbe mult mai ușor — o combinație simplă, cu un efect disproporționat de mare în zilele în care pierzi cel mai mult.",
+      "Pare contraintuitiv, dar mișcarea de intensitate scăzută crește fluxul de sânge către zona pelviană și poate reduce cu adevărat intensitatea crampelor, în timp ce antrenamentul de intensitate mare adaugă stres fizic peste ce gestionează deja corpul. E una dintre puținele săptămâni în care mai puțin înseamnă mai mult.",
+      "Căldura acționează asupra durerii menstruale printr-un mecanism real: crește fluxul local de sânge și relaxează musculatura netedă a uterului care se contractă și provoacă crampele. Studiile care compară căldura cu analgezicele fără prescripție au găsit o eficiență comparabilă, specific pentru durerea menstruală.",
+    ],
+  },
+  follicular: { label:"Foliculară",
+    short:[
+      "Antrenamentul HIIT și cel de forță sunt excelente în această săptămână. Carbohidrații complecși îți alimentează energia. Adaugă alimente fermentate.",
+      "Estrogenul în creștere susține energie mai mare și recuperare mai rapidă — o fereastră bună pentru a progresa volumul de antrenament.",
+      "Alimentele fermentate susțin estrobolomul, bacteriile intestinale care ajută la eliminarea și reciclarea eficientă a estrogenului.",
+      "E adesea cea mai rezistentă săptămână a ciclului — un moment potrivit pentru a încerca o clasă nouă sau un antrenament mai dificil.",
+      "Carbohidrații complecși și proteinele slabe, împreună, susțin cerințele energetice mai mari ale acestei faze cu estrogen în creștere.",
+    ],
+    long:[
+      "Estrogenul crește constant pe parcursul fazei foliculare, îmbunătățind absorbția glucozei în mușchi și susținând o recuperare mai rapidă între antrenamente. E cu adevărat una dintre cele mai bune ferestre din ciclu pentru a crește volumul sau intensitatea antrenamentului.",
+      "Capacitatea de recuperare urmărește destul de fidel nivelul de estrogen — pe măsură ce acesta crește în această fază, refacerea țesuturilor și reîncărcarea glicogenului tind să funcționeze mai eficient. Nu e neapărat că poți depune mai mult efort în acel moment, ci mai degrabă că îți revii mai repede între antrenamente.",
+      "Estrobolomul este subgrupul de bacterii intestinale care pot reactiva estrogenul pe care ficatul l-a marcat deja pentru eliminare. Un microbiom mai divers, susținut de alimente fermentate, înseamnă un metabolism mai eficient al estrogenului — relevant pentru echilibrul hormonal cu mult dincolo de această singură săptămână.",
+      "Toleranța la durere și percepția efortului tind amândouă să se îmbunătățească pe măsură ce estrogenul crește, ceea ce explică parțial de ce același antrenament poate părea mai ușor acum decât în timpul menstruației. E o fereastră potrivită pentru a testa unde se află de fapt limitele actuale.",
+      "Estrogenul în creștere crește sensibilitatea la insulină, ceea ce înseamnă că mușchii preiau glucoza din carbohidrați mai eficient chiar acum. Carbohidrații complecși combinați cu proteine susțin atât cheltuiala energetică mai mare pe care o invită această fază, cât și refacerea care urmează.",
+    ],
+  },
+  ovulatory: { label:"Ovulatorie",
+    short:[
+      "Fereastra de performanță maximă — ridică greutăți mari, antrenează-te intens. Semințele bogate în zinc și somonul antiinflamator sunt ideale.",
+      "Forța și coordonarea ating adesea un vârf în jurul ovulației — o fereastră bună pentru un record personal, dacă te simți pregătită.",
+      "Zincul este consumat intens la ovulație — semințele de dovleac, stridiile sau semințele de cânepă ajută la refacerea rezervelor.",
+      "Estrogenul atinge acum un vârf, ceea ce poate însemna energie mai mare, dar și mai multă laxitate articulară — încălzește-te puțin mai mult.",
+      "Alimentele antiinflamatorii — peștele gras, uleiul de măsline, fructele de pădure — susțin schimbarea hormonală din această săptămână.",
+    ],
+    long:[
+      "Estrogenul atinge vârful ciclului chiar înainte de ovulație, coincizând cu îmbunătățiri măsurabile ale forței și coordonării neuromusculare, conform mai multor studii. E o fereastră legitimă pentru a încerca greutăți mai mari, cu condiția ca încălzirea să țină cont de laxitatea articulară descrisă mai jos.",
+      "Combinația dintre vârful de estrogen și o mică creștere a testosteronului în jurul ovulației se crede că explică de ce multe femei raportează cele mai bune performanțe de forță în această fereastră. Nu e valabil pentru toată lumea, dar dacă ai lucrat spre ceva anume, e o săptămână potrivită pentru a testa.",
+      "Zincul joacă un rol direct în cascada hormonală care declanșează ovulația și susține ulterior corpul galben — cererea corpului pentru zinc crește specific în jurul acestui punct al ciclului, ceea ce face ca refacerea prin alimentație să fie mai relevantă acum decât în alte momente.",
+      "Estrogenul afectează laxitatea ligamentelor și atinge vârful chiar în jurul ovulației — un factor bine documentat în ratele mai mari de accidentări de ligament încrucișat anterior observate la sportivele din această fereastră. O încălzire mai lungă nu e prudență de dragul prudenței; e un răspuns rezonabil la o schimbare fiziologică reală.",
+      "Tranziția de la vârful de estrogen la creșterea timpurie a progesteronului poate aduce, pentru unele femei, o scurtă fereastră de inflamație de grad scăzut. Alimentele antiinflamatorii nu previn această schimbare, dar susțin corpul pe parcursul ei, fără a adăuga un efort suplimentar.",
+    ],
+  },
+  luteal: { label:"Luteală",
+    short:[
+      "Magneziul calmează simptomele premenstruale — ciocolată neagră, nuci, verdețuri cu frunze. Redu sarea și preferă cardio moderat.",
+      "Progesteronul crește în această fază, ridicând adesea ușor temperatura corpului — antrenamentul poate părea puțin mai greu.",
+      "Poftele tind să crească în faza luteală — proteinele și fibrele la fiecare masă ajută la atenuarea variațiilor.",
+      "Reducerea sodiului și a alimentelor procesate în săptămâna dinaintea menstruației poate reduce semnificativ balonarea.",
+      "Somnul poate fi mai superficial spre finalul fazei luteale — o rutină constantă de relaxare seara contează mai mult decât de obicei acum.",
+    ],
+    long:[
+      "Magneziul se consumă mai rapid când progesteronul e ridicat, iar nivelul scăzut de magneziu e asociat cu simptome premenstruale mai severe — printre care iritabilitate, crampe și somn tulburat. Refacerea lui prin alimentație pe parcursul întregii faze luteale, nu doar când apar simptomele, este unde dovezile sunt cele mai puternice.",
+      "Progesteronul ridică temperatura bazală a corpului cu aproximativ 0,3-0,5°C în faza luteală — unul dintre semnele mai fiabile că ovulația a avut loc. Aceeași schimbare termică explică parțial de ce antrenamentul moderat poate părea subiectiv mai greu, chiar dacă nivelul de fitness nu s-a schimbat.",
+      "Scăderea estrogenului și creșterea progesteronului spre finalul fazei luteale sunt asociate cu o activitate mai scăzută a serotoninei, parte din baza biologică a poftelor mai puternice de carbohidrați dinaintea menstruației. Proteinele și fibrele încetinesc digestia și atenuează variațiile glicemiei care fac poftele să pară mai urgente.",
+      "Progesteronul favorizează retenția de sodiu și lichide, mecanismul direct din spatele balonării din faza luteală — nu e doar o percepție. Reducerea sodiului suplimentar din alimentele procesate nu o elimină complet, dar înlătură unul dintre factorii care o agravează.",
+      "Creșterea temperaturii cauzată de progesteron poate fragmenta somnul în a doua jumătate a fazei luteale, în special în cele două-trei nopți dinaintea începerii menstruației. O cameră mai răcoroasă și o rutină constantă de relaxare seara tind să conteze mai mult aici decât în alte momente ale ciclului.",
+    ],
+  },
+};
+
+export const getCycleTip = (phase, style = "short", lang) => {
+  const meta = (lang === "ro" ? CYCLE_TIP_POOLS_RO : CYCLE_TIP_POOLS)[phase];
   if (!meta) return "";
   const idx = pickDailyIndex(`cycle_${phase}`, meta.short.length);
   return (meta[style] || meta.short)[idx] ?? meta.short[idx];
@@ -215,16 +282,83 @@ const MALE_TIP_POOLS = {
   },
 };
 
+const MALE_TIP_POOLS_RO = {
+  strength: { title:"Fereastră de forță",
+    short:[
+      "Testosteronul atinge vârful dimineața — optim pentru ridicări grele. Alimentează-te cu un mic dejun bogat în proteine cu 1-2 ore înainte de antrenament.",
+      "Forța de prindere și timpul de reacție sunt de obicei mai ascuțite dimineața — o fereastră bună pentru ridicări tehnice.",
+      "Antrenamentul pe stomacul gol sau după masă funcționează în ambele cazuri, dar o mică porție de proteine înainte susține o viteză mai bună a barei sub încărcătură.",
+      "Sesiunile de forță de dimineață tind să aibă un risc mai scăzut de accidentare, odată ce o încălzire corespunzătoare ridică temperatura corpului.",
+      "Momentul zilei în care iei creatină contează mai puțin decât consecvența — consumul zilnic, indiferent de oră, susține rezervele musculare de fosfocreatină.",
+    ],
+    long:[
+      "Testosteronul urmează un ritm zilnic clar, fiind de obicei cu 20-30% mai ridicat în prima oră-două după trezire decât seara. Acest vârf susține atât producția de forță, cât și semnalizarea de recuperare, ceea ce reprezintă baza fiziologică pentru a trata dimineața ca o fereastră implicită solidă pentru cele mai grele ridicări.",
+      "Atât recrutarea unităților motorii, cât și timpul de reacție arată o variație circadiană măsurabilă, iar dimineața tinde să favorizeze precizia în detrimentul forței brute pentru majoritatea oamenilor. Ridicările tehnice sau care necesită multă îndemânare — unde tehnica contează la fel de mult ca încărcătura — beneficiază adesea de această fereastră mai timpurie.",
+      "Dacă te antrenezi pe stomacul gol ține mai mult de preferință decât de performanță, pentru majoritatea sesiunilor sub o oră. Acolo unde proteinele dinainte chiar ajută este viteza barei și puterea dezvoltată sub încărcături mai mari, probabil printr-o disponibilitate mai bună a aminoacizilor chiar în timpul ridicării.",
+      "Temperatura corpului este în mod natural mai scăzută dimineața devreme, iar țesutul e măsurabil mai rigid până când aceasta crește — exact ceea ce rezolvă o încălzire corespunzătoare. Omiterea ei, nu momentul zilei în sine, este de unde vine de fapt riscul antrenamentului de dimineață.",
+      "Creatina funcționează prin saturarea rezervelor musculare de fosfocreatină de-a lungul zilelor și săptămânilor, nu printr-o doză acută înainte de antrenament. Ceea ce prezice rezultatele în studii este consumul zilnic constant — ora exactă la care o iei contează foarte puțin.",
+    ],
+  },
+  cardio: { title:"Vârf cardio",
+    short:[
+      "Temperatura corpului și timpul de reacție ating acum un vârf. Excelent pentru HIIT sau anduranță. Încarcă-te cu carbohidrați complecși înainte.",
+      "Funcția pulmonară și capacitatea aerobă sunt măsurabil mai ridicate după-amiaza decât dimineața devreme.",
+      "O masă care include carbohidrați cu 2-3 ore înainte de cardio reîncarcă glicogenul, fără senzația de greutate a mesei prea apropiate de antrenament.",
+      "Toleranța la căldură e mai ridicată după-amiaza — o fereastră bună pentru antrenament de condiție fizică mai intens, dacă te antrenezi în aer liber.",
+      "Efortul perceput tinde să pară mai scăzut după-amiaza pentru același efort real — util pentru a împinge lucrul la ritm.",
+    ],
+    long:[
+      "Temperatura corpului crește pe parcursul zilei și atinge de obicei un vârf spre finalul după-amiezii, iar țesutul muscular mai cald se contractă mai eficient, cu risc mai mic de întindere. Combinat cu un timp de reacție mai rapid în această fereastră, e un argument rezonabil pentru a programa aici cel mai dificil antrenament de condiție fizică, dacă programul zilei permite.",
+      "Funcția pulmonară, măsurată ca VEMS, urmează un tipar circadian documentat și tinde să fie semnificativ mai ridicată spre finalul după-amiezii decât dimineața devreme. Pentru anduranță în mod specific, asta se traduce în mai mult oxigen livrat per respirație, la același nivel de efort.",
+      "Glicogenul muscular — principalul combustibil pentru un efort susținut și intens — are nevoie de aproximativ 2-3 ore pentru a fi digerat și stocat dintr-o masă cu carbohidrați. Dacă mănânci prea aproape de antrenament, combustibilul rămâne încă în intestin, nu în mușchi, cauza obișnuită a acelei senzații de greutate.",
+      "Toleranța la căldură se îmbunătățește pe parcursul zilei, urmărind același ritm al temperaturii corpului care atinge vârful după-amiaza. Dacă te antrenezi în aer liber, în condiții calde, corpul tău e cu adevărat mai bine pregătit pentru asta acum decât dimineața devreme.",
+      "Rata efortului perceput — cât de greu pare un efort, independent de ce face de fapt ritmul cardiac — tinde să fie mai scăzută după-amiaza, pentru aceeași încărcătură de lucru. E o schimbare reală de percepție, nu doar motivație, și explică parțial de ce sesiunile de după-amiază produc adesea rezultate mai bune de ritm sau putere.",
+    ],
+  },
+  recovery: { title:"Fereastră de recuperare",
+    short:[
+      "Refacerea musculară are loc după antrenament. Prioritizează proteinele și alimentele bogate în magneziu; somnul de calitate încheie ciclul.",
+      "Consumul de proteine seara susține sinteza proteică musculară pe timpul nopții aproape la fel de bine ca mesele de peste zi.",
+      "Alimentele bogate în magneziu seara — verdețuri, nuci, semințe — pot reduce tensiunea musculară înainte de somn.",
+      "O sesiune scurtă de mobilitate sau stretching acum poate reduce rigiditatea din ziua următoare mai bine decât odihna statică singură.",
+      "Sucul de vișine acre are dovezi modeste pentru reducerea durerii musculare cauzate de exercițiu, atunci când e consumat seara.",
+    ],
+    long:[
+      "Sinteza proteică musculară rămâne ridicată timp de aproximativ 24-48 de ore după antrenamentul de forță, nu doar în prima oră sau două — vechea idee a unei „ferestre” înguste post-antrenament a fost în mare parte revizuită. Ce contează mai mult pe parcursul acestui interval este proteina totală zilnică și un somn cu adevărat odihnitor, din moment ce eliberarea hormonului de creștere se concentrează în somnul profund.",
+      "Studiile care compară momentul consumului de proteine pe parcursul zilei au constatat că o doză seara — inclusiv chiar înainte de culcare — susține sinteza proteică musculară pe timpul nopții aproape la fel de eficient ca aportul de mai devreme, cu condiția ca proteina totală zilnică să fie suficientă. Vechea regulă de a evita proteinele seara nu rezistă bine în fața datelor.",
+      "Magneziul este un cofactor în procesul care permite fibrelor musculare să se relaxeze după contracție — un nivel cu adevărat scăzut de magneziu poate contribui la crampe și la o senzație de tensiune persistentă. Sursele alimentare seara nu acționează instantaneu, dar un consum constant susține acest proces de relaxare în timp.",
+      "Stretchingul static și mobilitatea ușoară cresc fluxul de sânge către țesutul solicitat, fără a adăuga stres mecanic suplimentar, mecanismul probabil din spatele rigidității reduse din ziua următoare, comparativ cu a nu face nimic. E un adaos cu cost scăzut și un beneficiu modest, dar destul de constant.",
+      "Vișinele acre au o concentrație neobișnuit de mare de antociani, compuși cu activitate antiinflamatorie măsurabilă în câteva studii mici privind durerea musculară cauzată de exercițiu. Mărimea efectului e modestă, iar dovezile nu sunt la scară largă, dar e unul dintre cele mai bine susținute ajutoare alimentare de recuperare care există.",
+    ],
+  },
+  restRepair: { title:"Odihnă și refacere",
+    short:[
+      "Evită mesele copioase după ora 21:00. Corpul se detoxifică și se reface în timpul somnului profund — protejează această fereastră.",
+      "Producția de testosteron e strâns legată de somnul profund — reducerea orelor de somn are un cost măsurabil în ziua următoare.",
+      "O cameră răcoroasă și întunecată susține eliberarea de testosteron și hormon de creștere care are loc peste noapte.",
+      "Alcoolul consumat târziu seara diminuează etapele de somn profund în care are loc cea mai mare parte a recuperării fizice.",
+      "Orele constante de culcare și trezire contează mai mult pentru recuperarea hormonală decât numărul total de ore, luat singur.",
+    ],
+    long:[
+      "Digestia concurează cu procesele de refacere ale corpului de peste noapte pentru flux sanguin și resurse metabolice — o masă copioasă aproape de culcare nu doar riscă un somn mai slab, ci poate întârzia etapele de somn profund în care are loc cea mai mare parte a refacerii fizice. Terminarea mesei cu câteva ore înainte de culcare oferă corpului un traseu mai curat către această fereastră de recuperare.",
+      "Cea mai mare parte a eliberării zilnice de testosteron are loc în timpul somnului, concentrată în etapele de somn profund și REM. Studiile care au restricționat somnul la cinci ore pe noapte, la bărbați tineri și sănătoși, au constatat o scădere măsurabilă a nivelului de testosteron în aproximativ o săptămână — nu e un efect mic sau teoretic.",
+      "Atât eliberarea de testosteron, cât și cea de hormon de creștere sunt legate de somnul profund, iar somnul profund în sine e foarte sensibil la lumină și temperatură. O cameră mai răcoroasă susține scăderea temperaturii corpului de care ai nevoie pentru a intra în somn profund, motivul mecanic pentru care acest mediu contează la fel de mult ca durata.",
+      "Alcoolul poate face adormirea să pară mai ușoară, dar suprimă somnul REM și fragmentează etapele profunde din a doua parte a nopții — exact etapele cele mai legate de recuperarea hormonală și refacerea țesuturilor. Costul tinde să apară în ziua următoare, chiar și atunci când numărul total de ore de somn pare normal.",
+      "Cercetarea circadiană arată constant că orele neregulate de somn perturbă tiparele hormonale, chiar și atunci când durata totală a somnului rămâne aceeași. Culcarea și trezirea la ore constante e una dintre schimbările cu cel mai mare impact și cel mai mic efort pentru recuperarea hormonală — mai mult decât urmărirea unei ore suplimentare într-un program neregulat.",
+    ],
+  },
+};
+
 export const getMaleTipKey = () => {
   const h = new Date().getHours();
   return h>=5&&h<12 ? "strength" : h>=12&&h<18 ? "cardio" : h>=18&&h<22 ? "recovery" : "restRepair";
 };
 
-export const getMaleTip = (style = "short") => {
+export const getMaleTip = (style = "short", lang) => {
   const key = getMaleTipKey();
-  const meta = MALE_TIP_POOLS[key];
+  const meta = (lang === "ro" ? MALE_TIP_POOLS_RO : MALE_TIP_POOLS)[key];
   const idx = pickDailyIndex(`male_${key}`, meta.short.length);
-  return { icon: meta.icon, title: meta.title, tip: (meta[style] || meta.short)[idx] ?? meta.short[idx] };
+  return { icon: MALE_TIP_POOLS[key].icon, title: meta.title, tip: (meta[style] || meta.short)[idx] ?? meta.short[idx] };
 };
 
 const scaleCycleBoundaries = (periodLength, cycleLength) => {
@@ -235,7 +369,7 @@ const scaleCycleBoundaries = (periodLength, cycleLength) => {
 };
 
 // periodLogs: array of { id, start_date: "YYYY-MM-DD", end_date: "YYYY-MM-DD"|null }, any order.
-export const getCyclePhase = (periodLogs, fallbackCycleLength = 28) => {
+export const getCyclePhase = (periodLogs, fallbackCycleLength = 28, lang) => {
   const logs = (periodLogs || []).filter(l => l.start_date).slice().sort((a, b) => b.start_date.localeCompare(a.start_date));
   if (logs.length === 0) return null;
 
@@ -285,8 +419,8 @@ export const getCyclePhase = (periodLogs, fallbackCycleLength = 28) => {
   })();
 
   return {
-    phase, day, label: meta.label, color: meta.color,
-    tip: getCycleTip(phase, "short"),
+    phase, day, label: (lang === "ro" ? CYCLE_TIP_POOLS_RO : CYCLE_TIP_POOLS)[phase].label, color: meta.color,
+    tip: getCycleTip(phase, "short", lang),
     periodLength, periodLengthEstimated: periodLengthEstimated_final,
     cycleLength, cycleLengthEstimated,
     predictedNextStart,
@@ -328,10 +462,44 @@ export const DAILY_FACTS = [
   "Adequate sleep is one of the most powerful tools for body composition.",
 ];
 
-export const getDailyFact = () => {
+export const DAILY_FACTS_RO = [
+  "Fierul se absoarbe cel mai bine alături de vitamina C — încearcă spanac cu lămâie.",
+  "Magneziul susține peste 300 de reacții enzimatice din organism.",
+  "Microbiomul intestinal poate influența starea de spirit prin axa intestin-creier.",
+  "Acizii grași Omega-3 reduc inflamația și susțin sănătatea inimii.",
+  "Proteinele mențin senzația de sațietate mai mult timp decât carbohidrații sau grăsimile.",
+  "Vitamina D este sintetizată de piele atunci când e expusă la soare.",
+  "Verdețurile cu frunze închise la culoare sunt printre cele mai bogate surse de folat.",
+  "Hidratarea corespunzătoare îmbunătățește funcția cognitivă și starea de spirit.",
+  "Fibrele hrănesc bacteriile benefice din intestin, susținând imunitatea.",
+  "Lipsa somnului crește cortizolul și poftele de zahăr.",
+  "Zincul este esențial pentru funcția imunitară și vindecarea rănilor.",
+  "Mâncatul în ritm lent îmbunătățește digestia și ajută la instalarea mai rapidă a sațietății.",
+  "Calciul din alimente se absoarbe mai bine decât cel din suplimente.",
+  "Vitamina B12 se găsește aproape exclusiv în produse animale — persoanele vegane ar trebui să suplimenteze.",
+  "Legumele colorate conțin antioxidanți diferiți — cu cât mai multe culori, cu atât mai bine.",
+  "Cofeina blochează receptorii de adenozină, reducând temporar oboseala.",
+  "Alimentele fermentate precum iaurtul și chefirul susțin diversitatea microbiomului intestinal.",
+  "Printre alimentele antiinflamatorii se numără fructele de pădure, peștele gras, uleiul de măsline și turmericul.",
+  "Potasiul ajută la reglarea tensiunii arteriale și a funcției musculare.",
+  "Consumul de proteine la micul dejun reduce poftele de gustări de după-amiază.",
+  "Prebioticele din ceapă, usturoi și ovăz hrănesc bacteriile probiotice.",
+  "Mestecatul temeinic al fiecărei îmbucături ajută digestia și reduce balonarea.",
+  "Iodul din alge marine și lactate susține producția de hormoni tiroidieni.",
+  "Carbohidrații complecși eliberează energie mai lent și mai constant decât zaharurile simple.",
+  "Seleniul, prezent în nucile braziliene, este un antioxidant puternic.",
+  "Consumul de apă înainte de mese poate reduce aportul caloric în mod natural.",
+  "Luteina și zeaxantina din verdețuri protejează sănătatea ochilor.",
+  "Exercițiul fizic crește nivelul de BDNF — o proteină care susține sănătatea creierului.",
+  "Curcumina din turmeric este mai bine absorbită atunci când e consumată alături de piper negru.",
+  "Somnul suficient este unul dintre cele mai puternice instrumente pentru compoziția corporală.",
+];
+
+export const getDailyFact = (lang) => {
   const now = new Date();
   const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
-  return DAILY_FACTS[dayOfYear % DAILY_FACTS.length];
+  const pool = lang === "ro" ? DAILY_FACTS_RO : DAILY_FACTS;
+  return pool[dayOfYear % pool.length];
 };
 
 export const getWeekKey = () => {

@@ -3,6 +3,17 @@ import { C, card, serif, sans, inp, localDateStr, pickDailyVariant, getMaleTip, 
 import { LeafDecor, DropIcon, CheckIcon, SparkleIcon, CameraIcon, EditIcon } from "../NoraIcons";
 import AtmosphereBackground from "../AtmosphereBackground";
 import { BrowserMultiFormatReader, BarcodeFormat } from "@zxing/browser";
+import { useLanguage, LANGUAGE_NAMES } from "../../lib/i18n/LanguageContext";
+import challengesRo from "../../lib/i18n/content/challenges.ro";
+
+// Merges the Romanian overlay (title/instruction/science) over an English challenge object —
+// same helper as Ritual.jsx's trChallenge, duplicated locally (small, per-file pattern already
+// used elsewhere, e.g. Eat.jsx's trRecipe).
+const trChallenge = (c, lang) => {
+  if (!c || lang !== "ro") return c;
+  const tr = challengesRo[c.id];
+  return tr ? { ...c, ...tr } : c;
+};
 
 const MovementIcon = ({ size = 15, color = C.sage }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
@@ -122,12 +133,58 @@ const HORMONAL_TIPS = [
   { cat:"cycle", tip: "Curcumin in turmeric inhibits NF-kB, a key inflammatory pathway activated during menstruation. Adding turmeric with black pepper and a healthy fat daily may reduce period-related inflammation over time." },
   { cat:"cycle", tip: "Dehydration concentrates prostaglandins in uterine tissue and worsens cramping. Electrolyte-balanced water — a pinch of sea salt and lemon — hydrates cells more effectively than plain water alone." },
 ];
+// Romanian overlay — same order/length/cat as HORMONAL_TIPS, picked by language at the read site.
+const HORMONAL_TIPS_RO = [
+  { cat:"general", tip: "Combină alimentele bogate în fier cu vitamina C pentru a tripla absorbția. Spanac cu lămâie, linte cu roșii sau carne roșie cu ardei — combinația e mult mai eficientă decât oricare separat." },
+  { cat:"cycle", tip: "Ghimbirul e la fel de eficient ca ibuprofenul pentru crampele menstruale, în mai multe studii clinice. Încearcă 1g de ghimbir proaspăt în apă caldă sau ceai de ghimbir, începând cu 2 zile înainte de menstruație." },
+  { cat:"cycle", tip: "Estrogenul crește în faza foliculară, sporind energia și reziliența. Aceasta e fereastra ta optimă pentru antrenament de intensitate mare, provocări noi și planuri sociale — profită de ea." },
+  { cat:"general", tip: "Alimentele fermentate precum chefirul, iaurtul și kimchi susțin oestrobiomul — bacteriile intestinale care reglează metabolismul estrogenului. O porție zilnică îmbunătățește eliminarea hormonală în timp." },
+  { cat:"cycle", tip: "Zincul susține dezvoltarea foliculară și este intens folosit la ovulație. Semințele de dovleac, semințele de cânepă și stridiile sunt surse excelente — vizează un aliment bogat în zinc zilnic în jurul mijlocului ciclului." },
+  { cat:"cycle", tip: "EPA și DHA din peștele gras reduc prostaglandinele — compușii care declanșează crampele menstruale. Două porții de somon, macrou sau sardine pe săptămână pot reduce intensitatea durerii în timp." },
+  { cat:"cycle", tip: "Nivelul de magneziu scade în faza luteală, agravând dispoziția, poftele și somnul. Ciocolata neagră, migdalele și verdețurile cu frunze sunt cele mai bogate surse — vizează una zilnic în săptămâna dinaintea menstruației." },
+  { cat:"cycle", tip: "Fluctuațiile de progesteron și estrogen din faza luteală cresc retenția de apă. Reducerea sodiului, alimentelor procesate și alcoolului în cele 7 zile dinaintea menstruației poate ameliora semnificativ balonarea." },
+  { cat:"cycle", tip: "În faza foliculară (zilele 1-14), câte o lingură de semințe de in măcinate și semințe de dovleac zilnic poate susține producția de estrogen. Lignanii din in acționează ca modulatori naturali de estrogen." },
+  { cat:"cycle", tip: "În faza luteală (zilele 15-28), câte o lingură de semințe de susan și floarea-soarelui zilnic oferă zinc și seleniu pentru susținerea progesteronului. Utilizarea constantă timp de 3 cicluri poate ameliora PMS-ul." },
+  { cat:"peri", tip: "Semințele de in, soia, năutul și lintea conțin fitoestrogeni — compuși vegetali care se leagă slab de receptorii de estrogen, ajutând la ameliorarea simptomelor perimenopauzei și moderarea dominanței estrogenice." },
+  { cat:"general", tip: "Fibrele alimentare leagă excesul de estrogen în intestin pentru eliminare. Fibrele insuficiente permit reabsorbția estrogenului, agravând simptomele hormonale. Vizează 25-35g zilnic din legume și leguminoase." },
+  { cat:"cycle", tip: "Vitamina B6 este esențială pentru sinteza progesteronului și reduce anxietatea și dispoziția scăzută asociate PMS-ului. Avocado, banana, puiul, tonul și fisticul se numără printre cele mai bogate surse alimentare." },
+  { cat:"general", tip: "Vârfurile de glicemie declanșează cortizol, care perturbă estrogenul și progesteronul. Consumarea proteinelor și grăsimilor înaintea carbohidraților la fiecare masă atenuează răspunsul glicemic și susține ritmul hormonal." },
+  { cat:"cycle", tip: "Aportul scăzut de iod poate afecta producția de hormoni tiroidieni, care reglează metabolismul și regularitatea ciclului. Algele marine, sarea iodată, ouăle și lactatele sunt surse de încredere — dar mai mult nu înseamnă mai bine; excesul poate fi la fel de dăunător." },
+  { cat:"general", tip: "Doar 1-2 nuci braziliene zilnic îți acoperă necesarul complet de seleniu. Seleniul protejează tiroida de deteriorarea oxidativă și susține conversia T4 în T3 — a mânca mai multe nu aduce beneficii suplimentare." },
+  { cat:"cycle", tip: "Receptorii de vitamina D sunt prezenți în ovare, uter și hipofiză. Nivelurile scăzute sunt asociate cu cicluri neregulate și fertilitate redusă în unele studii. Un test de sânge e cel mai bun mod de a-ți cunoaște nivelul — discută cu medicul tău dacă un supliment de întreținere are sens pentru tine." },
+  { cat:"cycle", tip: "Progesteronul are un efect sedativ natural, la vârf în faza luteală. Somnul perturbat scade progesteronul, ceea ce agravează PMS-ul și neregularitatea ciclului. Protejarea a 7-9 ore de somn este, direct, medicină hormonală." },
+  { cat:"cycle", tip: "Stresul cronic crește cortizolul, care concurează cu progesteronul pentru aceiași receptori. Această scădere relativă a progesteronului poate contribui la menstruații mai abundente și schimbări de dispoziție. Reducerea stresului este o formă de îngrijire hormonală." },
+  { cat:"cycle", tip: "Suplimentarea cu calciu poate ajuta la reducerea severității PMS-ului, conform studiilor clinice. Lactatele, laptele vegetal fortificat, peștele conservat cu oase, tofu și broccoli sunt cele mai bune surse alimentare — merită incluse aproape zilnic." },
+  { cat:"cycle", tip: "Folatul susține sinteza ADN-ului în mucoasa uterină aflată în diviziune rapidă. Verdețurile cu frunze închise, lintea și avocado sunt cele mai bogate surse — deosebit de importante pentru regularitatea ciclului și calitatea ovulelor." },
+  { cat:"general", tip: "Zincul inhibă 5-alfa reductaza, reducând conversia testosteronului în DHT și scăzând producția de sebum. Erupțiile hormonale răspund adesea bine la un aport constant de zinc din semințe de dovleac sau alimente integrale." },
+  { cat:"cycle", tip: "Myo-inozitolul și D-chiro-inozitolul îmbunătățesc sensibilitatea la insulină și au dovezi solide pentru restabilirea regularității ciclului. Se găsesc natural în fructele citrice, fasole și cereale integrale — sau disponibile ca suplimente." },
+  { cat:"general", tip: "Ashwagandha are dovezi solide că ajută la reducerea cortizolului la adulții cronic stresați. Un cortizol mai scăzut poate susține nivelurile de progesteron și ajuta la reglarea ritmului hormonal." },
+  { cat:"general", tip: "Rădăcina de maca conține alcaloizi unici care acționează asupra axei hipotalamo-hipofizare, susținând echilibrul hormonal fără a acționa ca fitoestrogen. Studii mici arată beneficii pentru dispoziție, energie și libido." },
+  { cat:"general", tip: "Două căni de ceai de mentă zilnic s-au dovedit, în studii clinice, că reduc testosteronul liber la femeile cu androgeni crescuți. Un ritual zilnic simplu, fără cofeină, cu efecte hormonale măsurabile." },
+  { cat:"cycle", tip: "Uleiul de primulă de seară este bogat în acid gama-linolenic (GLA), care, sugerează studiile, poate ajuta la ameliorarea sensibilității sânilor, durerii menstruale și inflamației cutanate, atunci când e luat în a doua jumătate a ciclului." },
+  { cat:"cycle", tip: "Melatonina reglează vârfurile de LH și momentul ovulației. Lumina albastră de la ecrane după ora 21 suprimă melatonina și poate perturba ovulația și durata ciclului. Lumina caldă, slabă seara protejează acest ritm." },
+  { cat:"cycle", tip: "În faza foliculară, antrenează-te mai intens — estrogenul susține performanța și recuperarea. În faza luteală, intensitatea se simte mai grea din cauza progesteronului crescut și a temperaturii corporale ridicate. Respectarea acestei schimbări reduce epuizarea." },
+  { cat:"peri", tip: "Scăderea estrogenului după 40 de ani accelerează pierderea osoasă. Exercițiile cu greutate corporală și antrenamentul de rezistență sunt cele mai eficiente intervenții — calciul și vitamina D susțin procesul, dar mișcarea stimulează formarea osoasă." },
+  { cat:"peri", tip: "Fitoestrogenii din soia, semințele de in și trifoiul roșu pot reduce frecvența bufeurilor. Studiile arată cel mai mare beneficiu la femeile cu bufeuri mai frecvente. Evită factorii declanșatori comuni: cofeina, alcoolul și camerele calde." },
+  { cat:"peri", tip: "Scăderea progesteronului în perimenopauză perturbă arhitectura somnului. Un dormitor mai răcoros (16-18°C), fără ecrane cu 90 de minute înainte de culcare și magneziu glicinat înainte de somn — toate îmbunătățesc măsurabil calitatea somnului." },
+  { cat:"general", tip: "Microbiomul intestinal reglează reciclarea estrogenului. Constipația permite reabsorbția estrogenului. Alimentele fermentate zilnice și fibrele suficiente mențin acest ciclu enterohepatic în mișcare și hormonii într-un echilibru mai bun." },
+  { cat:"cycle", tip: "Prostaglandinele determină durerea menstruală și sunt amplificate de alimentele inflamatorii. Reducerea zahărului rafinat și a uleiurilor procesate, cu creșterea polifenolilor și omega-3, este una dintre cele mai puternice pârghii alimentare pentru durerea ciclului." },
+  { cat:"cycle", tip: "Curcumina din turmeric inhibă NF-kB, o cale inflamatorie cheie activată în timpul menstruației. Adăugarea turmericului cu piper negru și o grăsime sănătoasă zilnic poate reduce inflamația legată de menstruație în timp." },
+  { cat:"cycle", tip: "Deshidratarea concentrează prostaglandinele în țesutul uterin și agravează crampele. Apa echilibrată cu electroliți — un praf de sare de mare și lămâie — hidratează celulele mai eficient decât apa simplă." },
+];
 
 const PHASE_EXTRAS = {
   menstrual:  { foods: ["Iron: lentils, red meat, dark leafy greens", "Ginger tea for cramps"], exercise: "Yoga · gentle walking" },
   follicular: { foods: ["Fermented foods: kefir, yoghurt, kimchi", "Complex carbs: oats, quinoa"], exercise: "HIIT · strength training" },
   ovulatory:  { foods: ["Zinc: pumpkin seeds, hemp seeds", "Anti-inflammatory: salmon, sardines"], exercise: "Peak performance: lift heavy" },
   luteal:     { foods: ["Magnesium: dark chocolate, almonds", "B6: banana, avocado, poultry"], exercise: "Moderate cardio · pilates" },
+};
+// Romanian overlay — same shape, picked by language at the read site.
+const PHASE_EXTRAS_RO = {
+  menstrual:  { foods: ["Fier: linte, carne roșie, verdețuri cu frunze închise", "Ceai de ghimbir pentru crampe"], exercise: "Yoga · plimbări ușoare" },
+  follicular: { foods: ["Alimente fermentate: chefir, iaurt, kimchi", "Carbohidrați complecși: ovăz, quinoa"], exercise: "HIIT · antrenament de forță" },
+  ovulatory:  { foods: ["Zinc: semințe de dovleac, semințe de cânepă", "Anti-inflamator: somon, sardine"], exercise: "Performanță maximă: greutăți mari" },
+  luteal:     { foods: ["Magneziu: ciocolată neagră, migdale", "B6: banană, avocado, carne de pasăre"], exercise: "Cardio moderat · pilates" },
 };
 
 
@@ -155,6 +212,11 @@ const fmtRemaining = (ms) => {
 };
 
 export default function MyDay({ profile, targets, entries, logMeal, updateMeal, deleteMeal, clearTodayMeals, waterMl, setWaterMl, cyclePhase, activeChallenges, checkInChallenge, setActiveTab, fastingEnabled, fastingStart, fastingEnd, fastingMode, fastingExtendedStartAt, fastingExtendedHours, logWaterEntry, lookupCommunityBarcode, saveCommunityBarcode }) {
+  const { t, language } = useLanguage();
+  const langName = LANGUAGE_NAMES[language] || "English";
+  const langLine = language && language !== "en"
+    ? `\nCRITICAL: Write entirely in ${langName}. Do not use English unless a word has absolutely no translation.`
+    : "";
   const [greeting,          setGreeting]          = useState("");
   const [greetingLoad,      setGreetingLoad]      = useState(false);
   const [greetingDone,      setGreetingDone]      = useState(false);
@@ -203,7 +265,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   const isFemale     = profile?.sex === "female";
   const isMale       = profile?.sex === "male";
   const isPeri       = profile?.biologicalTrackingEnabled && (profile?.biologicalContext === "perimenopause" || profile?.biologicalContext === "menopause");
-  const hormonalTipsPool = HORMONAL_TIPS.filter(t => t.cat !== "cycle");
+  const hormonalTipsPool = (language === "ro" ? HORMONAL_TIPS_RO : HORMONAL_TIPS).filter(tip => tip.cat !== "cycle");
   const foodE        = entries.filter(e=>e.type==="food");
   const exerE        = entries.filter(e=>e.type==="exercise");
   const totalCal     = foodE.reduce((s,e)=>s+(e.calories||0),0);
@@ -214,7 +276,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   const totalFat     = foodE.reduce((s,e)=>s+(e.fat_g||0),0);
   const h            = new Date().getHours();
   const isEvening    = h >= 18;
-  const maleTip      = (isMale && profile?.biologicalTrackingEnabled) ? getMaleTip("short") : null;
+  const maleTip      = (isMale && profile?.biologicalTrackingEnabled) ? getMaleTip("short", language) : null;
 
   // Invitatie discreta, o singura data, pentru femei care nu au activat personalizarea
   // biologica deloc — dupa ce se afiseaza o data, tacere completa (nu mai reapare).
@@ -233,7 +295,9 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
       const ev=localStorage.getItem("nora_evening_reflection");
       if(ev){
         const d=JSON.parse(ev);
-        if(d.date===localDateStr())setEveningSummary(d.text);
+        // profile?.language (prop), not the language context — this effect runs once on
+        // mount, before NutritionApp's context-sync effect necessarily commits.
+        if(d.date===localDateStr() && d.language===(profile?.language||"en"))setEveningSummary(d.text);
       }
     } catch{}
   },[]);
@@ -288,11 +352,11 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
       setEditPortions(Object.fromEntries(enriched.map((f, i) => [i, String(f.portion_grams)])));
     } catch (err) {
       const code = err?.message || "";
-      if (code === "UNSUPPORTED_FORMAT") setPlateError("This photo's format isn't supported. Try a different photo.");
-      else if (code === "TOO_LARGE") setPlateError("This photo is too large to upload. Try a different one, or a lower-resolution photo.");
-      else if (code === "NETWORK") setPlateError("Couldn't reach the server. Check your connection and try again.");
-      else if (code === "READ_FAILED" || code === "BAD_RESPONSE" || code === "EMPTY_RESPONSE" || code === "parse error") setPlateError("Couldn't read this photo clearly. Try a different angle or better lighting.");
-      else setPlateError("Something went wrong analysing this photo. Please try again.");
+      if (code === "UNSUPPORTED_FORMAT") setPlateError(t("myday.plate.errorFormat"));
+      else if (code === "TOO_LARGE") setPlateError(t("myday.plate.errorTooLarge"));
+      else if (code === "NETWORK") setPlateError(t("myday.plate.errorNetwork"));
+      else if (code === "READ_FAILED" || code === "BAD_RESPONSE" || code === "EMPTY_RESPONSE" || code === "parse error") setPlateError(t("myday.plate.errorUnclear"));
+      else setPlateError(t("myday.plate.errorGeneric"));
     }
     setPlateLoad(false);
   };
@@ -320,14 +384,14 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
     const mg = hh < 11 ? "Morning" : hh < 15 ? "Midday" : hh < 18 ? "Snacks" : "Evening";
     const entry = {
       id: Date.now(), type: "food", source: "photo",
-      name: `Plate: ${name.length > 55 ? name.slice(0, 52) + "…" : name}`,
+      name: `${t("myday.plate.namePrefix")}: ${name.length > 55 ? name.slice(0, 52) + "…" : name}`,
       time: new Date().toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" }),
       mealGroup: mg, calories: totalKcal,
       protein_g: totalPro, carbs_g: totalCarb, fat_g: totalFat,
-      fiber_g: 0, notes: `Photo analysis · ${adjusted.length} item${adjusted.length !== 1 ? "s" : ""}`,
+      fiber_g: 0, notes: `${t("myday.plate.analysisLabel")} · ${adjusted.length} ${adjusted.length !== 1 ? t("myday.plate.items") : t("myday.plate.item")}`,
     };
     logMeal(entry);
-    setLogToast({ entry, msg: `Plate logged · ${totalKcal} kcal · tap to adjust` });
+    setLogToast({ entry, msg: `${t("myday.toast.plateLogged")} · ${totalKcal} kcal · ${t("myday.toast.tapAdjust")}` });
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setLogToast(null), 6000);
     closePlateModal();
@@ -353,7 +417,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         setBarcodeResult({
           name: community.name, brand: null, image: null, nutriScore: null, ingredients: null,
           kcal: community.kcal || 0, protein: community.protein_g || 0, carbs: community.carbs_g || 0, fat: community.fat_g || 0,
-          source: "Nora community",
+          source: t("myday.barcode.source.Nora community"),
         });
         setBarcodeLoad(false);
         return;
@@ -378,7 +442,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         console.log("[Nora][barcode DEBUG] OFF nutriments used:", { kcalRaw, proteinRaw, carbsRaw, fatRaw, hasNutritionData, nutrition_data_per: p.nutrition_data_per, serving_size: p.serving_size }); // TEMPORAR
         if (hasNutritionData) {
           setBarcodeResult({
-            name:        p.product_name?.trim() || "Unknown product",
+            name:        p.product_name?.trim() || t("myday.barcode.unknownProduct"),
             brand:       p.brands?.split(",")[0]?.trim() || null,
             image:       p.image_front_url || p.image_url || null,
             nutriScore:  p.nutriscore_grade?.toUpperCase() || null,
@@ -387,7 +451,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
             protein:     Math.round((proteinRaw || 0) * 10) / 10,
             carbs:       Math.round((carbsRaw   || 0) * 10) / 10,
             fat:         Math.round((fatRaw     || 0) * 10) / 10,
-            source:      "Open Food Facts",
+            source:      t("myday.barcode.source.Open Food Facts"),
           });
           setBarcodeLoad(false);
           return;
@@ -409,7 +473,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
           name: item.name, brand: item.brand || null, image: null,
           nutriScore: null, ingredients: null,
           kcal: p.kcal || 0, protein: p.protein || 0, carbs: p.carbs || 0, fat: p.fat || 0,
-          source: "USDA",
+          source: t("myday.barcode.source.USDA"),
         });
         setBarcodeLoad(false);
         return;
@@ -429,17 +493,17 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
     const carbs = parseFloat(manualAddForm.carbs) || 0;
     const fat = parseFloat(manualAddForm.fat) || 0;
 
-    if (!name) { setManualAddError("Enter a product name."); return; }
-    if (!Number.isFinite(kcal) || kcal < 0 || kcal > 900) { setManualAddError("Calories per 100g should be between 0 and 900."); return; }
-    if (protein + carbs + fat > 100) { setManualAddError("Protein + carbs + fat can't add up to more than 100g per 100g."); return; }
+    if (!name) { setManualAddError(t("myday.barcode.errorName")); return; }
+    if (!Number.isFinite(kcal) || kcal < 0 || kcal > 900) { setManualAddError(t("myday.barcode.errorKcal")); return; }
+    if (protein + carbs + fat > 100) { setManualAddError(t("myday.barcode.errorMacros")); return; }
 
     setManualAddError("");
     setManualAddSaving(true);
     const result = await saveCommunityBarcode?.(currentBarcode, { name, kcal, protein_g: protein, carbs_g: carbs, fat_g: fat });
     setManualAddSaving(false);
-    if (!result?.ok) { setManualAddError(result?.error || "Couldn't save this product. Try again."); return; }
+    if (!result?.ok) { setManualAddError(result?.error || t("myday.barcode.errorSave")); return; }
 
-    setBarcodeResult({ name, brand: null, image: null, nutriScore: null, ingredients: null, kcal, protein, carbs, fat, source: "Nora community" });
+    setBarcodeResult({ name, brand: null, image: null, nutriScore: null, ingredients: null, kcal, protein, carbs, fat, source: t("myday.barcode.source.Nora community") });
     setManualAddOpen(false);
     setManualAddThanks(true);
     setManualAddForm({ name:"", kcal:"", protein:"", carbs:"", fat:"" });
@@ -448,7 +512,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
   const startBarcodeCamera = async () => {
     setBarcodeError("");
     if (!navigator.mediaDevices?.getUserMedia) {
-      setBarcodeError("Camera not available. Enter the barcode number manually below.");
+      setBarcodeError(t("myday.barcode.errorNoCamera"));
       return;
     }
     try {
@@ -499,7 +563,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
       }));
     } catch (e) {
       console.log("[Nora][barcode DEBUG] getUserMedia failed:", e?.name, e?.message); // TEMPORAR
-      setBarcodeError("Camera access denied. Enter the barcode number manually below.");
+      setBarcodeError(t("myday.barcode.errorDenied"));
     }
   };
 
@@ -523,10 +587,10 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
       protein_g: Math.round(barcodeResult.protein * factor * 10) / 10,
       carbs_g:   Math.round(barcodeResult.carbs   * factor * 10) / 10,
       fat_g:     Math.round(barcodeResult.fat     * factor * 10) / 10,
-      fiber_g: 0, notes: `${grams}g · barcode scan`, estimated: false,
+      fiber_g: 0, notes: `${grams}g · ${t("myday.barcode.scanLabel")}`, estimated: false,
     };
     logMeal(entry);
-    setLogToast({ entry, msg: `${barcodeResult.name} (~${entry.calories} kcal) · tap to adjust` });
+    setLogToast({ entry, msg: `${barcodeResult.name} (~${entry.calories} kcal) · ${t("myday.toast.tapAdjust")}` });
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setLogToast(null), 6000);
     closeBarcodeModal();
@@ -536,11 +600,11 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
     setGreetingLoad(true);
     try{
       const g = await callClaude(
-        "You are Nora, a warm nutritionist AI. 1–2 sentences. Never say your own name.",
+        `You are Nora, a warm nutritionist AI. 1–2 sentences. Never say your own name.${langLine}`,
         `User: ${profile?.name}, goals: ${(profile?.goals||[]).join(", ")}, activity: ${profile?.activity}. Time: ${h<12?"morning":h<17?"afternoon":"evening"}. Personalised greeting + one actionable tip.`
       );
       setGreeting(g);
-    }catch{setGreeting(`Let's make today count, ${profile?.name}.`);}
+    }catch{setGreeting(`${t("myday.greeting.fallback")}, ${profile?.name}.`);}
     setGreetingLoad(false);
   };
 
@@ -551,19 +615,19 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         ? `Cal today:${Math.round(netCal)}/${targets?.calories||2000}, P:${Math.round(totalPro)}g/${targets?.protein_g||150}g, Water:${waterMl}ml/${targets?.water_ml||2500}ml, ${entries.length} items logged.`
         : "Nothing logged today.";
       const userPrompt = `Evening reflection for ${profile?.name}. Goals:${(profile?.goals||[]).join(", ")}. ${dataStr} Write 2–3 warm sentences that close the day: a gentle look back at how it went (acknowledge wins, note any gaps without judgement — or if nothing was logged, a soft closing thought instead of a reminder), then a small thought or intention to carry into tomorrow.`;
-      const t=await callClaude(
-        "You are Nora, a warm and knowledgeable nutrition coach. Write a closing reflection for the end of the day — retrospective in tone, looking back and gently ahead to tomorrow. Never a tip, a reminder, or a call to action. 2–3 sentences only. Use the user's name.",
+      const raw=await callClaude(
+        `You are Nora, a warm and knowledgeable nutrition coach. Write a closing reflection for the end of the day — retrospective in tone, looking back and gently ahead to tomorrow. Never a tip, a reminder, or a call to action. 2–3 sentences only. Use the user's name.${langLine}`,
         userPrompt
       );
-      setEveningSummary(t);
-      try{localStorage.setItem("nora_evening_reflection",JSON.stringify({date:localDateStr(),text:t}));}catch{}
+      setEveningSummary(raw);
+      try{localStorage.setItem("nora_evening_reflection",JSON.stringify({date:localDateStr(),language,text:raw}));}catch{}
     }catch{}
     setEveningSummaryLoad(false);
   };
 
   const addWater=(ml)=>{
     setWaterMl(w=>Math.min(w+ml,(targets?.water_ml||3000)*2));
-    setWaterToast(`+${ml>=1000?(ml/1000).toFixed(1)+"L":ml+"ml"} added`);
+    setWaterToast(`+${ml>=1000?(ml/1000).toFixed(1)+"L":ml+"ml"} ${t("myday.toast.added")}`);
     setTimeout(()=>setWaterToast(""),2800);
     logWaterEntry?.(ml);
   };
@@ -577,21 +641,21 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
     try{
       const now2=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
       const mg=h<11?"Morning":h<15?"Midday":h<18?"Snacks":"Evening";
-      const t=await callClaude(
+      const raw=await callClaude(
         "You are a nutrition AI. Return ONLY valid JSON.",
         `Parse: "${input}". Assume a standard single serving if no quantity. Return JSON: {"type":"food"|"exercise","name":"string","time":"${now2}","mealGroup":"${mg}","calories":number,"protein_g":number,"carbs_g":number,"fat_g":number,"fiber_g":number,"notes":"brief portion e.g. 1 cup, 100g"}`
       );
-      const parsed=parseJSON(t);
+      const parsed=parseJSON(raw);
       const entry={...parsed,id:Date.now(),source:"manual",estimated:true};
       logMeal(entry);
       setLogInput("");
       if(parsed.type==="food"){
         const portion=parsed.notes?`${parsed.notes} · `:"";
-        setLogToast({entry,msg:`${portion}${parsed.name} (~${parsed.calories} kcal) · tap to adjust`});
+        setLogToast({entry,msg:`${portion}${parsed.name} (~${parsed.calories} kcal) · ${t("myday.toast.tapAdjust")}`});
         if(toastTimer.current) clearTimeout(toastTimer.current);
         toastTimer.current=setTimeout(()=>setLogToast(null),6000);
       }
-    }catch{setLogError("Couldn't parse that. Try again.");}
+    }catch{setLogError(t("myday.log.errorParse"));}
     setLogLoading(false);
   };
 
@@ -601,18 +665,18 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
     try{
       const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(imageFile);});
       const mg=h<11?"Morning":h<15?"Midday":h<18?"Snacks":"Evening";
-      const t=await callClaude("You are a nutrition AI with vision. Return ONLY valid JSON.",[
+      const raw=await callClaude("You are a nutrition AI with vision. Return ONLY valid JSON.",[
         {type:"image",source:{type:"base64",media_type:imageFile.type,data:b64}},
         {type:"text",text:`Identify food. Return JSON: {"type":"food","name":"string","time":"${new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}","mealGroup":"${mg}","calories":number,"protein_g":number,"carbs_g":number,"fat_g":number,"fiber_g":number,"notes":"string"}`},
       ],600);
-      const parsed=parseJSON(t);
+      const parsed=parseJSON(raw);
       const entry={...parsed,id:Date.now(),source:"photo",estimated:true};
       logMeal(entry);
       setImageFile(null);setPhotoMode(false);
-      setLogToast({entry,msg:`${parsed.name} (~${parsed.calories} kcal) · tap to adjust`});
+      setLogToast({entry,msg:`${parsed.name} (~${parsed.calories} kcal) · ${t("myday.toast.tapAdjust")}`});
       if(toastTimer.current) clearTimeout(toastTimer.current);
       toastTimer.current=setTimeout(()=>setLogToast(null),6000);
-    }catch{setLogError("Couldn't read the image. Try a clearer photo.");}
+    }catch{setLogError(t("myday.log.errorImage"));}
     setLogLoading(false);
   };
 
@@ -630,11 +694,11 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
       <div style={{position:"relative",borderRadius:18,overflow:"hidden",backgroundColor:C.green,boxShadow:"0 4px 20px rgba(31,46,38,0.20)",padding:"20px 20px 22px"}}>
         <div style={{position:"relative"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:6}}>
-            <p style={{fontSize:9,fontWeight:700,color:"rgba(168,178,169,0.85)",textTransform:"uppercase",letterSpacing:"0.12em",margin:0}}>{h<12?"Morning":h<17?"Afternoon":"Evening"} · {profile?.name}</p>
+            <p style={{fontSize:9,fontWeight:700,color:"rgba(168,178,169,0.85)",textTransform:"uppercase",letterSpacing:"0.12em",margin:0}}>{h<12?t("myday.morning"):h<17?t("myday.afternoon"):t("myday.evening")} · {profile?.name}</p>
           </div>
           {greetingLoad
             ? <div style={{display:"flex",gap:5,paddingTop:2}}>{[0,1,2].map(j=><span key={j} style={{width:5,height:5,borderRadius:"50%",backgroundColor:"rgba(244,242,237,0.4)",display:"inline-block",animation:`dotPulse 1.2s ease ${j*0.2}s infinite`}}/>)}</div>
-            : <p style={{fontFamily:serif,fontSize:15,fontWeight:500,color:C.ivory,lineHeight:1.65,margin:0,fontStyle:"italic"}}>{greeting||`Good ${h<12?"morning":h<17?"afternoon":"evening"}, ${profile?.name}.`}</p>
+            : <p style={{fontFamily:serif,fontSize:15,fontWeight:500,color:C.ivory,lineHeight:1.65,margin:0,fontStyle:"italic"}}>{greeting||`${t("myday.good")} ${(h<12?t("myday.morning"):h<17?t("myday.afternoon"):t("myday.evening")).toLowerCase()}, ${profile?.name}.`}</p>
           }
         </div>
       </div>
@@ -642,9 +706,9 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
       {/* Health summary */}
       {Object.keys(healthData).length>0&&(
         <div style={{...card,padding:"14px 16px"}}>
-          <p style={{fontSize:9,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em",margin:"0 0 10px"}}>Today's health</p>
+          <p style={{fontSize:9,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.1em",margin:"0 0 10px"}}>{t("myday.health.title")}</p>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,textAlign:"center"}}>
-            {[{label:"Steps",val:healthData.steps||"—"},{label:"Sleep",val:healthData.sleep?`${healthData.sleep}h`:"—"},{label:"HR",val:healthData.heartRate?`${healthData.heartRate}`:"—"},{label:"Workout",val:healthData.workoutDuration?`${healthData.workoutDuration}m`:"—"}].map(item=>(
+            {[{label:t("myday.health.steps"),val:healthData.steps||"—"},{label:t("myday.health.sleep"),val:healthData.sleep?`${healthData.sleep}h`:"—"},{label:t("myday.health.hr"),val:healthData.heartRate?`${healthData.heartRate}`:"—"},{label:t("myday.health.workout"),val:healthData.workoutDuration?`${healthData.workoutDuration}m`:"—"}].map(item=>(
               <div key={item.label}>
                 <div style={{fontFamily:serif,fontSize:16,fontWeight:600,color:C.green}}>{item.val}</div>
                 <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em",marginTop:2}}>{item.label}</div>
@@ -660,24 +724,24 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
           <div style={{position:"relative",padding:"22px 20px 20px"}}>
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:22}}>
               <div>
-                <p style={{fontSize:10,fontWeight:700,color:"rgba(139,107,30,0.75)",textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 6px"}}>Today's progress</p>
+                <p style={{fontSize:10,fontWeight:700,color:"rgba(139,107,30,0.75)",textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 6px"}}>{t("myday.progress.title")}</p>
                 <div style={{display:"flex",alignItems:"baseline",gap:7}}>
                   <p style={{fontFamily:serif,fontSize:42,fontWeight:600,color:"#1C3D2B",margin:0,lineHeight:1}}>{Math.round(netCal)}</p>
                   <p style={{fontSize:15,color:"rgba(28,61,43,0.42)",margin:0}}>kcal</p>
                 </div>
-                <p style={{fontSize:11,color:"rgba(28,61,43,0.38)",margin:"5px 0 0"}}>of {targets.calories} target{burnedCal>0?` · ${burnedCal} burned`:""}</p>
+                <p style={{fontSize:11,color:"rgba(28,61,43,0.38)",margin:"5px 0 0"}}>{t("myday.progress.ofTarget")} {targets.calories}{burnedCal>0?` · ${burnedCal} ${t("myday.progress.burned")}`:""}</p>
               </div>
               <div style={{backgroundColor:"rgba(155,123,42,0.10)",border:"1px solid rgba(155,123,42,0.22)",borderRadius:14,padding:"11px 14px",textAlign:"center",flexShrink:0}}>
                 <p style={{fontFamily:serif,fontSize:26,fontWeight:700,color:"#8A6B1E",margin:0,lineHeight:1}}>{Math.min(Math.round((netCal/(targets.calories||2000))*100),999)}%</p>
-                <p style={{fontSize:9,color:"rgba(139,107,30,0.55)",margin:"3px 0 0",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>of goal</p>
+                <p style={{fontSize:9,color:"rgba(139,107,30,0.55)",margin:"3px 0 0",fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em"}}>{t("myday.progress.ofGoal")}</p>
               </div>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px 16px"}}>
               {[
-                {label:"Protein",value:totalPro, max:targets.protein_g,color:"#8A6B1E",unit:"g"},
-                {label:"Carbs",  value:totalCarb,max:targets.carbs_g,  color:"#5A8C6E",unit:"g"},
-                {label:"Fat",    value:totalFat, max:targets.fat_g,    color:"#4A7A6A",unit:"g"},
-                {label:"Water",  value:waterMl,  max:targets.water_ml, color:"#4A7090",unit:"ml"},
+                {label:t("me.targets.protein"),value:totalPro, max:targets.protein_g,color:"#8A6B1E",unit:"g"},
+                {label:t("me.targets.carbs"),  value:totalCarb,max:targets.carbs_g,  color:"#5A8C6E",unit:"g"},
+                {label:t("me.targets.fat"),    value:totalFat, max:targets.fat_g,    color:"#4A7A6A",unit:"g"},
+                {label:t("me.targets.water"),  value:waterMl,  max:targets.water_ml, color:"#4A7090",unit:"ml"},
               ].map(({label,value,max,color,unit})=>{
                 const pct=Math.min(max>0?(value/max)*100:0,100);
                 const disp=unit==="ml"&&value>=1000?(value/1000).toFixed(1)+"L":Math.round(value)+unit;
@@ -714,11 +778,11 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                     {checkedIn&&<CheckIcon size={13} color={C.bg}/>}
                   </button>
                   <div style={{flex:1,minWidth:0}}>
-                    <p style={{fontSize:9,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 2px"}}>Today's challenge</p>
-                    <p style={{fontFamily:serif,fontSize:14,fontWeight:600,color:C.text,margin:0,lineHeight:1.3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{ac.title.replace(/^✦ For Her - |^✦ For Him - /,"")}</p>
+                    <p style={{fontSize:9,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 2px"}}>{t("myday.challenge.title")}</p>
+                    <p style={{fontFamily:serif,fontSize:14,fontWeight:600,color:C.text,margin:0,lineHeight:1.3,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{trChallenge(ac,language).title.replace(/^✦ For Her - |^✦ For Him - /,"")}</p>
                   </div>
                   <button onClick={()=>setActiveTab("ritual")} style={{background:"none",border:"none",color:C.green,fontSize:11,fontWeight:600,cursor:"pointer",padding:0,flexShrink:0,fontFamily:sans,whiteSpace:"nowrap"}}>
-                    Ritual →
+                    {t("nav.ritual")} →
                   </button>
                 </div>
               );
@@ -734,8 +798,8 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
             <div style={{...card,padding:"12px 16px",borderLeft:`3px solid ${C.green}`}}>
               <p style={{fontSize:12,color:C.text,margin:0,lineHeight:1.5}}>
                 {remainingMs>0
-                  ? <>Fasting · <strong>{fmtRemaining(remainingMs)}</strong> remaining</>
-                  : "Fast complete ✓"}
+                  ? <>{t("me.fasting.fasting")} · <strong>{fmtRemaining(remainingMs)}</strong> {t("me.fasting.remaining")}</>
+                  : `${t("me.fasting.complete")} ✓`}
               </p>
             </div>
           );
@@ -750,11 +814,11 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         {/* Log input */}
         <div style={{...card,padding:"14px"}}>
           <div style={{display:"flex",gap:8,marginBottom:photoMode&&imageFile?10:0}}>
-            <input style={{...inp,flex:1}} placeholder={logLoading?"Analysing…":"Log food, drink, or exercise…"} value={logInput} disabled={logLoading||photoMode} onChange={e=>setLogInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!logLoading)handleLogText();}}/>
-            <button onClick={()=>plateFileRef.current?.click()} title="Analyse plate photo" style={{width:44,height:44,borderRadius:10,border:`1px solid ${C.border}`,backgroundColor:C.card,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <input style={{...inp,flex:1}} placeholder={logLoading?t("myday.analysing"):t("myday.logPlaceholder")} value={logInput} disabled={logLoading||photoMode} onChange={e=>setLogInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!logLoading)handleLogText();}}/>
+            <button onClick={()=>plateFileRef.current?.click()} title={t("myday.analysePlate")} style={{width:44,height:44,borderRadius:10,border:`1px solid ${C.border}`,backgroundColor:C.card,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
               <CameraIcon size={16} color={C.muted}/>
             </button>
-            <button onClick={()=>{setBarcodeOpen(true);startBarcodeCamera();}} title="Scan barcode" style={{width:44,height:44,borderRadius:10,border:`1px solid ${barcodeOpen?C.green:C.border}`,backgroundColor:barcodeOpen?`${C.green}18`:C.card,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <button onClick={()=>{setBarcodeOpen(true);startBarcodeCamera();}} title={t("myday.scanBarcode")} style={{width:44,height:44,borderRadius:10,border:`1px solid ${barcodeOpen?C.green:C.border}`,backgroundColor:barcodeOpen?`${C.green}18`:C.card,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                 <path d="M2 6V3.5A1.5 1.5 0 0 1 3.5 2H6" stroke={barcodeOpen?C.green:C.muted} strokeWidth="1.5" strokeLinecap="round"/>
                 <path d="M14 2h2.5A1.5 1.5 0 0 1 18 3.5V6" stroke={barcodeOpen?C.green:C.muted} strokeWidth="1.5" strokeLinecap="round"/>
@@ -775,7 +839,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
           {photoMode&&imageFile&&(
             <div style={{display:"flex",gap:8,alignItems:"center",padding:"10px 12px",backgroundColor:C.card,borderRadius:10,border:`1px solid ${C.border}`}}>
               <span style={{fontSize:13,color:C.amber,fontWeight:500,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{imageFile.name}</span>
-              <button onClick={handleLogImage} disabled={logLoading} style={{padding:"8px 14px",backgroundColor:logLoading?"#C8D5D1":C.green,color:C.bg,border:"none",borderRadius:8,fontSize:12,fontWeight:500,cursor:logLoading?"not-allowed":"pointer"}}>{logLoading?"Analysing…":"Analyse"}</button>
+              <button onClick={handleLogImage} disabled={logLoading} style={{padding:"8px 14px",backgroundColor:logLoading?"#C8D5D1":C.green,color:C.bg,border:"none",borderRadius:8,fontSize:12,fontWeight:500,cursor:logLoading?"not-allowed":"pointer"}}>{logLoading?t("myday.analysing"):t("myday.analyse")}</button>
               <button onClick={()=>{setImageFile(null);setPhotoMode(false);}} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:18}}>×</button>
             </div>
           )}
@@ -785,18 +849,18 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         {/* Water tracker */}
         <div style={{...card,padding:"14px 16px"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-            <div style={{display:"flex",alignItems:"center",gap:6}}><DropIcon size={16} color={C.slate}/><span style={{fontFamily:serif,fontSize:13,fontWeight:600,color:C.text}}>Water · {waterMl>=1000?(waterMl/1000).toFixed(1)+"L":waterMl+"ml"} / {targets?Math.round(targets.water_ml/1000)+"L":"2.5L"}</span></div>
+            <div style={{display:"flex",alignItems:"center",gap:6}}><DropIcon size={16} color={C.slate}/><span style={{fontFamily:serif,fontSize:13,fontWeight:600,color:C.text}}>{t("me.targets.water")} · {waterMl>=1000?(waterMl/1000).toFixed(1)+"L":waterMl+"ml"} / {targets?Math.round(targets.water_ml/1000)+"L":"2.5L"}</span></div>
             <span style={{fontSize:11,color:C.slate,fontWeight:500}}>{targets?Math.round((waterMl/(targets.water_ml||2500))*100):0}%</span>
           </div>
           <div style={{height:4,backgroundColor:C.track,borderRadius:10,marginBottom:10,overflow:"hidden"}}><div style={{width:`${Math.min((waterMl/(targets?.water_ml||2500))*100,100)}%`,height:"100%",backgroundColor:C.slate,borderRadius:10,transition:"width 0.6s ease"}}/></div>
           <div style={{display:"flex",gap:6}}>
             {[150,250,500].map(ml=><button key={ml} onClick={()=>addWater(ml)} style={{flex:1,padding:"9px 0",borderRadius:9,border:`1px solid ${C.green}`,backgroundColor:"transparent",color:C.green,fontSize:12,fontWeight:500,cursor:"pointer"}}>+{ml}ml</button>)}
-            <button onClick={()=>setShowOtherWater(v=>!v)} style={{flex:1,padding:"9px 0",borderRadius:9,border:`1px solid ${C.green}`,backgroundColor:"transparent",color:C.green,fontSize:12,cursor:"pointer"}}>Other</button>
+            <button onClick={()=>setShowOtherWater(v=>!v)} style={{flex:1,padding:"9px 0",borderRadius:9,border:`1px solid ${C.green}`,backgroundColor:"transparent",color:C.green,fontSize:12,cursor:"pointer"}}>{t("me.fasting.other")}</button>
           </div>
           {showOtherWater&&(
             <div style={{display:"flex",gap:6,marginTop:8,animation:"fadeIn 0.2s ease"}}>
-              <input type="number" min="1" max="5000" placeholder="Amount in ml" value={customWaterMl} onChange={e=>setCustomWaterMl(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&Number(customWaterMl)>0){addWater(Number(customWaterMl));setCustomWaterMl("");setShowOtherWater(false);}}} style={{...inp,flex:1}}/>
-              <button onClick={()=>{if(Number(customWaterMl)>0){addWater(Number(customWaterMl));setCustomWaterMl("");setShowOtherWater(false);}}} style={{padding:"10px 16px",backgroundColor:customWaterMl?C.green:C.track,color:customWaterMl?C.bg:C.muted,border:"none",borderRadius:9,fontSize:13,fontWeight:500,cursor:customWaterMl?"pointer":"not-allowed",transition:"background-color 0.15s"}}>Add</button>
+              <input type="number" min="1" max="5000" placeholder={t("myday.water.amountPlaceholder")} value={customWaterMl} onChange={e=>setCustomWaterMl(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&Number(customWaterMl)>0){addWater(Number(customWaterMl));setCustomWaterMl("");setShowOtherWater(false);}}} style={{...inp,flex:1}}/>
+              <button onClick={()=>{if(Number(customWaterMl)>0){addWater(Number(customWaterMl));setCustomWaterMl("");setShowOtherWater(false);}}} style={{padding:"10px 16px",backgroundColor:customWaterMl?C.green:C.track,color:customWaterMl?C.bg:C.muted,border:"none",borderRadius:9,fontSize:13,fontWeight:500,cursor:customWaterMl?"pointer":"not-allowed",transition:"background-color 0.15s"}}>{t("boost.add")}</button>
             </div>
           )}
         </div>
@@ -806,30 +870,30 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <LeafDecor size={16}/>
-              <h3 style={{fontFamily:serif,fontSize:18,color:C.green,fontWeight:600,margin:0}}>Today's log</h3>
-              <button onClick={clearTodayMeals} style={{marginLeft:"auto",fontSize:11,color:C.error,background:"none",border:"none",cursor:"pointer"}}>Clear all</button>
+              <h3 style={{fontFamily:serif,fontSize:18,color:C.green,fontWeight:600,margin:0}}>{t("myday.log.title")}</h3>
+              <button onClick={clearTodayMeals} style={{marginLeft:"auto",fontSize:11,color:C.error,background:"none",border:"none",cursor:"pointer"}}>{t("myday.log.clearAll")}</button>
             </div>
             {mealGroups.map(group=>{
               const items=grouped[group]||[];
               if(!items.length) return null;
               return(
                 <div key={group} style={{...card,overflow:"hidden"}}>
-                  <div style={{padding:"9px 14px 7px",borderBottom:`1px solid ${C.border}`}}><span style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em"}}>{group}</span></div>
+                  <div style={{padding:"9px 14px 7px",borderBottom:`1px solid ${C.border}`}}><span style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em"}}>{t(`myday.mealGroup.${group}`)}</span></div>
                   {items.map((entry,idx)=>(
                     <div key={entry.id}>
                       {idx>0&&<div style={{height:1,backgroundColor:C.border,margin:"0 14px"}}/>}
                       {editingId===entry.id?(
                         <div style={{padding:"12px 14px",display:"flex",flexDirection:"column",gap:8}}>
-                          <input style={inp} value={editFields.name} onChange={e=>setEditFields(f=>({...f,name:e.target.value}))} placeholder="Name"/>
+                          <input style={inp} value={editFields.name} onChange={e=>setEditFields(f=>({...f,name:e.target.value}))} placeholder={t("me.field.name")}/>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6}}>
                             {[["calories","kcal"],["protein_g","prot"],["carbs_g","carbs"],["fat_g","fat"]].map(([k,l])=>(
                               <div key={k}><label style={{fontSize:10,color:C.muted,display:"block",marginBottom:3}}>{l}</label><input type="number" style={{...inp,padding:"8px 10px",fontSize:13}} value={editFields[k]} onChange={e=>setEditFields(f=>({...f,[k]:e.target.value}))}/></div>
                             ))}
                           </div>
-                          <input style={inp} value={editFields.notes} onChange={e=>setEditFields(f=>({...f,notes:e.target.value}))} placeholder="Portion notes"/>
+                          <input style={inp} value={editFields.notes} onChange={e=>setEditFields(f=>({...f,notes:e.target.value}))} placeholder={t("myday.log.portionNotes")}/>
                           <div style={{display:"flex",gap:8}}>
-                            <button onClick={()=>saveEdit(entry.id)} style={{flex:2,padding:"10px",backgroundColor:C.green,color:C.bg,border:"none",borderRadius:9,fontSize:13,fontWeight:500,cursor:"pointer"}}>Save</button>
-                            <button onClick={()=>setEditingId(null)} style={{flex:1,padding:"10px",backgroundColor:"transparent",color:C.green,border:`1px solid ${C.green}`,borderRadius:9,fontSize:13,cursor:"pointer"}}>Cancel</button>
+                            <button onClick={()=>saveEdit(entry.id)} style={{flex:2,padding:"10px",backgroundColor:C.green,color:C.bg,border:"none",borderRadius:9,fontSize:13,fontWeight:500,cursor:"pointer"}}>{t("common.save")}</button>
+                            <button onClick={()=>setEditingId(null)} style={{flex:1,padding:"10px",backgroundColor:"transparent",color:C.green,border:`1px solid ${C.green}`,borderRadius:9,fontSize:13,cursor:"pointer"}}>{t("common.cancel")}</button>
                           </div>
                         </div>
                       ):(
@@ -838,7 +902,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                           <div style={{flex:1,minWidth:0}}>
                             <p style={{fontSize:13,color:C.text,fontWeight:500,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{entry.name}</p>
                             {entry.notes&&<p style={{fontSize:11,color:C.muted,margin:"1px 0 0"}}>{entry.notes}</p>}
-                            {entry.noraComment&&<p style={{fontSize:11,color:C.muted,fontStyle:"italic",margin:"4px 0 0",lineHeight:1.5}}><span style={{fontWeight:600,color:C.sage,fontStyle:"normal"}}>Nora </span>{entry.noraComment}</p>}
+                            {entry.noraComment&&<p style={{fontSize:11,color:C.muted,fontStyle:"italic",margin:"4px 0 0",lineHeight:1.5}}><span style={{fontWeight:600,color:C.sage,fontStyle:"normal"}}>{t("myday.noraPrefix")} </span>{entry.noraComment}</p>}
                           </div>
                           <span style={{fontSize:13,fontWeight:600,color:C.text,flexShrink:0}}>{Math.abs(Math.round(entry.calories))}<span style={{fontSize:11,color:C.muted,fontWeight:400}}> kcal{entry.estimated?" ~":""}</span></span>
                           <button onClick={()=>startEdit(entry)} style={{background:"none",border:"none",cursor:"pointer",padding:4,flexShrink:0}}><EditIcon size={13} color={C.muted}/></button>
@@ -858,8 +922,8 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <MovementIcon size={15} color={C.sage}/>
-              <h3 style={{fontFamily:serif,fontSize:18,color:C.green,fontWeight:600,margin:0}}>Movement</h3>
-              <span style={{marginLeft:"auto",fontSize:12,fontWeight:600,color:C.sage}}>−{Math.round(burnedCal)} kcal today</span>
+              <h3 style={{fontFamily:serif,fontSize:18,color:C.green,fontWeight:600,margin:0}}>{t("myday.movement.title")}</h3>
+              <span style={{marginLeft:"auto",fontSize:12,fontWeight:600,color:C.sage}}>−{Math.round(burnedCal)} kcal {t("myday.movement.today")}</span>
             </div>
             <div style={{...card,overflow:"hidden"}}>
               {exerE.map((entry,idx)=>(
@@ -867,16 +931,16 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                   {idx>0&&<div style={{height:1,backgroundColor:C.border,margin:"0 14px"}}/>}
                   {editingId===entry.id?(
                     <div style={{padding:"12px 14px",display:"flex",flexDirection:"column",gap:8}}>
-                      <input style={inp} value={editFields.name} onChange={e=>setEditFields(f=>({...f,name:e.target.value}))} placeholder="Name"/>
+                      <input style={inp} value={editFields.name} onChange={e=>setEditFields(f=>({...f,name:e.target.value}))} placeholder={t("me.field.name")}/>
                       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6}}>
                         {[["calories","kcal"],["protein_g","prot"],["carbs_g","carbs"],["fat_g","fat"]].map(([k,l])=>(
                           <div key={k}><label style={{fontSize:10,color:C.muted,display:"block",marginBottom:3}}>{l}</label><input type="number" style={{...inp,padding:"8px 10px",fontSize:13}} value={editFields[k]} onChange={e=>setEditFields(f=>({...f,[k]:e.target.value}))}/></div>
                         ))}
                       </div>
-                      <input style={inp} value={editFields.notes} onChange={e=>setEditFields(f=>({...f,notes:e.target.value}))} placeholder="Duration / notes"/>
+                      <input style={inp} value={editFields.notes} onChange={e=>setEditFields(f=>({...f,notes:e.target.value}))} placeholder={t("myday.log.durationNotes")}/>
                       <div style={{display:"flex",gap:8}}>
-                        <button onClick={()=>saveEdit(entry.id)} style={{flex:2,padding:"10px",backgroundColor:C.green,color:C.bg,border:"none",borderRadius:9,fontSize:13,fontWeight:500,cursor:"pointer"}}>Save</button>
-                        <button onClick={()=>setEditingId(null)} style={{flex:1,padding:"10px",backgroundColor:"transparent",color:C.green,border:`1px solid ${C.green}`,borderRadius:9,fontSize:13,cursor:"pointer"}}>Cancel</button>
+                        <button onClick={()=>saveEdit(entry.id)} style={{flex:2,padding:"10px",backgroundColor:C.green,color:C.bg,border:"none",borderRadius:9,fontSize:13,fontWeight:500,cursor:"pointer"}}>{t("common.save")}</button>
+                        <button onClick={()=>setEditingId(null)} style={{flex:1,padding:"10px",backgroundColor:"transparent",color:C.green,border:`1px solid ${C.green}`,borderRadius:9,fontSize:13,cursor:"pointer"}}>{t("common.cancel")}</button>
                       </div>
                     </div>
                   ):(
@@ -904,11 +968,11 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         {isFemale&&cyclePhase&&(
           <div style={{...card,padding:"16px 18px",borderLeft:`3px solid ${cyclePhase.color}`}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-              <p style={{fontFamily:serif,fontSize:13,fontWeight:600,color:cyclePhase.color,margin:0}}>{cyclePhase.label} Phase</p>
-              <span style={{fontSize:10,color:cyclePhase.color,backgroundColor:`${cyclePhase.color}18`,padding:"2px 9px",borderRadius:20,fontWeight:600,letterSpacing:"0.04em"}}>Day {cyclePhase.day}{(cyclePhase.periodLengthEstimated||cyclePhase.cycleLengthEstimated)&&" (est.)"}</span>
+              <p style={{fontFamily:serif,fontSize:13,fontWeight:600,color:cyclePhase.color,margin:0}}>{cyclePhase.label} {t("myday.cycle.phase")}</p>
+              <span style={{fontSize:10,color:cyclePhase.color,backgroundColor:`${cyclePhase.color}18`,padding:"2px 9px",borderRadius:20,fontWeight:600,letterSpacing:"0.04em"}}>{t("myday.cycle.day")} {cyclePhase.day}{(cyclePhase.periodLengthEstimated||cyclePhase.cycleLengthEstimated)&&` (${t("myday.cycle.estimated")})`}</span>
             </div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:4}}>
-              <p style={{fontSize:9,fontWeight:700,color:cyclePhase.color,textTransform:"uppercase",letterSpacing:"0.08em",margin:0}}>✦ Cycle Insight</p>
+              <p style={{fontSize:9,fontWeight:700,color:cyclePhase.color,textTransform:"uppercase",letterSpacing:"0.08em",margin:0}}>✦ {t("myday.cycle.insight")}</p>
             </div>
             <p style={{fontFamily:serif,fontSize:12,color:C.text,margin:0,lineHeight:1.6}}>{cyclePhase.tip}</p>
           </div>
@@ -916,7 +980,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         {isFemale&&isPeri&&(
           <div style={{...card,padding:"10px 14px",borderLeft:`2px solid ${C.muted}`}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:3}}>
-              <p style={{fontSize:10,fontWeight:700,color:C.amber,textTransform:"uppercase",letterSpacing:"0.05em",margin:0}}>Hormonal balance</p>
+              <p style={{fontSize:10,fontWeight:700,color:C.amber,textTransform:"uppercase",letterSpacing:"0.05em",margin:0}}>{t("myday.hormonalBalance")}</p>
             </div>
             <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{pickDailyVariant("perimenopause_tip",hormonalTipsPool).tip}</p>
           </div>
@@ -932,7 +996,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         {showCycleInvite&&(
           <div style={{...card,padding:"10px 14px",borderLeft:`2px solid ${C.muted}`}}>
             <button onClick={()=>setActiveTab("me")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",background:"none",border:"none",padding:0,cursor:"pointer",textAlign:"left"}}>
-              <span style={{fontSize:11,color:C.muted,lineHeight:1.5}}>Nora poate ține cont de ritmul tău — activează din Me →</span>
+              <span style={{fontSize:11,color:C.muted,lineHeight:1.5}}>{t("myday.cycleInvite")} →</span>
             </button>
           </div>
         )}
@@ -940,9 +1004,9 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         {/* Today's Tip — general life/health, for everyone, independent of Biological personalisation */}
         <div style={{...card,padding:"10px 14px",borderLeft:`2px solid ${C.gold}60`}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:3}}>
-            <p style={{fontSize:9,fontWeight:700,color:C.gold,textTransform:"uppercase",letterSpacing:"0.08em",margin:0}}>✦ Today's Tip</p>
+            <p style={{fontSize:9,fontWeight:700,color:C.gold,textTransform:"uppercase",letterSpacing:"0.08em",margin:0}}>✦ {t("myday.todaysTip")}</p>
           </div>
-          <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{getDailyFact()}</p>
+          <p style={{fontSize:11,color:C.muted,margin:0,lineHeight:1.45,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{getDailyFact(language)}</p>
         </div>
 
         {/* Evening reflection — closing the day, only after ~18:00 — Nora message identity: pine card, no avatar */}
@@ -956,14 +1020,14 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         {isEvening&&eveningSummary&&(
           <div style={{...card,padding:"20px 22px",animation:"fadeIn 0.4s ease",backgroundColor:C.green,border:"none",boxShadow:"0 4px 20px rgba(31,46,38,0.20)"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:10}}>
-              <p style={{fontSize:9,fontWeight:700,color:"rgba(168,178,169,0.85)",textTransform:"uppercase",letterSpacing:"0.12em",margin:0}}>Evening Reflection</p>
+              <p style={{fontSize:9,fontWeight:700,color:"rgba(168,178,169,0.85)",textTransform:"uppercase",letterSpacing:"0.12em",margin:0}}>{t("myday.eveningReflection")}</p>
             </div>
             <p style={{fontFamily:serif,fontSize:15,fontWeight:500,color:C.ivory,lineHeight:1.75,margin:0,fontStyle:"italic"}}>{eveningSummary}</p>
           </div>
         )}
 
         <p style={{fontSize:11,color:C.muted,textAlign:"center",lineHeight:1.6,padding:"0 16px"}}>
-          Informational only, not medical advice. Talk to your doctor or a registered dietitian for guidance specific to you.
+          {t("myday.disclaimer")}
         </p>
 
       {/* ── Plate analysis modal ── */}
@@ -972,28 +1036,28 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
           <div style={{marginTop:56,flex:1,display:"flex",flexDirection:"column",backgroundColor:C.card,borderRadius:"22px 22px 0 0",overflow:"hidden"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 18px 12px",borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
               <div>
-                <p style={{fontSize:16,fontWeight:700,color:C.text,margin:0,fontFamily:serif}}>Plate Analysis</p>
-                <p style={{fontSize:12,color:C.muted,margin:"2px 0 0"}}>Claude Vision · USDA cross-reference</p>
+                <p style={{fontSize:16,fontWeight:700,color:C.text,margin:0,fontFamily:serif}}>{t("myday.plate.title")}</p>
+                <p style={{fontSize:12,color:C.muted,margin:"2px 0 0"}}>{t("myday.plate.subtitle")}</p>
               </div>
               <button onClick={closePlateModal} style={{width:32,height:32,borderRadius:"50%",border:`1px solid ${C.border}`,background:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,color:C.muted,lineHeight:1}}>×</button>
             </div>
             <div style={{overflowY:"auto",flex:1,padding:"14px 16px 32px"}}>
               {platePreviewUrl&&(
                 <div style={{width:"100%",height:200,borderRadius:16,overflow:"hidden",marginBottom:14,backgroundColor:"#000",flexShrink:0}}>
-                  <img src={platePreviewUrl} alt="Plate" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  <img src={platePreviewUrl} alt={t("myday.plate.alt")} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
                 </div>
               )}
               {plateLoad&&(
                 <div style={{textAlign:"center",padding:"36px 0"}}>
                   <div style={{width:36,height:36,border:`3px solid ${C.border}`,borderTopColor:C.green,borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 16px"}}/>
-                  <p style={{fontSize:14,fontWeight:600,color:C.text,margin:"0 0 4px"}}>Analysing your plate…</p>
-                  <p style={{fontSize:12,color:C.muted,margin:0}}>Claude Vision · USDA cross-reference</p>
+                  <p style={{fontSize:14,fontWeight:600,color:C.text,margin:"0 0 4px"}}>{t("myday.plate.analysing")}</p>
+                  <p style={{fontSize:12,color:C.muted,margin:0}}>{t("myday.plate.subtitle")}</p>
                 </div>
               )}
               {plateError&&!plateLoad&&(
                 <div style={{backgroundColor:"#FFF0F0",borderRadius:12,padding:"14px 16px",border:"1px solid #FFCCCC",marginBottom:14}}>
                   <p style={{fontSize:13,color:C.error,margin:"0 0 10px"}}>{plateError}</p>
-                  <button onClick={()=>{setPlateError("");plateFileRef.current?.click();}} style={{fontSize:12,color:C.green,background:"none",border:"none",cursor:"pointer",fontWeight:500,padding:0}}>Try another photo →</button>
+                  <button onClick={()=>{setPlateError("");plateFileRef.current?.click();}} style={{fontSize:12,color:C.green,background:"none",border:"none",cursor:"pointer",fontWeight:500,padding:0}}>{t("myday.plate.tryAnother")} →</button>
                 </div>
               )}
               {plateFoodData.length>0&&!plateLoad&&(()=>{
@@ -1015,7 +1079,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                 const totF=Math.round(adjusted.reduce((s,f)=>s+(f.fat_g||0),0)*10)/10;
                 return(
                   <>
-                    <p style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 10px"}}>Foods identified</p>
+                    <p style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 10px"}}>{t("myday.plate.foodsIdentified")}</p>
                     {adjusted.map((food,i)=>(
                       <div key={i} style={{...card,padding:"12px 14px",marginBottom:8,animation:"fadeIn 0.2s ease"}}>
                         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:8,marginBottom:8}}>
@@ -1026,7 +1090,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                           <span style={{fontSize:16,fontWeight:700,color:C.green,flexShrink:0}}>{food.kcal} kcal</span>
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
-                          <span style={{fontSize:12,color:C.muted,flexShrink:0}}>Portion:</span>
+                          <span style={{fontSize:12,color:C.muted,flexShrink:0}}>{t("myday.plate.portion")}</span>
                           <input type="number" min="1" max="2000" value={editPortions[i]||""} onChange={e=>setEditPortions(p=>({...p,[i]:e.target.value}))} style={{...inp,width:68,textAlign:"center",padding:"6px 8px",fontSize:13}} placeholder={String(food.portion_grams)}/>
                           <span style={{fontSize:12,color:C.muted}}>g</span>
                           <div style={{marginLeft:"auto",display:"flex",gap:8,flexShrink:0}}>
@@ -1038,9 +1102,9 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                       </div>
                     ))}
                     <div style={{...card,padding:"14px 16px",marginTop:6,marginBottom:14}}>
-                      <p style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 10px"}}>Total meal</p>
+                      <p style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 10px"}}>{t("myday.plate.totalMeal")}</p>
                       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
-                        {[{label:"Calories",value:totK,unit:"kcal",color:C.green},{label:"Protein",value:totP,unit:"g",color:C.gold},{label:"Carbs",value:totC,unit:"g",color:C.amber},{label:"Fat",value:totF,unit:"g",color:C.sage}].map(m=>(
+                        {[{label:t("myday.plate.calories"),value:totK,unit:"kcal",color:C.green},{label:t("me.targets.protein"),value:totP,unit:"g",color:C.gold},{label:t("me.targets.carbs"),value:totC,unit:"g",color:C.amber},{label:t("me.targets.fat"),value:totF,unit:"g",color:C.sage}].map(m=>(
                           <div key={m.label} style={{backgroundColor:C.bg,borderRadius:10,padding:"9px 4px",textAlign:"center",border:`1px solid ${C.border}`}}>
                             <p style={{fontSize:15,fontWeight:700,color:m.color,margin:0,lineHeight:1}}>{m.value}</p>
                             <p style={{fontSize:9,color:C.muted,margin:"3px 0 0"}}>{m.label}</p>
@@ -1050,7 +1114,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                     </div>
                     <button onClick={logPlateMeal} style={{width:"100%",padding:"14px",backgroundColor:C.green,color:C.bg,border:"none",borderRadius:14,fontSize:15,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-6" stroke={C.bg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      Log this meal
+                      {t("myday.plate.logMeal")}
                     </button>
                   </>
                 );
@@ -1067,8 +1131,8 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
             {/* Header */}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"16px 18px 12px",borderBottom:`1px solid ${C.border}`,flexShrink:0}}>
               <div>
-                <p style={{fontSize:16,fontWeight:700,color:C.text,margin:0}}>Scan Barcode</p>
-                <p style={{fontSize:12,color:C.muted,margin:"2px 0 0"}}>Open Food Facts · USDA FoodData Central</p>
+                <p style={{fontSize:16,fontWeight:700,color:C.text,margin:0}}>{t("myday.barcode.title")}</p>
+                <p style={{fontSize:12,color:C.muted,margin:"2px 0 0"}}>{t("myday.barcode.subtitle")}</p>
               </div>
               <button onClick={closeBarcodeModal} style={{width:32,height:32,borderRadius:"50%",border:`1px solid ${C.border}`,background:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,color:C.muted,lineHeight:1}}>×</button>
             </div>
@@ -1085,7 +1149,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                     </div>
                   </div>
                   <div style={{position:"absolute",bottom:10,left:0,right:0,textAlign:"center"}}>
-                    <span style={{fontSize:12,color:"#fff",backgroundColor:"rgba(0,0,0,0.55)",padding:"4px 14px",borderRadius:20}}>Scanning automatically…</span>
+                    <span style={{fontSize:12,color:"#fff",backgroundColor:"rgba(0,0,0,0.55)",padding:"4px 14px",borderRadius:20}}>{t("myday.barcode.scanning")}</span>
                   </div>
                 </div>
               )}
@@ -1094,17 +1158,17 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
               {!barcodeResult && (
                 <div style={{marginBottom:14}}>
                   <p style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 8px"}}>
-                    {cameraActive ? "Or enter barcode manually" : "Enter barcode number"}
+                    {cameraActive ? t("myday.barcode.orManual") : t("myday.barcode.enterNumber")}
                   </p>
                   <div style={{display:"flex",gap:8}}>
-                    <input type="number" placeholder="e.g. 5000112637922" value={manualBarcode}
+                    <input type="number" placeholder={t("myday.barcode.numberPlaceholder")} value={manualBarcode}
                       onChange={e=>setManualBarcode(e.target.value)}
                       onKeyDown={e=>{if(e.key==="Enter"&&manualBarcode.length>=8) lookupBarcode(manualBarcode);}}
                       style={{...inp,flex:1,appearance:"textfield"}}/>
                     <button onClick={()=>{if(manualBarcode.length>=8) lookupBarcode(manualBarcode);}}
                       disabled={manualBarcode.length<8||barcodeLoad}
                       style={{padding:"10px 16px",backgroundColor:manualBarcode.length>=8?C.green:"#C8D5D1",color:C.bg,border:"none",borderRadius:9,fontSize:13,fontWeight:500,cursor:manualBarcode.length>=8?"pointer":"not-allowed"}}>
-                      Look up
+                      {t("myday.barcode.lookUp")}
                     </button>
                   </div>
                 </div>
@@ -1114,7 +1178,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
               {barcodeLoad && (
                 <div style={{textAlign:"center",padding:"36px 0"}}>
                   <div style={{width:28,height:28,border:`2.5px solid ${C.border}`,borderTopColor:C.green,borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 12px"}}/>
-                  <p style={{fontSize:13,color:C.muted,margin:0}}>Looking up product…</p>
+                  <p style={{fontSize:13,color:C.muted,margin:0}}>{t("myday.barcode.lookingUp")}</p>
                 </div>
               )}
 
@@ -1122,33 +1186,33 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
               {barcodeError && !barcodeLoad && (
                 <div style={{backgroundColor:`${C.error}14`,borderRadius:12,padding:"14px 16px",marginBottom:14,animation:"fadeIn 0.2s ease"}}>
                   <p style={{fontSize:13,color:C.error,margin:"0 0 8px"}}>{barcodeError}</p>
-                  <button onClick={()=>{setBarcodeError("");setManualBarcode("");startBarcodeCamera();}} style={{fontSize:12,color:C.green,background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:600}}>Try scanning again</button>
+                  <button onClick={()=>{setBarcodeError("");setManualBarcode("");startBarcodeCamera();}} style={{fontSize:12,color:C.green,background:"none",border:"none",cursor:"pointer",padding:0,fontWeight:600}}>{t("myday.barcode.tryAgain")}</button>
                 </div>
               )}
 
               {/* Manual add — no source had this barcode */}
               {manualAddOpen && !barcodeLoad && (
                 <div style={{...card,padding:"16px",marginBottom:14,animation:"fadeIn 0.2s ease"}}>
-                  <p style={{fontSize:13,color:C.text,fontWeight:600,margin:"0 0 3px"}}>Product not found</p>
-                  <p style={{fontSize:12,color:C.muted,margin:"0 0 14px",lineHeight:1.5}}>Add it once — Nora remembers it for next time, for you and everyone else who scans this code.</p>
+                  <p style={{fontSize:13,color:C.text,fontWeight:600,margin:"0 0 3px"}}>{t("myday.barcode.notFound")}</p>
+                  <p style={{fontSize:12,color:C.muted,margin:"0 0 14px",lineHeight:1.5}}>{t("myday.barcode.notFoundDesc")}</p>
                   <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                    <input placeholder="Product name" value={manualAddForm.name} onChange={e=>setManualAddForm(f=>({...f,name:e.target.value}))} style={inp}/>
+                    <input placeholder={t("myday.barcode.productName")} value={manualAddForm.name} onChange={e=>setManualAddForm(f=>({...f,name:e.target.value}))} style={inp}/>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                      <input type="number" placeholder="Calories /100g" value={manualAddForm.kcal} onChange={e=>setManualAddForm(f=>({...f,kcal:e.target.value}))} style={inp}/>
-                      <input type="number" placeholder="Protein g /100g" value={manualAddForm.protein} onChange={e=>setManualAddForm(f=>({...f,protein:e.target.value}))} style={inp}/>
-                      <input type="number" placeholder="Carbs g /100g" value={manualAddForm.carbs} onChange={e=>setManualAddForm(f=>({...f,carbs:e.target.value}))} style={inp}/>
-                      <input type="number" placeholder="Fat g /100g" value={manualAddForm.fat} onChange={e=>setManualAddForm(f=>({...f,fat:e.target.value}))} style={inp}/>
+                      <input type="number" placeholder={t("myday.barcode.caloriesPer100")} value={manualAddForm.kcal} onChange={e=>setManualAddForm(f=>({...f,kcal:e.target.value}))} style={inp}/>
+                      <input type="number" placeholder={t("myday.barcode.proteinPer100")} value={manualAddForm.protein} onChange={e=>setManualAddForm(f=>({...f,protein:e.target.value}))} style={inp}/>
+                      <input type="number" placeholder={t("myday.barcode.carbsPer100")} value={manualAddForm.carbs} onChange={e=>setManualAddForm(f=>({...f,carbs:e.target.value}))} style={inp}/>
+                      <input type="number" placeholder={t("myday.barcode.fatPer100")} value={manualAddForm.fat} onChange={e=>setManualAddForm(f=>({...f,fat:e.target.value}))} style={inp}/>
                     </div>
                   </div>
                   {manualAddError && <p style={{fontSize:12,color:C.error,margin:"10px 0 0"}}>{manualAddError}</p>}
-                  <button onClick={saveManualBarcodeEntry} disabled={manualAddSaving} style={{width:"100%",marginTop:12,padding:"12px",backgroundColor:manualAddSaving?"#C8D5D1":C.green,color:C.bg,border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:manualAddSaving?"not-allowed":"pointer"}}>{manualAddSaving?"Saving…":"Save & log"}</button>
-                  <button onClick={()=>{setManualAddOpen(false);setManualBarcode("");startBarcodeCamera();}} style={{width:"100%",marginTop:8,padding:"10px",background:"none",color:C.muted,border:"none",fontSize:12,cursor:"pointer"}}>Try scanning again instead</button>
+                  <button onClick={saveManualBarcodeEntry} disabled={manualAddSaving} style={{width:"100%",marginTop:12,padding:"12px",backgroundColor:manualAddSaving?"#C8D5D1":C.green,color:C.bg,border:"none",borderRadius:10,fontSize:13,fontWeight:600,cursor:manualAddSaving?"not-allowed":"pointer"}}>{manualAddSaving?t("myday.barcode.saving"):t("myday.barcode.saveAndLog")}</button>
+                  <button onClick={()=>{setManualAddOpen(false);setManualBarcode("");startBarcodeCamera();}} style={{width:"100%",marginTop:8,padding:"10px",background:"none",color:C.muted,border:"none",fontSize:12,cursor:"pointer"}}>{t("myday.barcode.tryAgainInstead")}</button>
                 </div>
               )}
 
               {/* Thanks for a manual contribution — shown once, above the logged result */}
               {manualAddThanks && barcodeResult && !barcodeLoad && (
-                <p style={{fontSize:12,color:C.sage,margin:"0 0 10px",fontStyle:"italic"}}>Added — thank you, this helps someone else log this too.</p>
+                <p style={{fontSize:12,color:C.sage,margin:"0 0 10px",fontStyle:"italic"}}>{t("myday.barcode.thanks")}</p>
               )}
 
               {/* Product result */}
@@ -1168,7 +1232,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                       <div style={{flex:1,minWidth:0}}>
                         {barcodeResult.brand && <p style={{fontSize:11,color:C.muted,margin:"0 0 3px"}}>{barcodeResult.brand}</p>}
                         <p style={{fontSize:16,fontWeight:700,color:C.text,margin:"0 0 3px",lineHeight:1.3}}>{barcodeResult.name}</p>
-                        <p style={{fontSize:11,color:C.muted,margin:0}}>per 100g · {barcodeResult.source}</p>
+                        <p style={{fontSize:11,color:C.muted,margin:0}}>{t("myday.barcode.per100g")} · {barcodeResult.source}</p>
                       </div>
                       {barcodeResult.nutriScore && (() => {
                         const bg={A:"#00803E",B:"#85BB2F",C:"#FFCC00",D:"#FF6600",E:"#FF0000"}[barcodeResult.nutriScore]||C.muted;
@@ -1182,19 +1246,19 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                     </div>
                     {/* Amount consumed */}
                     <div style={{marginBottom:12}}>
-                      <p style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.05em",margin:"0 0 6px"}}>Amount consumed</p>
+                      <p style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.05em",margin:"0 0 6px"}}>{t("myday.barcode.amountConsumed")}</p>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
                         <input type="number" value={barcodeGrams} onChange={e=>setBarcodeGrams(e.target.value)} style={{...inp,width:90,flexShrink:0}}/>
-                        <span style={{fontSize:13,color:C.muted}}>grams</span>
+                        <span style={{fontSize:13,color:C.muted}}>{t("myday.barcode.grams")}</span>
                       </div>
                     </div>
                     {/* Macros — scaled to amount consumed */}
                     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:12}}>
                       {[
-                        {label:"Calories",value:Math.round(barcodeResult.kcal*factor),unit:"kcal",color:C.green},
-                        {label:"Protein", value:Math.round(barcodeResult.protein*factor*10)/10,unit:"g", color:C.gold},
-                        {label:"Carbs",   value:Math.round(barcodeResult.carbs*factor*10)/10,unit:"g",   color:C.amber},
-                        {label:"Fat",     value:Math.round(barcodeResult.fat*factor*10)/10,unit:"g",     color:C.sage},
+                        {label:t("myday.plate.calories"),value:Math.round(barcodeResult.kcal*factor),unit:"kcal",color:C.green},
+                        {label:t("me.targets.protein"), value:Math.round(barcodeResult.protein*factor*10)/10,unit:"g", color:C.gold},
+                        {label:t("me.targets.carbs"),   value:Math.round(barcodeResult.carbs*factor*10)/10,unit:"g",   color:C.amber},
+                        {label:t("me.targets.fat"),     value:Math.round(barcodeResult.fat*factor*10)/10,unit:"g",     color:C.sage},
                       ].map(m=>(
                         <div key={m.label} style={{backgroundColor:C.bg,borderRadius:10,padding:"9px 4px",textAlign:"center",border:`1px solid ${C.border}`}}>
                           <p style={{fontSize:15,fontWeight:700,color:m.color,margin:0,lineHeight:1}}>{m.value}</p>
@@ -1205,18 +1269,18 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
                     {/* Ingredients */}
                     {barcodeResult.ingredients && (
                       <div style={{marginBottom:12}}>
-                        <p style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.05em",margin:"0 0 6px"}}>Ingredients</p>
+                        <p style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.05em",margin:"0 0 6px"}}>{t("myday.barcode.ingredients")}</p>
                         <p style={{fontSize:11,color:C.text,margin:0,lineHeight:1.65,backgroundColor:C.bg,borderRadius:9,padding:"10px 12px",border:`1px solid ${C.border}`}}>{barcodeResult.ingredients}</p>
                       </div>
                     )}
                     {/* Log button */}
                     <button onClick={logBarcodeProduct} style={{width:"100%",padding:"13px",backgroundColor:C.green,color:C.bg,border:"none",borderRadius:12,fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8l4 4 6-6" stroke={C.bg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      Add to today's log
+                      {t("myday.barcode.addToLog")}
                     </button>
                   </div>
                   <button onClick={()=>{setBarcodeResult(null);setBarcodeGrams("100");setBarcodeError("");setManualBarcode("");setManualAddThanks(false);startBarcodeCamera();}} style={{width:"100%",padding:"12px",backgroundColor:"transparent",color:C.green,border:`1.5px solid ${C.green}`,borderRadius:12,fontSize:13,fontWeight:500,cursor:"pointer"}}>
-                    Scan another product
+                    {t("myday.barcode.scanAnother")}
                   </button>
                 </div>
                 );
@@ -1300,35 +1364,96 @@ const CIRCADIAN_TIP_POOLS = {
   ]},
 };
 
-const circadianTipFromKey = (key) => {
-  const pool = CIRCADIAN_TIP_POOLS[key];
+// Romanian overlay — same keys/shape as CIRCADIAN_TIP_POOLS, picked by language in circadianTipFromKey().
+const CIRCADIAN_TIP_POOLS_RO = {
+  overnightRest: { icon:"🌙", title:"Odihnă peste noapte", tips:[
+    "Somnul de calitate e momentul în care corpul se reconstruiește și hormonii se resetează. Protejează această fereastră de recuperare.",
+    "Hormonul de creștere atinge vârful în somnul profund timpuriu — o oră de culcare constantă face mai mult pentru recuperare decât orice supliment.",
+    "Temperatura centrală a corpului scade pentru a permite somnul profund. O cameră răcoroasă și întunecată susține asta mai mult decât realizează majoritatea oamenilor.",
+    "Glicemia se stabilizează natural peste noapte atunci când somnul e neîntrerupt — ecranele și gustările târzii lucrează împotriva acestui proces.",
+    "Sistemul glimfatic elimină deșeurile metabolice din creier aproape exclusiv în timpul somnului profund.",
+  ]},
+  wakeLight: { icon:"🌅", title:"Trezire și lumină", tips:[
+    "Ieși afară în primele 30 de minute de la răsărit — lumina naturală ancorează ceasul tău circadian și crește serotonina.",
+    "Expunerea la lumină de dimineață îți setează ritmul de cortizol pentru toată ziua — chiar și un cer înnorat oferă suficient lux.",
+    "Zece minute de lumină de afară bat orice bec de interior pentru semnalizarea circadiană — intensitatea contează mai mult decât durata în interior.",
+    "Amânarea expunerii la lumina de dimineață împinge tot ciclul tău somn-veghe mai târziu — consecvența aici se acumulează în timp.",
+    "Combinarea luminii de dimineață cu mișcarea — chiar și o plimbare scurtă — amplifică semnalul de vigilență către creier.",
+  ]},
+  breakfast: { icon:"🍳", title:"Fereastra micului dejun", tips:[
+    "Mănâncă în prima oră de la trezire. Proteinele la micul dejun stabilizează glicemia și reduc poftele toată ziua.",
+    "Un mic dejun bogat în proteine atenuează căderea de energie de la mijlocul dimineții mai bine decât unul bogat în carbohidrați.",
+    "Ruperea postului cu fibre și proteine — nu doar carbohidrați — stabilizează răspunsul la insulină timp de ore întregi.",
+    "Ouăle, iaurtul sau leguminoasele la micul dejun susțin sațietatea mai mult timp decât cerealele sau produsele de patiserie.",
+    "Prima masă dă tonul pentru controlul glicemiei pentru restul zilei — a începe cu proteine ajută.",
+  ]},
+  peakMetabolism: { icon:"☀️", title:"Metabolism la vârf", tips:[
+    "Corpul tău procesează nutrienții cel mai eficient acum — fă din asta masa ta cea mai nutritivă.",
+    "Sensibilitatea la insulină tinde să atingă vârful în jurul prânzului, făcând din asta o fereastră bună pentru cea mai mare masă a ta.",
+    "Activitatea enzimelor digestive este de obicei la maxim în această fereastră — o masă mai consistentă, bogată în nutrienți, e bine tolerată acum.",
+    "Temperatura centrală și rata metabolică sunt ușor mai ridicate la prânz, susținând procesarea eficientă a nutrienților.",
+    "Aceasta e o fereastră puternică pentru mese bogate în proteine — sinteza proteinelor musculare răspunde bine la aportul de la prânz.",
+  ]},
+  afternoonFuel: { icon:"🌤", title:"Combustibil de după-amiază", tips:[
+    "O gustare cu proteine și carbohidrați complecși previne căderea de energie de la ora 15. Evită zahărul rafinat.",
+    "Glicemia scade natural la începutul după-amiezii — combinarea proteinelor cu fibrele atenuează căderea.",
+    "Un pumn de nuci sau semințe cu fructe e o alegere de după-amiază mai stabilă decât ceva dulce.",
+    "Cofeina după ora 14 poate încă circula la ora culcării — merită să-ți programezi ultima cană mai devreme.",
+    "O plimbare scurtă după o gustare de după-amiază ajută la direcționarea glucozei spre mușchi în loc de depozitare.",
+  ]},
+  dinnerWindow: { icon:"🌆", title:"Fereastra cinei", tips:[
+    "Vizează să termini de mâncat cu 2-3 ore înainte de somn pentru a susține melatonina și o odihnă mai profundă.",
+    "O cină mai ușoară, luată mai devreme, tinde să producă un somn mai reparator decât una târzie și grea.",
+    "Producția de melatonină e suprimată de digestie — o cină mai devreme îi dă corpului tău un avans pentru relaxare.",
+    "Carbohidrații complecși la cină, în porții moderate, pot susține serotonina și o tranziție mai ușoară spre somn.",
+    "Alcoolul la cină fragmentează arhitectura somnului mai târziu în noapte, chiar dacă la început se simte relaxant.",
+  ]},
+  windDown: { icon:"🌇", title:"Relaxare", tips:[
+    "Estompează luminile și redu luminozitatea ecranelor. Producția de melatonină începe pe măsură ce lumina scade.",
+    "Lumina albastră seara este cel mai puternic semnal care întârzie melatonina — o lumină mai caldă și mai slabă o ajută să apară.",
+    "O plimbare scurtă sau întinderi ușoare acum susțin digestia fără stimularea unui antrenament complet.",
+    "Ceaiul din plante — mușețel sau valeriană — poate face parte dintr-un ritual liniștitor de relaxare, fără perturbarea cofeinei.",
+    "Menținerea dormitorului mai răcoros în această fereastră pregătește scăderea temperaturii corporale de care depinde somnul profund.",
+  ]},
+  overnightFast: { icon:"🌙", title:"Post peste noapte", tips:[
+    "Apa și ceaiul din plante susțin recuperarea celulară fără a întrerupe resetarea ta metabolică.",
+    "Postul de peste noapte oferă digestiei o odihnă reală — majoritatea lucrului de reparare care are loc acum nu are nevoie de combustibil.",
+    "Dacă setea te trezește, apa e suficientă — un pahar plin rareori perturbă somnul așa cum o face mâncarea.",
+    "Această fereastră e momentul în care autofagia — procesul de curățare celulară al corpului — se crede că e cea mai activă.",
+    "Menținerea hidratării înainte de culcare, nu în timpul nopții, evită perturbarea somnului cu vizite la baie.",
+  ]},
+};
+
+const circadianTipFromKey = (key, lang) => {
+  const pool = (lang === "ro" ? CIRCADIAN_TIP_POOLS_RO : CIRCADIAN_TIP_POOLS)[key];
   return { icon: pool.icon, title: pool.title, tip: pickDailyVariant(`circadian_${key}`, pool.tips) };
 };
 
-function computeCircadianTip(srH, ssH) {
+function computeCircadianTip(srH, ssH, lang) {
   const now = new Date();
   const h = now.getHours() + now.getMinutes() / 60;
   const dayLen = ssH - srH;
-  if (h < srH - 0.5) return circadianTipFromKey("overnightRest");
-  if (h < srH + 0.75) return circadianTipFromKey("wakeLight");
-  if (h < srH + 2.5)  return circadianTipFromKey("breakfast");
-  if (h < srH + dayLen * 0.45) return circadianTipFromKey("peakMetabolism");
-  if (h < srH + dayLen * 0.62) return circadianTipFromKey("afternoonFuel");
-  if (h < ssH)                  return circadianTipFromKey("dinnerWindow");
-  if (h < ssH + 1.5)            return circadianTipFromKey("windDown");
-  return                               circadianTipFromKey("overnightFast");
+  if (h < srH - 0.5) return circadianTipFromKey("overnightRest", lang);
+  if (h < srH + 0.75) return circadianTipFromKey("wakeLight", lang);
+  if (h < srH + 2.5)  return circadianTipFromKey("breakfast", lang);
+  if (h < srH + dayLen * 0.45) return circadianTipFromKey("peakMetabolism", lang);
+  if (h < srH + dayLen * 0.62) return circadianTipFromKey("afternoonFuel", lang);
+  if (h < ssH)                  return circadianTipFromKey("dinnerWindow", lang);
+  if (h < ssH + 1.5)            return circadianTipFromKey("windDown", lang);
+  return                               circadianTipFromKey("overnightFast", lang);
 }
 
-function getFallbackCircadianTip() {
+function getFallbackCircadianTip(lang) {
   const h = new Date().getHours() + new Date().getMinutes() / 60;
-  if (h >= 6  && h < 10) return circadianTipFromKey("breakfast");
-  if (h >= 10 && h < 14) return circadianTipFromKey("peakMetabolism");
-  if (h >= 14 && h < 17) return circadianTipFromKey("afternoonFuel");
-  if (h >= 17 && h < 21) return circadianTipFromKey("dinnerWindow");
-  return                        circadianTipFromKey("overnightFast");
+  if (h >= 6  && h < 10) return circadianTipFromKey("breakfast", lang);
+  if (h >= 10 && h < 14) return circadianTipFromKey("peakMetabolism", lang);
+  if (h >= 14 && h < 17) return circadianTipFromKey("afternoonFuel", lang);
+  if (h >= 17 && h < 21) return circadianTipFromKey("dinnerWindow", lang);
+  return                        circadianTipFromKey("overnightFast", lang);
 }
 
 function EatingWindowBand({ fastingStart, fastingEnd, setActiveTab }) {
+  const { t } = useLanguage();
   const now  = new Date();
   const nowH = now.getHours() + now.getMinutes() / 60;
 
@@ -1358,10 +1483,10 @@ function EatingWindowBand({ fastingStart, fastingEnd, setActiveTab }) {
     <div style={{ ...card, padding: "14px 16px", borderLeft: `3px solid ${C.green}`, animation: "fadeIn 0.3s ease" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <p style={{ fontSize: 11, fontWeight: 700, color: C.green, textTransform: "uppercase", letterSpacing: "0.07em", margin: 0 }}>
-          🌆 Eating Window
+          🌆 {t("myday.eatingWindow.title")}
         </p>
         <button onClick={() => setActiveTab("me")} style={{ background: "none", border: "none", color: C.muted, fontSize: 10, cursor: "pointer", padding: 0, fontFamily: sans, textDecoration: "underline", textUnderlineOffset: 2, whiteSpace: "nowrap" }}>
-          Fasting settings →
+          {t("myday.eatingWindow.settings")} →
         </button>
       </div>
 
@@ -1409,9 +1534,9 @@ function EatingWindowBand({ fastingStart, fastingEnd, setActiveTab }) {
       {/* Legend */}
       <div style={{ display: "flex", gap: 14 }}>
         {[
-          { color: C.green, label: "Eat freely" },
-          { color: C.slate, label: "Wind down" },
-          { color: C.track, label: "Overnight fast", border: `1px solid ${C.border}` },
+          { color: C.green, label: t("myday.eatingWindow.eatFreely") },
+          { color: C.slate, label: t("myday.eatingWindow.windDown") },
+          { color: C.track, label: t("myday.eatingWindow.overnightFast"), border: `1px solid ${C.border}` },
         ].map(({ color, label, border }) => (
           <div key={label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
             <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: color, border }}/>
@@ -1424,6 +1549,7 @@ function EatingWindowBand({ fastingStart, fastingEnd, setActiveTab }) {
 }
 
 function CircadianCard() {
+  const { language } = useLanguage();
   const [tip, setTip] = useState(null);
 
   useEffect(() => {
@@ -1434,11 +1560,11 @@ function CircadianCard() {
     })();
 
     if (cached) {
-      setTip(computeCircadianTip(cached.srH, cached.ssH));
+      setTip(computeCircadianTip(cached.srH, cached.ssH, language));
       return;
     }
 
-    if (!navigator.geolocation) { setTip(getFallbackCircadianTip()); return; }
+    if (!navigator.geolocation) { setTip(getFallbackCircadianTip(language)); return; }
 
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
@@ -1450,17 +1576,17 @@ function CircadianCard() {
             const ssH = parseTimeToH(data.results.sunset);
             if (srH && ssH) {
               try { localStorage.setItem("nora_circadian", JSON.stringify({ date: today, srH, ssH })); } catch {}
-              setTip(computeCircadianTip(srH, ssH));
+              setTip(computeCircadianTip(srH, ssH, language));
               return;
             }
           }
         } catch {}
-        setTip(getFallbackCircadianTip());
+        setTip(getFallbackCircadianTip(language));
       },
-      () => setTip(getFallbackCircadianTip()),
+      () => setTip(getFallbackCircadianTip(language)),
       { timeout: 5000, maximumAge: 86400000 }
     );
-  }, []);
+  }, [language]);
 
   if (!tip) return null;
 
