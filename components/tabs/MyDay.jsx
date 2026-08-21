@@ -302,8 +302,26 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
     } catch{}
   },[]);
 
+  // Cached 1x/day (date+language), same idea as the evening reflection below — without
+  // it, since MyDay fully unmounts/remounts on every tab switch (NutritionApp only renders
+  // the active tab), reopening My Day paid for a fresh Sonnet greeting every single time.
+  // The cache check and the decision to fetch happen in this ONE effect (not split across a
+  // separate cache-read effect + a sibling trigger effect, the way evening reflection does
+  // it) — on mount, sibling effects still see each other's pre-update state, so a two-effect
+  // split would race: the trigger effect would run with the stale "no greeting yet" value
+  // and call fetchGreeting() again before the cache-read effect's setGreeting had flushed,
+  // defeating the cache on every single remount.
   useEffect(()=>{
-    if(!greetingDone&&profile){setGreetingDone(true);fetchGreeting();}
+    if(greetingDone||!profile) return;
+    setGreetingDone(true);
+    try{
+      const cached=localStorage.getItem("nora_greeting");
+      if(cached){
+        const d=JSON.parse(cached);
+        if(d.date===localDateStr()&&d.language===(profile?.language||"en")){ setGreeting(d.text); return; }
+      }
+    }catch{}
+    fetchGreeting();
   },[profile]);
 
   useEffect(()=>{
@@ -604,6 +622,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         `User: ${profile?.name}, goals: ${(profile?.goals||[]).join(", ")}, activity: ${profile?.activity}. Time: ${h<12?"morning":h<17?"afternoon":"evening"}. Personalised greeting + one actionable tip.`
       );
       setGreeting(g);
+      try{localStorage.setItem("nora_greeting",JSON.stringify({date:localDateStr(),language,text:g}));}catch{}
     }catch{setGreeting(`${t("myday.greeting.fallback")}, ${profile?.name}.`);}
     setGreetingLoad(false);
   };
