@@ -12,6 +12,15 @@ Nora (nora-nutrition) este o aplicație web de wellness construită în Next.js,
 * **Date nutriționale:** Spoonacular, USDA FoodData Central, Open Food Facts
 * **Științific:** PubMed
 
+## Modele AI — convenții (decizii 21.08.2026)
+
+* **Sonnet standard: `claude-sonnet-4-5`** — folosit consecvent în toată aplicația (My Day, traducerea rețetelor, Ask Nora, onboarding, analiza foto/Vision). Nu amesteca versiuni de Sonnet (Ask Nora folosea `claude-sonnet-4-6` până azi — aliniat pe 4-5 pentru consistență, nu invers, ca să nu ating comportamentul deja testat al celorlalte funcții).
+* **Sonnet e rezervat pentru:** traduceri RO (calitate lingvistică contează — Haiku a produs erori reale de terminologie culinară, testat empiric), analiza foto/Vision, și conținutul conversațional care reprezintă vocea Norei (brief-ul din My Day, reflecția de seară, Ask Nora).
+* **Haiku (`claude-haiku-4-5-20251001`) pentru tot restul:** comentariul după logarea unei mese, recomandările Boost, fallback-ul de challenge din Ritual, generarea de smoothie/shot/desert, traducerea query-urilor de căutare — task-uri scurte, structurate, unde diferența de calitate față de Sonnet nu contează.
+* **Regula de caching:** orice apel AI declanșat la montarea unei componente TREBUIE cache-uit (`localStorage`, cheie `dată+limbă`) dacă tab-ul se poate remonta des — arhitectura randează un singur tab activ (`tabContent[activeTab]`), deci fiecare tab se demontează/remontează complet la fiecare comutare. Fără cache, costul crește cu numărul de vizite, nu cu conținut nou.
+* **Pattern corect pentru cache-ul de mai sus:** verificarea cache-ului și decizia de a apela AI-ul trebuie să fie în ACELAȘI `useEffect`, nu în două efecte separate (unul de citire-cache, altul de declanșare). Două efecte separate creează o cursă la montare: efectul de declanșare vede starea veche (goală) înainte ca efectul de citire-cache să apuce să-și propage `setState`-ul, deci sună AI-ul din nou chiar dacă exista deja o valoare cache-uită validă. Bug găsit și reparat de 3 ori azi (traducere rețete, greeting My Day, reflecție de seară) — verifică acest pattern la orice nou apel AI legat de montarea unui tab.
+* **Traducerile de rețete au cache global separat** (`recipe_translations` în Supabase) — o rețetă se traduce o singură dată, pentru toți utilizatorii, pentru totdeauna.
+
 ## Structura aplicației (taburi)
 
 * **My Day** — brief zilnic (ecran de start): salut, un insight, o acțiune recomandată, challenge-ul zilei. NU dashboard cu date duplicate.
