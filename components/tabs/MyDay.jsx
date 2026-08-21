@@ -289,28 +289,28 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
     } catch {}
   },[isFemale, profile?.biologicalTrackingEnabled]);
 
+  // Cache check and fetch decision in one effect (was split into a cache-read effect + a
+  // sibling trigger effect keyed on !eveningSummary) — on mount, the trigger effect's own
+  // closure still saw eveningSummary as "" from this render, since the cache-read effect's
+  // setEveningSummary hadn't flushed to a re-render yet, so it called fetchEveningSummary()
+  // regardless of whether a valid cached reflection existed. Same race as the recipe
+  // translation effect and the My Day greeting effect fixed earlier — same fix here.
   useEffect(()=>{
-    if(!isEvening) return;
-    try {
+    if(!profile||!isEvening||eveningSummary||eveningSummaryLoad) return;
+    try{
       const ev=localStorage.getItem("nora_evening_reflection");
       if(ev){
         const d=JSON.parse(ev);
-        // profile?.language (prop), not the language context — this effect runs once on
-        // mount, before NutritionApp's context-sync effect necessarily commits.
-        if(d.date===localDateStr() && d.language===(profile?.language||"en"))setEveningSummary(d.text);
+        if(d.date===localDateStr() && d.language===(profile?.language||"en")){ setEveningSummary(d.text); return; }
       }
-    } catch{}
-  },[]);
+    }catch{}
+    fetchEveningSummary();
+  },[profile,isEvening,eveningSummary,eveningSummaryLoad]);
 
-  // Cached 1x/day (date+language), same idea as the evening reflection below — without
-  // it, since MyDay fully unmounts/remounts on every tab switch (NutritionApp only renders
-  // the active tab), reopening My Day paid for a fresh Sonnet greeting every single time.
-  // The cache check and the decision to fetch happen in this ONE effect (not split across a
-  // separate cache-read effect + a sibling trigger effect, the way evening reflection does
-  // it) — on mount, sibling effects still see each other's pre-update state, so a two-effect
-  // split would race: the trigger effect would run with the stale "no greeting yet" value
-  // and call fetchGreeting() again before the cache-read effect's setGreeting had flushed,
-  // defeating the cache on every single remount.
+  // Cached 1x/day (date+language) — without it, since MyDay fully unmounts/remounts on every
+  // tab switch (NutritionApp only renders the active tab), reopening My Day paid for a fresh
+  // Sonnet greeting every single time. Cache check and fetch decision in one effect, same
+  // reasoning as the evening reflection effect above.
   useEffect(()=>{
     if(greetingDone||!profile) return;
     setGreetingDone(true);
@@ -323,10 +323,6 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
     }catch{}
     fetchGreeting();
   },[profile]);
-
-  useEffect(()=>{
-    if(profile&&isEvening&&!eveningSummary&&!eveningSummaryLoad) fetchEveningSummary();
-  },[profile,isEvening]);
 
   useEffect(()=>{
     try{const hd=localStorage.getItem("nora_health");if(hd)setHealthData(JSON.parse(hd));}catch{}
