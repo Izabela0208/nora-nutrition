@@ -318,6 +318,24 @@ const Spinner = () => (
   <span style={{ width:14, height:14, border:`2px solid ${G.ivory}`, borderTopColor:"transparent", borderRadius:"50%", display:"inline-block", animation:"spin 0.8s linear infinite" }}/>
 );
 
+// Pale, softly pulsing placeholders for a recipe title/steps mid-translation — no loading copy,
+// just shimmer. The real text mounts in its place once the translation lands and fades in via the
+// fadeInContent keyframe (defined in Eat's top-level <style>), instead of popping in abruptly.
+const TitleShimmer = ({ height = 20, width = "62%" }) => (
+  <div style={{ height, width, borderRadius:6, backgroundColor:G.border, animation:"shimmerPulse 1.3s ease-in-out infinite" }}/>
+);
+
+const StepsShimmer = ({ lines = 3 }) => (
+  <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+    {Array.from({ length: lines }).map((_, i) => (
+      <div key={i} style={{ display:"flex", gap:14, alignItems:"center" }}>
+        <div style={{ width:24, height:24, borderRadius:"50%", flexShrink:0, backgroundColor:G.border, animation:"shimmerPulse 1.3s ease-in-out infinite" }}/>
+        <div style={{ height:14, width: i === lines - 1 ? "50%" : "85%", borderRadius:6, backgroundColor:G.border, animation:"shimmerPulse 1.3s ease-in-out infinite" }}/>
+      </div>
+    ))}
+  </div>
+);
+
 const MacroStrip = ({ kcal, pro, carbs, fat }) => (
   <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginTop:4 }}>
     {[
@@ -694,6 +712,11 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
     } catch {}
   }, []);
 
+  // spoonId -> true while that meal's Romanian translation is in flight — read by the Today's
+  // Plan card, Week Plan preview and recipe modal to show a shimmer over the title/steps instead
+  // of the (still-English) text, with no explicit loading copy.
+  const [translatingIds, setTranslatingIds] = useState({});
+
   // Switching to Romanian re-displays the current plan(s) in place (via displayMeal, at render
   // time) — this effect only fills in the rare gap: a meal that has never been seen in Romanian
   // yet, so it has no nameDisplay/stepsDisplay cached. It reuses localizeMeals (same
@@ -722,8 +745,12 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
 
   useEffect(() => {
     if (language !== "ro" || !missingTranslations) return;
+    const planMissing = (mealPlan || []).filter(needsTr).map(m => m.spoonId);
+    const weekMissing = (weekPlan?.days || []).flatMap(d => [d.breakfast, d.lunch, d.dinner]).filter(needsTr).map(m => m.spoonId);
+    const allMissing = [...planMissing, ...weekMissing];
+    if (allMissing.length) setTranslatingIds(prev => { const n = { ...prev }; allMissing.forEach(id => { n[id] = true; }); return n; });
     (async () => {
-      if ((mealPlan || []).some(needsTr)) {
+      if (planMissing.length) {
         const translated = await localizeMeals(mealPlan, language);
         setMealPlan(translated);
         try {
@@ -731,7 +758,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
           if (tp) { const d = JSON.parse(tp); localStorage.setItem("nora_today_plan", JSON.stringify({ ...d, plan: translated })); }
         } catch {}
       }
-      if ((weekPlan?.days || []).some(d => [d.breakfast, d.lunch, d.dinner].some(needsTr))) {
+      if (weekMissing.length) {
         const flat = weekPlan.days.flatMap(d => [d.breakfast, d.lunch, d.dinner]).filter(Boolean);
         const translatedFlat = await localizeMeals(flat, language);
         let li = 0;
@@ -745,6 +772,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
         setWeekPlan(result);
         try { localStorage.setItem("nora_week_plan", JSON.stringify(result)); } catch {}
       }
+      if (allMissing.length) setTranslatingIds(prev => { const n = { ...prev }; allMissing.forEach(id => { delete n[id]; }); return n; });
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language, missingTranslations]);
@@ -1183,6 +1211,8 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
         @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(12px) } to { opacity:1; transform:translateX(-50%) translateY(0) } }
         @keyframes sectionIn { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes shimmerPulse { 0%, 100% { opacity:0.4 } 50% { opacity:0.9 } }
+        @keyframes fadeInContent { from { opacity:0 } to { opacity:1 } }
         .eat-scroll::-webkit-scrollbar { display:none }
         details summary { list-style: none; }
         details summary::-webkit-details-marker { display: none; }
@@ -1201,7 +1231,13 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
 
       {/* Recipe modal */}
       {recipeModal && (() => {
-        const rmDm = displayMeal(recipeModal.meal, language);
+        // Resolved from the live weekPlan (by day+mealType) rather than the recipeModal.meal
+        // snapshot captured at open time — so if the background RO-translation effect finishes
+        // while this modal is open, the title/steps pick it up instead of staying stuck in
+        // English. Falls back to the snapshot if the day/meal can't be found (e.g. plan changed).
+        const liveMeal = weekPlan?.days?.find(d => d.day === recipeModal.dayName)?.[recipeModal.mealType] || recipeModal.meal;
+        const rmDm = displayMeal(liveMeal, language);
+        const isTranslating = !!translatingIds[liveMeal.spoonId];
         return (
         <div onClick={() => setRecipeModal(null)} style={{ position:"fixed", inset:0, backgroundColor:"rgba(27,58,45,0.55)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }}>
           <div onClick={e => e.stopPropagation()} style={{ width:"100%", maxWidth:480, backgroundColor:G.card, borderRadius:"20px 20px 0 0", maxHeight:"90vh", display:"flex", flexDirection:"column", overflow:"hidden" }}>
@@ -1214,7 +1250,9 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
             <div style={{ padding:"16px 20px 14px", borderBottom:`1px solid ${G.border}`, display:"flex", alignItems:"flex-start", gap:12, flexShrink:0 }}>
               <div style={{ flex:1, minWidth:0 }}>
                 <span style={{ fontSize:10, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.06em" }}>{recipeModal.dayName} · {t(`eat.mealType.${recipeModal.mealType.charAt(0).toUpperCase()}${recipeModal.mealType.slice(1)}`)}</span>
-                <p style={{ fontFamily:serif, fontSize:17, fontWeight:600, color:G.text, margin:"3px 0 2px", lineHeight:1.2 }}>{recipeModal.meal.emoji} {rmDm.name}</p>
+                {isTranslating
+                  ? <div style={{ margin:"5px 0 4px" }}><TitleShimmer height={17} width="55%"/></div>
+                  : <p style={{ fontFamily:serif, fontSize:17, fontWeight:600, color:G.text, margin:"3px 0 2px", lineHeight:1.2, animation:"fadeInContent 0.4s ease" }}>{recipeModal.meal.emoji} {rmDm.name}</p>}
                 <p style={{ fontSize:11, color:G.muted, margin:0 }}>~{recipeModal.meal.calories} kcal · ~{recipeModal.meal.protein_g}g protein</p>
               </div>
               {!recipeModal.meal.image && (
@@ -1238,12 +1276,16 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                   {(rmDm.steps || []).length > 0 && (
                     <div style={{ marginBottom:20 }}>
                       <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.05em", margin:"0 0 10px" }}>{t("eat.instructions")}</p>
-                      {rmDm.steps.map((step, i) => (
-                        <div key={i} style={{ display:"flex", gap:12, marginBottom:12 }}>
-                          <div style={{ width:24, height:24, borderRadius:"50%", flexShrink:0, marginTop:1, backgroundColor:G.forest, color:G.ivory, fontSize:11, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{i+1}</div>
-                          <p style={{ fontSize:14, color:G.text, lineHeight:1.65, margin:0, paddingTop:2 }}>{step}</p>
+                      {isTranslating ? <StepsShimmer lines={Math.min(rmDm.steps.length, 5)}/> : (
+                        <div style={{ animation:"fadeInContent 0.4s ease" }}>
+                          {rmDm.steps.map((step, i) => (
+                            <div key={i} style={{ display:"flex", gap:12, marginBottom:12 }}>
+                              <div style={{ width:24, height:24, borderRadius:"50%", flexShrink:0, marginTop:1, backgroundColor:G.forest, color:G.ivory, fontSize:11, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{i+1}</div>
+                              <p style={{ fontSize:14, color:G.text, lineHeight:1.65, margin:0, paddingTop:2 }}>{step}</p>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
                   )}
                   {(recipeModal.ingredients||[]).length===0 && (rmDm.steps||[]).length===0 && (
@@ -1587,6 +1629,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                     const isLogged = !!loggedMeals[group];
                     const isFav    = savedItems.some(i => i.type === "meal" && i.data?.name === meal.name);
                     const dm       = displayMeal(meal, language);
+                    const isTranslating = !!translatingIds[meal.spoonId];
                     return (
                       <div key={group} style={{ backgroundColor:G.card, borderRadius:18, overflow:"hidden", border:`1px solid ${G.border}`, boxShadow:"0 1px 6px rgba(27,58,45,0.05)" }}>
                         <div style={{ height:3, backgroundColor:color }}/>
@@ -1597,7 +1640,9 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                           </button>
                         </div>
                         <div style={{ padding:"5px 16px 3px" }}>
-                          <p style={{ fontFamily:serif, fontSize:19, fontWeight:600, color:G.text, margin:0, lineHeight:1.25 }}>{dm.name}</p>
+                          {isTranslating
+                            ? <TitleShimmer height={22}/>
+                            : <p style={{ fontFamily:serif, fontSize:19, fontWeight:600, color:G.text, margin:0, lineHeight:1.25, animation:"fadeInContent 0.4s ease" }}>{dm.name}</p>}
                         </div>
                         <div style={{ padding:"3px 16px 13px" }}>
                           <MacroStrip kcal={meal.calories} pro={meal.protein_g} carbs={meal.carbs_g} fat={meal.fat_g}/>
@@ -1644,12 +1689,16 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                             {(dm.steps||[]).length > 0 && (
                               <div style={{ marginBottom:16 }}>
                                 <p style={{ fontSize:11, fontWeight:700, color:G.muted, textTransform:"uppercase", letterSpacing:"0.07em", margin:"0 0 12px" }}>{t("eat.instructions")}</p>
-                                {dm.steps.map((step, i) => (
-                                  <div key={i} style={{ display:"flex", gap:14, marginBottom:14 }}>
-                                    <div style={{ width:24, height:24, borderRadius:"50%", flexShrink:0, backgroundColor:color, color:G.ivory, fontSize:12, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{i+1}</div>
-                                    <p style={{ fontSize:14, color:G.text, lineHeight:1.65, margin:0, paddingTop:2 }}>{step}</p>
+                                {isTranslating ? <StepsShimmer lines={Math.min(dm.steps.length, 4)}/> : (
+                                  <div style={{ animation:"fadeInContent 0.4s ease" }}>
+                                    {dm.steps.map((step, i) => (
+                                      <div key={i} style={{ display:"flex", gap:14, marginBottom:14 }}>
+                                        <div style={{ width:24, height:24, borderRadius:"50%", flexShrink:0, backgroundColor:color, color:G.ivory, fontSize:12, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{i+1}</div>
+                                        <p style={{ fontSize:14, color:G.text, lineHeight:1.65, margin:0, paddingTop:2 }}>{step}</p>
+                                      </div>
+                                    ))}
                                   </div>
-                                ))}
+                                )}
                               </div>
                             )}
                             {meal.tip && (
@@ -1781,12 +1830,15 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
                               const logged = !!weekMealLogged[logKey];
                               const isFav = savedItems.some(i => i.type === "meal" && i.data?.name === m.name);
                               const dm = displayMeal(m, language);
+                              const isTranslating = !!translatingIds[m.spoonId];
                               return (
                                 <div key={mk} style={{ backgroundColor:G.ivory, borderRadius:12, border:`1px solid ${G.border}`, overflow:"hidden" }}>
                                   {m.image && <div style={{ width:"100%", height:160, overflow:"hidden" }}><img src={m.image} alt={dm.name} style={{ width:"100%", height:"100%", objectFit:"cover" }} loading="lazy"/></div>}
                                   <div style={{ padding:"11px 13px" }}>
                                     <span style={{ fontSize:10, fontWeight:700, color:col, textTransform:"capitalize", letterSpacing:"0.04em" }}>{t(`eat.mealType.${mk.charAt(0).toUpperCase()}${mk.slice(1)}`)}</span>
-                                    <p style={{ fontFamily:serif, fontSize:14, fontWeight:600, color:G.text, margin:"3px 0 3px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m.emoji} {dm.name}</p>
+                                    {isTranslating
+                                      ? <div style={{ margin:"5px 0 5px" }}><TitleShimmer height={16} width="70%"/></div>
+                                      : <p style={{ fontFamily:serif, fontSize:14, fontWeight:600, color:G.text, margin:"3px 0 3px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", animation:"fadeInContent 0.4s ease" }}>{m.emoji} {dm.name}</p>}
                                     <MacroStrip kcal={m.calories} pro={m.protein_g} carbs={m.carbs_g} fat={m.fat_g}/>
                                     <div style={{ display:"flex", gap:8, marginTop:8 }}>
                                       <button onClick={() => openWeekRecipe(day.day, mk, m)} style={{ fontSize:11, color:G.forest, background:"none", border:`1.5px solid ${G.forest}40`, borderRadius:7, padding:"5px 10px", cursor:"pointer", fontWeight:600, fontFamily:sans }}>{t("eat.recipe")}</button>
