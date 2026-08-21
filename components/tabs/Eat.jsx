@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { C, card, serif, sans, inp, localDateStr } from "../noraTokens";
 import { LeafDecor, SparkleIcon, CheckIcon, HeartIcon } from "../NoraIcons";
 import { SectionHeader, Collapsible } from "../NoraUI";
@@ -698,11 +698,30 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
   // time) — this effect only fills in the rare gap: a meal that has never been seen in Romanian
   // yet, so it has no nameDisplay/stepsDisplay cached. It reuses localizeMeals (same
   // /api/translate-recipe + recipe_translations cache as generation), never a fresh Spoonacular
-  // fetch. Runs once per switch to "ro" — once every meal has nameDisplay, needsTr is false for
-  // all of them and this becomes a no-op.
+  // fetch.
+  const needsTr = (m) => m && m.spoonId && !m.nameDisplay;
+
+  // A primitive (string) summary of which spoonIds still lack a Romanian translation — used as
+  // the effect's dependency instead of mealPlan/weekPlan themselves. This matters because Eat
+  // fully unmounts/remounts on every tab switch (NutritionApp only renders the active tab), so
+  // mealPlan is still null on the render where a [language]-only effect would fire right after
+  // switching to Romanian; it needs mealPlan/weekPlan as deps too, to also fire once the plan
+  // finishes loading from localStorage. But depending on mealPlan/weekPlan directly would risk an
+  // infinite loop: setMealPlan(translated) always produces a new array reference, even when a
+  // meal's translation attempt failed (localizeMeals returns the original meal unchanged), so the
+  // effect would refire, retry, fail, refire, forever. Comparing the untranslated-id string instead
+  // means the effect only refires when the SET of meals needing translation actually changes —
+  // same ids in, same string out, no rerun, no infinite retry.
+  const missingTranslations = useMemo(() => {
+    const ids = [];
+    (mealPlan || []).forEach(m => { if (needsTr(m)) ids.push(m.spoonId); });
+    (weekPlan?.days || []).forEach(d => [d.breakfast, d.lunch, d.dinner].forEach(m => { if (needsTr(m)) ids.push(m.spoonId); }));
+    return ids.join(",");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mealPlan, weekPlan]);
+
   useEffect(() => {
-    if (language !== "ro") return;
-    const needsTr = (m) => m && m.spoonId && !m.nameDisplay;
+    if (language !== "ro" || !missingTranslations) return;
     (async () => {
       if ((mealPlan || []).some(needsTr)) {
         const translated = await localizeMeals(mealPlan, language);
@@ -728,7 +747,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language]);
+  }, [language, missingTranslations]);
 
   useEffect(() => { setJuiceLimit(5); }, [juiceCat, juiceSearch]);
   useEffect(() => { setDessertLimit(5); }, [dessertCatFilter, dessertSearch]);
