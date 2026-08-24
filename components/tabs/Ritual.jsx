@@ -2008,7 +2008,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
       {/* ─── 5. CYCLE PHASE / HORMONAL RHYTHM — opt-in, mutually exclusive by sex ── */}
       {profile?.sex==="female" && localCyclePhase && (
         <div style={{ ...card }}>
-          <SectionHeader title={t("ritual.cycleInsights")} sub={`${localCyclePhase.label} ${t("eat.plan.phase")} · ${t("myday.cycle.day")} ${localCyclePhase.day}${localCyclePhase.periodLengthEstimated||localCyclePhase.cycleLengthEstimated?` (${t("myday.cycle.estimated")})`:""}`} open={open.cycle} onToggle={() => tog("cycle")} accent/>
+          <SectionHeader title={t("ritual.cycleInsights")} sub={`${language==="ro" ? `${t("eat.plan.phase")} ${localCyclePhase.label.toLowerCase()}` : `${localCyclePhase.label} ${t("eat.plan.phase")}`} · ${t("myday.cycle.day")} ${localCyclePhase.day}${localCyclePhase.periodLengthEstimated||localCyclePhase.cycleLengthEstimated?` (${t("myday.cycle.estimated")})`:""}`} open={open.cycle} onToggle={() => tog("cycle")} accent/>
           <Collapsible open={open.cycle}>
             <div style={{ padding:"0 18px 18px" }}>
               <div style={{ borderLeft:`3px solid ${localCyclePhase.color}`, paddingLeft:12, marginBottom:16 }}>

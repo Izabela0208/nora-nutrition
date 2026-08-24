@@ -983,7 +983,7 @@ export default function MyDay({ profile, targets, entries, logMeal, updateMeal, 
         {isFemale&&cyclePhase&&(
           <div style={{...card,padding:"16px 18px",borderLeft:`3px solid ${cyclePhase.color}`}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-              <p style={{fontFamily:serif,fontSize:13,fontWeight:600,color:cyclePhase.color,margin:0}}>{cyclePhase.label} {t("myday.cycle.phase")}</p>
+              <p style={{fontFamily:serif,fontSize:13,fontWeight:600,color:cyclePhase.color,margin:0}}>{language==="ro" ? `${t("myday.cycle.phase")} ${cyclePhase.label}` : `${cyclePhase.label} ${t("myday.cycle.phase")}`}</p>
               <span style={{fontSize:10,color:cyclePhase.color,backgroundColor:`${cyclePhase.color}18`,padding:"2px 9px",borderRadius:20,fontWeight:600,letterSpacing:"0.04em"}}>{t("myday.cycle.day")} {cyclePhase.day}{(cyclePhase.periodLengthEstimated||cyclePhase.cycleLengthEstimated)&&` (${t("myday.cycle.estimated")})`}</span>
             </div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:4}}>

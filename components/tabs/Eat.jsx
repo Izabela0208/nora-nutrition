@@ -1527,7 +1527,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
           <div style={{ display:"flex", flexDirection:"column", gap:16, animation:"sectionIn 0.22s ease", paddingBottom:28 }}>
           <div style={{ ...card, padding:"20px 18px 22px" }}>
             <p style={STitleStyle}>{t("eat.plan.title")}</p>
-            <p style={SDescStyle}>{t("eat.plan.desc")}{cyclePhase ? `, ${cyclePhase.label.toLowerCase()} ${t("eat.plan.phase")}` : ""}.</p>
+            <p style={SDescStyle}>{t("eat.plan.desc")}{cyclePhase ? `, ${language==="ro" ? `${t("eat.plan.phase")} ${cyclePhase.label.toLowerCase()}` : `${cyclePhase.label.toLowerCase()} ${t("eat.plan.phase")}`}` : ""}.</p>
 
             {/* Goal selector — id is stored in planGoal state and fed to the AI prompt in
                 English; only the button's displayed label is translated */}
@@ -1910,7 +1910,7 @@ export default function Eat({ profile, targets, entries, logMeal, cyclePhase }) 
           <div style={{ display:"flex", flexDirection:"column", gap:16, animation:"sectionIn 0.22s ease", paddingBottom:28 }}>
           <div style={{ ...card, padding:"20px 18px 22px" }}>
             <p style={STitleStyle}>{t("eat.section.smoothie")}</p>
-            <p style={SDescStyle}>{t("eat.smoothie.desc")}{cyclePhase ? ` ${t("eat.smoothie.andPhase")} ${cyclePhase.label.toLowerCase()} ${t("eat.plan.phase")}` : ""}.</p>
+            <p style={SDescStyle}>{t("eat.smoothie.desc")}{cyclePhase ? ` ${t("eat.smoothie.andPhase")} ${cyclePhase.label.toLowerCase()}${language==="ro" ? "" : ` ${t("eat.plan.phase")}`}` : ""}.</p>
             {!smoothie && !smoothieLoad && (
               <GBtn onClick={genSmoothie}><span style={{ fontSize:16 }}>🥤</span>{t("eat.smoothie.generate")}</GBtn>
             )}
