@@ -18,6 +18,20 @@ const trChallenge = (c, lang) => {
   return tr ? { ...c, ...tr } : c;
 };
 
+// Smooth wave through a set of {x,y} points — horizontal-tangent cubic beziers, the standard
+// "organic line chart" technique (control points at the horizontal midpoint between each pair
+// of points, so the curve never overshoots vertically). Replaces the old dot-grid.
+const smoothWavePath = (points) => {
+  if (!points || points.length < 2) return "";
+  let d = `M${points[0].x},${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i], p1 = points[i + 1];
+    const midX = (p0.x + p1.x) / 2;
+    d += ` C${midX},${p0.y} ${midX},${p1.y} ${p1.x},${p1.y}`;
+  }
+  return d;
+};
+
 // Same pattern for Library → Concepts (title/summary/body/key_points, fully original content)
 // and Library → Podcasts (description only — title/host/top_episodes are real published names,
 // never translated). category/level/frequency are NOT part of these overlays — they're small
@@ -195,74 +209,6 @@ const CHALLENGES_MALE = [
   { id:"m11", title:"Cortisol Management Protocol", category:"stress", difficulty:"Beginner", duration:"20 min", instruction:"Identify your single largest stressor. Spend 10 minutes writing what is within your control and what is not. For each controllable factor, write one concrete action. Then do 5 rounds of box breathing.", science:"Chronic elevated cortisol directly inhibits Leydig cell function, suppressing testosterone synthesis. Men with high cortisol have 30-50% lower testosterone in cross-sectional studies.", pubmedQ:"cortisol testosterone men stress", pubmedFbs:["chronic stress testosterone","cortisol Leydig cells"] },
   { id:"m12", title:"Saturated Fat for Hormones", category:"nutrition", difficulty:"Beginner", duration:"All day", instruction:"Include 2-3 servings of healthy saturated fats today: grass-fed beef, 4+ whole eggs, or full-fat dairy. Dietary cholesterol is the direct precursor to testosterone synthesis.", science:"Dietary cholesterol is converted to pregnenolone in adrenal and testicular cells - the precursor to testosterone, cortisol, and progesterone. Men on very low-fat diets consistently show lower total testosterone.", pubmedQ:"dietary fat testosterone men cholesterol", pubmedFbs:["low fat diet testosterone","saturated fat hormone"] },
 ];
-
-// Picks a stable-for-the-week variant, using the same anti-repeat rotation and storage as the
-// daily pickDailyIndex/pickDailyVariant (noraTokens) — just keyed by ISO week instead of by day.
-const pickWeeklyVariant = (poolKey, pool, weekKey) => {
-  if (typeof window === "undefined" || !pool || pool.length === 0) return pool?.[0];
-  if (pool.length === 1) return pool[0];
-  let history = {};
-  try { history = JSON.parse(localStorage.getItem("nora_tip_history") || "{}"); } catch {}
-  const entry = history[poolKey];
-  if (entry && entry.date === weekKey && pool[entry.idx]) return pool[entry.idx];
-  const recent = entry?.recent || [];
-  const candidates = pool.map((_, i) => i).filter(i => !recent.includes(i));
-  const pickFrom = candidates.length > 0 ? candidates : pool.map((_, i) => i);
-  const idx = pickFrom[Math.floor(Math.random() * pickFrom.length)];
-  history[poolKey] = { date: weekKey, idx, recent: [idx, ...recent].slice(0, Math.min(3, pool.length - 1)) };
-  try { localStorage.setItem("nora_tip_history", JSON.stringify(history)); } catch {}
-  return pool[idx];
-};
-
-// Nora's voice, by how the week went — warm at every level, never guilt-tripping the quiet weeks.
-const WEEKLY_REPORT_MESSAGES = {
-  low: [
-    "A quieter week — that's alright. Tomorrow is a fresh page, not a deadline.",
-    "Some weeks ask more of us than others. What matters is that you're still here.",
-    "A slow week isn't a lost one. Small returns count as much as big ones.",
-    "You don't owe this week an explanation. Pick one thing to return to, and start there.",
-    "Consistency isn't unbroken — it's what you come back to. This week, come back gently.",
-  ],
-  medium: [
-    "A steady week — more days met than missed. That's the shape real habits take.",
-    "You showed up more often than not this week. That's worth noticing.",
-    "Good rhythm this week, even with a few gaps. Gaps are normal; the pattern is what counts.",
-    "You're building something here — not perfect, but persistent. That's the harder, better thing.",
-    "A solid week overall. The days that didn't go to plan don't undo the ones that did.",
-  ],
-  high: [
-    "A strong week — most days met, across the board. Well built.",
-    "This is what consistency looks like when it's working. Notice how it felt.",
-    "A full week, nearly end to end. That's not luck — that's a pattern you made.",
-    "You held the line all week. Let that be evidence for the weeks that feel harder.",
-    "A quietly excellent week. Nothing flashy — just shown up, day after day.",
-  ],
-};
-// Romanian overlay — same shape/order as WEEKLY_REPORT_MESSAGES, picked by language at the
-// pickWeeklyVariant() call site so the anti-repeat index logic keeps working unchanged.
-const WEEKLY_REPORT_MESSAGES_RO = {
-  low: [
-    "O săptămână mai liniștită — e în regulă. Mâine e o pagină nouă, nu un termen limită.",
-    "Unele săptămâni cer mai mult de la noi decât altele. Ce contează e că ești tot aici.",
-    "O săptămână lentă nu e una pierdută. Revenirile mici contează la fel de mult ca cele mari.",
-    "Nu-i datorezi nicio explicație acestei săptămâni. Alege un singur lucru la care să te întorci și începe de acolo.",
-    "Consecvența nu înseamnă neîntrerupt — înseamnă la ce te întorci. Săptămâna asta, întoarce-te blând.",
-  ],
-  medium: [
-    "O săptămână stabilă — mai multe zile atinse decât ratate. Așa arată obiceiurile reale.",
-    "Ai fost prezent mai des decât nu, săptămâna asta. Merită observat.",
-    "Ritm bun săptămâna asta, chiar și cu câteva goluri. Golurile sunt normale; tiparul e ce contează.",
-    "Construiești ceva aici — nu perfect, dar persistent. Acesta e lucrul mai greu, dar mai bun.",
-    "O săptămână solidă, per ansamblu. Zilele care n-au mers conform planului nu le anulează pe cele care au mers.",
-  ],
-  high: [
-    "O săptămână puternică — majoritatea zilelor atinse, pe toate planurile. Bine construită.",
-    "Așa arată consecvența atunci când funcționează. Observă cum s-a simțit.",
-    "O săptămână plină, aproape de la un capăt la altul. Asta nu e noroc — e un tipar pe care l-ai creat.",
-    "Ai ținut linia toată săptămâna. Lasă asta să fie dovadă pentru săptămânile care se simt mai grele.",
-    "O săptămână discret excelentă. Nimic spectaculos — doar prezență, zi după zi.",
-  ],
-};
 
 const EXPLORE_QUERIES = {
   sleep:       { q:"sleep quality",              fbs:["sleep health adults","sleep duration outcomes"] },
@@ -1353,7 +1299,7 @@ function CircadianTimeline({ sun, geoError, entries, locationLabel, onRetryLocat
 }
 
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
-export default function Ritual({ profile, targets, entries, waterMl, cyclePhase, periodLogs, activeChallenges, startChallenge, checkInChallenge, uncheckInChallenge, abandonChallenge, ritualStreak, markChallengeDone, weekMeals, weekWaterLogs, completionDates, fastingStart, fastingEnd }) {
+export default function Ritual({ profile, targets, entries, waterMl, cyclePhase, periodLogs, activeChallenges, startChallenge, checkInChallenge, uncheckInChallenge, abandonChallenge, ritualStreak, markChallengeDone, weekMeals, weekWaterLogs, completionDates, fastingStart, fastingEnd, supplements, weekSuppLogs, ouraConnected, weekOuraLogs }) {
   const { t, language } = useLanguage();
   const dateLocale = language === "ro" ? "ro-RO" : "en-US";
   const [biohack,        setBiohack]        = useState(null);
@@ -1384,8 +1330,7 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
 
   const localCyclePhase = cyclePhase || ((profile?.sex==="female" && profile?.biologicalTrackingEnabled && profile?.biologicalContext==="cycle") ? getCyclePhase(periodLogs, profile?.cycleLength||28, language) : null);
 
-  // Weekly Biohack Report — Monday-reset consistency grid (food/water/challenge) + numbers + message.
-  // Structured as a `rows` array so a 4th row (movement/smartwatch) is just another entry, later.
+  // Longevity Score — Monday-reset week, same day/food/water/challenge groundwork as before.
   const weekKey = getWeekKey();
   const weekDateStrs = (() => {
     const now = new Date();
@@ -1418,13 +1363,8 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
   const challengeDateSet = new Set(completionDates || []);
   const challengeDone = weekDateStrs.map(ds => challengeDateSet.has(ds));
 
-  const weekRows = [
-    { key: "food",      label: t("ritual.week.food"),      data: foodDone },
-    { key: "water",     label: t("ritual.week.water"),     data: waterDone },
-    { key: "challenge", label: t("ritual.week.challenge"), data: challengeDone },
-  ];
-
   const todayIdx = Math.max(0, weekDateStrs.indexOf(localDateStr()));
+  const daysElapsed = todayIdx + 1;
   const weekRangeLabel = (() => {
     const monday = new Date(weekDateStrs[0] + "T00:00:00");
     const sunday = new Date(weekDateStrs[6] + "T00:00:00");
@@ -1434,10 +1374,91 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
   })();
 
   const challengeDaysThisWeek = challengeDone.filter(Boolean).length;
-  const weekTicks = foodDone.filter(Boolean).length + waterDone.filter(Boolean).length + challengeDaysThisWeek;
-  const weekRatio = weekTicks / 21;
-  const weekTier = weekRatio < 0.34 ? "low" : weekRatio < 0.67 ? "medium" : "high";
-  const weeklyMessage = pickWeeklyVariant(`weekly_report_msg_${weekTier}`, (language === "ro" ? WEEKLY_REPORT_MESSAGES_RO : WEEKLY_REPORT_MESSAGES)[weekTier], weekKey);
+
+  // Longevity Score — a per-day mix of whichever signals actually apply to this user, not a
+  // fixed set. Supplements only count for users who track any; the wearable trend only counts
+  // when connected and synced for that day. Nobody is penalized for a source they don't have —
+  // the daily denominator shrinks instead, so the score always reflects "of what I could track,
+  // how much did I meet" rather than "of everything possible."
+  const hasSupps = (supplements || []).length > 0;
+  const suppDone = weekDateStrs.map(ds => {
+    if (!hasSupps) return null;
+    const takenIds = new Set((weekSuppLogs || []).filter(l => l.taken_date === ds).map(l => l.supplement_id));
+    return supplements.every(s => takenIds.has(s.id));
+  });
+
+  const ouraByDate = {};
+  (weekOuraLogs || []).forEach(r => { (ouraByDate[r.date] ||= {})[r.data_type] = r.score; });
+  const hasOuraData = !!ouraConnected && (weekOuraLogs || []).length > 0;
+  const ouraDone = weekDateStrs.map(ds => {
+    if (!hasOuraData) return null;
+    const day = ouraByDate[ds];
+    const scores = day ? ["sleep", "activity", "readiness"].map(k => day[k]).filter(v => v != null) : [];
+    if (!scores.length) return null; // connected, but that day hasn't synced yet
+    return (scores.reduce((a, b) => a + b, 0) / scores.length) >= 70;
+  });
+
+  const dayScores = weekDateStrs.map((ds, i) => {
+    const signals = [foodDone[i], waterDone[i], challengeDone[i]];
+    if (hasSupps) signals.push(suppDone[i]);
+    if (hasOuraData) signals.push(ouraDone[i]);
+    const applicable = signals.filter(v => v !== null);
+    return applicable.length ? applicable.filter(Boolean).length / applicable.length : 0;
+  });
+  const longevityScore = Math.round((dayScores.slice(0, daysElapsed).reduce((a, b) => a + b, 0) / daysElapsed) * 100);
+
+  const accountAgeDays = profile?.createdAt ? Math.floor((Date.now() - new Date(profile.createdAt).getTime()) / 86400000) : 999;
+  const isNewLongevityUser = accountAgeDays < 7;
+
+  // Narrative — cached 1x/week (weekKey+language), same single-effect pattern used for the My
+  // Day greeting and evening reflection: cache check and the decision to fetch happen in the
+  // SAME effect, not a separate cache-read effect + trigger effect, which would race on every
+  // remount (Ritual fully unmounts/remounts on every tab switch) and refire the AI call every time.
+  const [longevityNarrative, setLongevityNarrative] = useState("");
+  const [longevityLoading,   setLongevityLoading]   = useState(false);
+  const [longevityDone,      setLongevityDone]      = useState(false);
+  useEffect(() => {
+    if (longevityDone || isNewLongevityUser || !profile) return;
+    setLongevityDone(true);
+    (async () => {
+      try {
+        const cached = localStorage.getItem("nora_longevity_narrative");
+        if (cached) {
+          const d = JSON.parse(cached);
+          if (d.weekKey === weekKey && d.language === language) { setLongevityNarrative(d.text); return; }
+        }
+      } catch {}
+      setLongevityLoading(true);
+      try {
+        const ouraNote = hasOuraData
+          ? `Wearable connected — ${ouraDone.slice(0, daysElapsed).filter(v => v === true).length}/${ouraDone.slice(0, daysElapsed).filter(v => v !== null).length || daysElapsed} tracked days showed a good sleep/activity/readiness trend.`
+          : ouraConnected ? "Wearable connected, but no data synced yet this week." : null;
+        const res = await fetch("/api/weekly-report", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            score: longevityScore,
+            daysElapsed,
+            foodDays: foodDone.slice(0, daysElapsed).filter(Boolean).length,
+            waterDays: waterDone.slice(0, daysElapsed).filter(Boolean).length,
+            challengeDays: challengeDaysThisWeek,
+            suppDays: hasSupps ? suppDone.slice(0, daysElapsed).filter(Boolean).length : 0,
+            suppTotal: hasSupps ? supplements.length : 0,
+            streak: ritualStreak,
+            ouraNote,
+            cyclePhaseLabel: localCyclePhase?.label || null,
+            language,
+          }),
+        });
+        const data = await res.json();
+        if (data.text) {
+          setLongevityNarrative(data.text);
+          try { localStorage.setItem("nora_longevity_narrative", JSON.stringify({ weekKey, language, text: data.text })); } catch {}
+        }
+      } catch {}
+      setLongevityLoading(false);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, isNewLongevityUser]);
   // Weekly goals now live inside the normal Daily Challenge pool (see CHALLENGES_GENERAL) — this
   // slot just reflects real Active Challenges, or disappears entirely when there are none.
   const activeSorted = [...activeChallenges].sort((a, b) => (b.startDate || "").localeCompare(a.startDate || ""));
@@ -1885,66 +1906,103 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
         </Collapsible>
       </div>
 
-      {/* ─── 4. WEEKLY BIOHACK REPORT ───────────────────────────────────────────── */}
+      {/* ─── 4. LONGEVITY SCORE ─────────────────────────────────────────────────── */}
       <div style={{ ...card, padding:"24px 22px 26px" }}>
         {/* Header — editorial, matches the Circadian Rhythm title language */}
         <p style={{ fontFamily:serif, fontSize:19, fontWeight:600, color:C.text, margin:"0 0 4px", lineHeight:1.2 }}>{t("ritual.weeklyReport")}</p>
-        <p style={{ fontSize:9, color:C.muted, margin:"0 0 26px", fontFamily:sans, textTransform:"uppercase", letterSpacing:"0.14em" }}>{weekRangeLabel}</p>
 
-        {/* Grid — dots, generous air, today marked with a thin gold underline (the card's one gold accent) */}
-        <div style={{ display:"flex", flexDirection:"column", gap:15, marginBottom:28 }}>
-          <div style={{ display:"flex", alignItems:"center" }}>
-            <div style={{ width:60 }}/>
-            {t("ritual.weekdayInitials").split(",").map((d, i) => (
-              <div key={i} style={{ flex:1, textAlign:"center", opacity: i > todayIdx ? 0.35 : 1 }}>
-                <span style={{ fontSize:9, color:C.muted, fontFamily:sans, letterSpacing:"0.03em" }}>{d}</span>
-                <div style={{ height:1.5, width:12, backgroundColor: i === todayIdx ? C.gold : "transparent", margin:"4px auto 0", borderRadius:1 }}/>
-              </div>
-            ))}
-          </div>
-          {weekRows.map(row => (
-            <div key={row.key} style={{ display:"flex", alignItems:"center" }}>
-              <div style={{ width:60, fontSize:9, color:C.muted, textTransform:"uppercase", letterSpacing:"0.06em", fontFamily:sans }}>{row.label}</div>
-              {row.data.map((done, i) => (
-                <div key={i} style={{ flex:1, display:"flex", justifyContent:"center", opacity: i > todayIdx ? 0.3 : 1 }}>
-                  <div style={{ width: done ? 7 : 4, height: done ? 7 : 4, borderRadius:"50%", backgroundColor: done ? C.green : C.border, border:"none", opacity: done ? 1 : 0.55 }}/>
+        {isNewLongevityUser ? (
+          // New account (<7 days): no partial/misleading score — a warm placeholder instead.
+          <p style={{ fontFamily:serif, fontSize:16, fontStyle:"italic", color:C.text, lineHeight:1.8, margin:"18px 0 4px" }}>
+            {t("ritual.longevity.newUser")}
+          </p>
+        ) : (
+          <>
+            <p style={{ fontSize:9, color:C.muted, margin:"0 0 22px", fontFamily:sans, textTransform:"uppercase", letterSpacing:"0.14em" }}>{weekRangeLabel}</p>
+
+            {/* Score — the hero number */}
+            <div style={{ display:"flex", alignItems:"baseline", justifyContent:"center", gap:4, marginBottom:16 }}>
+              <span style={{ fontFamily:serif, fontSize:46, fontWeight:600, color:C.text, lineHeight:1 }}>{longevityScore}</span>
+              <span style={{ fontSize:13, color:C.muted, fontFamily:sans }}>/100</span>
+            </div>
+
+            {/* Day initials — today marked with a thin gold underline (the card's one gold accent) */}
+            <div style={{ display:"flex", alignItems:"center", marginBottom:6 }}>
+              {t("ritual.weekdayInitials").split(",").map((d, i) => (
+                <div key={i} style={{ flex:1, textAlign:"center", opacity: i > todayIdx ? 0.35 : 1 }}>
+                  <span style={{ fontSize:9, color:C.muted, fontFamily:sans, letterSpacing:"0.03em" }}>{d}</span>
+                  <div style={{ height:1.5, width:12, backgroundColor: i === todayIdx ? C.gold : "transparent", margin:"4px auto 0", borderRadius:1 }}/>
                 </div>
               ))}
             </div>
-          ))}
-        </div>
 
-        {/* Numbers — typographic row, no card boxes, no fractions (what was done, not what's owed) */}
-        <div style={{ display:"flex", alignItems:"stretch", marginBottom:26 }}>
-          <div style={{ flex:1, textAlign:"center" }}>
-            <p style={{ fontFamily:serif, fontSize:27, fontWeight:600, color:C.text, margin:0, lineHeight:1 }}>{challengeDaysThisWeek}</p>
-            <p style={{ fontSize:9, color:C.muted, margin:"7px 0 0", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:sans }}>{t("ritual.daysShaped")}</p>
-          </div>
-          <div style={{ width:1, backgroundColor:C.border }}/>
-          <div style={{ flex:1, textAlign:"center" }}>
-            <p style={{ fontFamily:serif, fontSize:27, fontWeight:600, color:C.text, margin:0, lineHeight:1 }}>{ritualStreak}</p>
-            <p style={{ fontSize:9, color:C.muted, margin:"7px 0 0", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:sans }}>{t("ritual.dayStreakLabel")}</p>
-          </div>
-        </div>
-
-        {/* Active challenges — every one in progress, not just the latest; nothing shown if none */}
-        {activeSorted.length > 0 && (
-          <div style={{ margin:"-10px 0 26px", display:"flex", flexDirection:"column", gap:6 }}>
-            {activeSorted.map(rawAc => {
-              const ac = trChallenge(rawAc, language);
+            {/* Organic wave — one smooth line through the week's daily scores, replaces the old dot grid */}
+            {(() => {
+              const w = 280, h = 52, pad = 8;
+              const points = dayScores.map((s, i) => ({ x: (w / 6) * i, y: pad + (1 - s) * (h - pad * 2) }));
+              const solidPoints = points.slice(0, daysElapsed);
+              const restPoints = points.slice(Math.max(0, daysElapsed - 1));
               return (
-              <p key={ac.instanceId} style={{ fontSize:11, color:C.muted, margin:0, textAlign:"center", fontFamily:sans, lineHeight:1.6 }}>
-                <span style={{ color:C.text, fontWeight:600 }}>{ac.title}</span> — {t("ritual.dayOf").toLowerCase()} {ac.checkIns.length} {t("ritual.of")} {ac.targetDays}
-              </p>
+                <svg width="100%" viewBox={`0 0 ${w} ${h}`} style={{ display:"block", marginBottom:22 }} preserveAspectRatio="none">
+                  {restPoints.length > 1 && (
+                    <path d={smoothWavePath(restPoints)} fill="none" stroke={C.border} strokeWidth="2" strokeDasharray="1 5" strokeLinecap="round"/>
+                  )}
+                  <path d={smoothWavePath(solidPoints)} fill="none" stroke={C.green} strokeWidth="2.25" strokeLinecap="round"/>
+                  {points.map((p, i) => (
+                    <circle key={i} cx={p.x} cy={p.y} r={i === todayIdx ? 3.5 : 2.5}
+                      fill={i <= todayIdx ? C.green : C.card}
+                      stroke={i === todayIdx ? C.gold : C.green} strokeWidth={i === todayIdx ? 1.5 : (i <= todayIdx ? 0 : 1.5)}
+                      opacity={i <= todayIdx ? 1 : 0.45}/>
+                  ))}
+                </svg>
               );
-            })}
-          </div>
-        )}
+            })()}
 
-        {/* Nora's message — the emotional close */}
-        <p style={{ fontFamily:serif, fontSize:15, fontStyle:"italic", color:C.text, lineHeight:1.8, margin:0, borderLeft:`3px solid ${C.green}`, paddingLeft:16 }}>
-          {weeklyMessage}
-        </p>
+            {/* Numbers — typographic row, no card boxes, no fractions (what was done, not what's owed) */}
+            <div style={{ display:"flex", alignItems:"stretch", marginBottom:22 }}>
+              <div style={{ flex:1, textAlign:"center" }}>
+                <p style={{ fontFamily:serif, fontSize:27, fontWeight:600, color:C.text, margin:0, lineHeight:1 }}>{challengeDaysThisWeek}</p>
+                <p style={{ fontSize:9, color:C.muted, margin:"7px 0 0", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:sans }}>{t("ritual.daysShaped")}</p>
+              </div>
+              <div style={{ width:1, backgroundColor:C.border }}/>
+              <div style={{ flex:1, textAlign:"center" }}>
+                <p style={{ fontFamily:serif, fontSize:27, fontWeight:600, color:C.text, margin:0, lineHeight:1 }}>{ritualStreak}</p>
+                <p style={{ fontSize:9, color:C.muted, margin:"7px 0 0", textTransform:"uppercase", letterSpacing:"0.08em", fontFamily:sans }}>{t("ritual.dayStreakLabel")}</p>
+              </div>
+            </div>
+
+            {/* Active challenges — every one in progress, not just the latest; nothing shown if none */}
+            {activeSorted.length > 0 && (
+              <div style={{ margin:"-8px 0 22px", display:"flex", flexDirection:"column", gap:6 }}>
+                {activeSorted.map(rawAc => {
+                  const ac = trChallenge(rawAc, language);
+                  return (
+                  <p key={ac.instanceId} style={{ fontSize:11, color:C.muted, margin:0, textAlign:"center", fontFamily:sans, lineHeight:1.6 }}>
+                    <span style={{ color:C.text, fontWeight:600 }}>{ac.title}</span> — {t("ritual.dayOf").toLowerCase()} {ac.checkIns.length} {t("ritual.of")} {ac.targetDays}
+                  </p>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Nora's narrative — AI-generated, cached 1x/week; a quiet shimmer while it loads, never explanatory loading text */}
+            {longevityNarrative ? (
+              <p style={{ fontFamily:serif, fontSize:15, fontStyle:"italic", color:C.text, lineHeight:1.8, margin:0, borderLeft:`3px solid ${C.green}`, paddingLeft:16, animation:"fadeInContent 0.4s ease" }}>
+                {longevityNarrative}
+              </p>
+            ) : longevityLoading ? (
+              <div style={{ display:"flex", flexDirection:"column", gap:8, borderLeft:`3px solid ${C.border}`, paddingLeft:16 }}>
+                <div style={{ height:13, width:"92%", borderRadius:6, backgroundColor:C.border, animation:"shimmerPulse 1.3s ease-in-out infinite" }}/>
+                <div style={{ height:13, width:"75%", borderRadius:6, backgroundColor:C.border, animation:"shimmerPulse 1.3s ease-in-out infinite" }}/>
+              </div>
+            ) : null}
+
+            {/* No wearable connected — discrete, optional, never blocking */}
+            {!ouraConnected && (
+              <p style={{ fontSize:11, color:C.muted, margin:"16px 0 0", fontFamily:sans, lineHeight:1.6 }}>{t("ritual.longevity.noWearable")}</p>
+            )}
+          </>
+        )}
       </div>
 
       {/* ─── 5. CYCLE PHASE / HORMONAL RHYTHM — opt-in, mutually exclusive by sex ── */}

@@ -43,3 +43,13 @@ input::placeholder, textarea::placeholder {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+@keyframes shimmerPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.9; }
+}
+
+@keyframes fadeInContent {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
