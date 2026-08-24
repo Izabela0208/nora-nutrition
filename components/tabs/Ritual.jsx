@@ -1920,10 +1920,10 @@ export default function Ritual({ profile, targets, entries, waterMl, cyclePhase,
           <>
             <p style={{ fontSize:9, color:C.muted, margin:"0 0 22px", fontFamily:sans, textTransform:"uppercase", letterSpacing:"0.14em" }}>{weekRangeLabel}</p>
 
-            {/* Score — the hero number */}
-            <div style={{ display:"flex", alignItems:"baseline", justifyContent:"center", gap:4, marginBottom:16 }}>
-              <span style={{ fontFamily:serif, fontSize:46, fontWeight:600, color:C.text, lineHeight:1 }}>{longevityScore}</span>
-              <span style={{ fontSize:13, color:C.muted, fontFamily:sans }}>/100</span>
+            {/* Score — small and discrete; the narrative below carries the card */}
+            <div style={{ display:"flex", alignItems:"baseline", justifyContent:"center", gap:3, marginBottom:14 }}>
+              <span style={{ fontFamily:serif, fontSize:20, fontWeight:600, color:C.muted, lineHeight:1 }}>{longevityScore}</span>
+              <span style={{ fontSize:11, color:C.muted, fontFamily:sans }}>/100</span>
             </div>
 
             {/* Day initials — today marked with a thin gold underline (the card's one gold accent) */}
