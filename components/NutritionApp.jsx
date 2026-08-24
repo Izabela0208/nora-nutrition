@@ -58,6 +58,7 @@ const profileToRow = (p, t, userId) => {
 };
 
 const rowToProfile = (row) => ({
+  createdAt: row.created_at || null,
   name: row.name || "",
   age: row.age ?? "",
   sex: row.sex || "",
@@ -102,6 +103,23 @@ const weekRangeISO = () => {
   const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
   const end = new Date(monday.getTime() + 7 * 86400000);
   return { start: monday.toISOString(), end: end.toISOString() };
+};
+
+// Same Monday-reset week as weekRangeISO, but as plain "YYYY-MM-DD" strings for querying a
+// `date` column (supplement_logs.taken_date) rather than a timestamptz one.
+const weekDateStrForMonday = () => {
+  const now = new Date();
+  const dow = now.getDay();
+  const diffToMonday = dow === 0 ? 6 : dow - 1;
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
+  return localDateStr(monday);
+};
+const weekDateStrForSunday = () => {
+  const now = new Date();
+  const dow = now.getDay();
+  const diffToMonday = dow === 0 ? 6 : dow - 1;
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday);
+  return localDateStr(new Date(monday.getTime() + 6 * 86400000));
 };
 
 // entry (JS, camelCase, used by Eat/MyDay) ⇄ meals row (Supabase, snake_case)
@@ -172,6 +190,9 @@ export default function NutritionApp() {
   const [periodLogs, setPeriodLogs] = useState([]);
   const [weekMeals, setWeekMeals] = useState([]);
   const [weekWaterLogs, setWeekWaterLogs] = useState([]);
+  const [supplements, setSupplements] = useState([]);
+  const [weekSuppLogs, setWeekSuppLogs] = useState([]);
+  const [weekOuraLogs, setWeekOuraLogs] = useState([]);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [fastingEnabled, setFastingEnabled] = useState(false);
   const [fastingStart,   setFastingStart]   = useState("09:00");
@@ -227,6 +248,50 @@ export default function NutritionApp() {
         if(!cancelled) setWeekMeals(weekMealRows || []);
         const { data: weekWaterRows } = await supabase.from("water_logs").select("amount_ml, logged_at").eq("user_id", session.user.id).gte("logged_at", weekStart).lt("logged_at", weekEnd);
         if(!cancelled) setWeekWaterLogs(weekWaterRows || []);
+
+        // Supplements: previously nora_supps_list/nora_supps_taken in localStorage only (no
+        // user_id, no history, "taken" reset every day). One-time migration below runs only if
+        // the user has no Supabase supplements yet but has a local list — pushes it up once,
+        // then clears the old keys so this never runs again for them.
+        const weekMonday = weekDateStrForMonday(), weekSunday = weekDateStrForSunday();
+        let { data: suppRows } = await supabase.from("supplements").select("id, name").eq("user_id", session.user.id).is("archived_at", null).order("created_at");
+        if((suppRows || []).length === 0){
+          try {
+            const localList = JSON.parse(localStorage.getItem("nora_supps_list") || "[]");
+            if(localList.length > 0){
+              const localTakenRaw = localStorage.getItem("nora_supps_taken");
+              const localTaken = localTakenRaw ? JSON.parse(localTakenRaw) : null;
+              const takenTodayLocal = (localTaken && localTaken.date === localDateStr()) ? (localTaken.taken || {}) : {};
+              const migrated = [];
+              for(const s of localList){
+                const { data: inserted } = await supabase.from("supplements").insert({ user_id: session.user.id, name: s.name }).select("id, name").single();
+                if(inserted){
+                  migrated.push(inserted);
+                  if(takenTodayLocal[s.id]) await supabase.from("supplement_logs").insert({ user_id: session.user.id, supplement_id: inserted.id, taken_date: localDateStr() });
+                }
+              }
+              suppRows = migrated;
+              localStorage.removeItem("nora_supps_list");
+              localStorage.removeItem("nora_supps_taken");
+            }
+          } catch {}
+        }
+        if(!cancelled) setSupplements(suppRows || []);
+        const { data: suppLogRows } = await supabase.from("supplement_logs").select("supplement_id, taken_date").eq("user_id", session.user.id).gte("taken_date", weekMonday).lte("taken_date", weekSunday);
+        if(!cancelled) setWeekSuppLogs(suppLogRows || []);
+
+        // Oura: synced into oura_daily_data already (lib/oura.js), but no UI read it until now —
+        // used by the Longevity Score as an optional bonus signal, only meaningful when connected.
+        const { data: weekOuraRows } = await supabase.from("oura_daily_data").select("date, data_type, score").eq("user_id", session.user.id).gte("date", weekMonday).lte("date", weekSunday);
+        if(!cancelled) setWeekOuraLogs(weekOuraRows || []);
+
+        // Weight: profiles.weight_kg is a single current value, overwritten on every edit — no
+        // history. Seed one entry from the current value so there's at least one data point
+        // without requiring the user to re-save their profile; saveProfile() logs future changes.
+        if(row.weight_kg){
+          const { count } = await supabase.from("weight_logs").select("id", { count: "exact", head: true }).eq("user_id", session.user.id);
+          if(!count) await supabase.from("weight_logs").insert({ user_id: session.user.id, weight_kg: row.weight_kg });
+        }
 
         const { data: acRows } = await supabase.from("active_challenges").select("*").eq("user_id", session.user.id);
         const { data: ccRows } = await supabase.from("challenge_completions").select("challenge_id, completed_date").eq("user_id", session.user.id);
@@ -363,6 +428,30 @@ export default function NutritionApp() {
   const logWaterEntry = async (ml) => {
     if(!session?.user?.id) return;
     await supabase.from("water_logs").insert({ user_id: session.user.id, amount_ml: ml });
+  };
+
+  const addSupplement = async (name) => {
+    if(!session?.user?.id) return;
+    const { data } = await supabase.from("supplements").insert({ user_id: session.user.id, name }).select("id, name").single();
+    if(data) setSupplements(p => [...p, data]);
+  };
+  // Never a hard delete — sets archived_at so supplement_logs history (and the FK it holds)
+  // stays intact for the Longevity Score. Only removes it from the active list shown in Boost.
+  const archiveSupplement = async (id) => {
+    if(!session?.user?.id) return;
+    setSupplements(p => p.filter(s => s.id !== id));
+    await supabase.from("supplements").update({ archived_at: new Date().toISOString() }).eq("id", id).eq("user_id", session.user.id);
+  };
+  const toggleSupplementTaken = async (id, dateStr) => {
+    if(!session?.user?.id) return;
+    const already = weekSuppLogs.some(l => l.supplement_id === id && l.taken_date === dateStr);
+    if(already){
+      setWeekSuppLogs(p => p.filter(l => !(l.supplement_id === id && l.taken_date === dateStr)));
+      await supabase.from("supplement_logs").delete().eq("user_id", session.user.id).eq("supplement_id", id).eq("taken_date", dateStr);
+    } else {
+      setWeekSuppLogs(p => [...p, { supplement_id: id, taken_date: dateStr }]);
+      await supabase.from("supplement_logs").insert({ user_id: session.user.id, supplement_id: id, taken_date: dateStr });
+    }
   };
 
   const sendAskNoraMessage = async (role, content) => {
@@ -554,11 +643,15 @@ export default function NutritionApp() {
 
   const saveProfile = async (newProfile, newTargets) => {
     const t = newTargets !== undefined ? newTargets : targets;
+    const prevWeightKg = profile?.weightKg || null;
     setProfile(newProfile);
     setTargets(t);
     if(!session?.user?.id) return;
     const row = profileToRow(newProfile, t, session.user.id);
     await supabase.from("profiles").upsert(row);
+    if(row.weight_kg && row.weight_kg !== prevWeightKg){
+      await supabase.from("weight_logs").insert({ user_id: session.user.id, weight_kg: row.weight_kg });
+    }
   };
 
   const handleOnboardingComplete=(finalProfile,data)=>{
@@ -586,7 +679,7 @@ export default function NutritionApp() {
 
   const resetProfile=()=>{
     ["nora_today_water","nora_today_entries","nora_sleep","nora_history","nora_supps_list","nora_supps_taken","nora_boost_recs","nora_smoothie","nora_evening_reflection"].forEach(k=>{try{localStorage.removeItem(k);}catch{}});
-    setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setActiveChallenges([]);setCompletionDates([]);setPeriodLogs([]);setNotificationsEnabled(true);setFastingEnabled(false);setFastingStart("09:00");setFastingEnd("21:00");setFastingMode("recurring");setFastingExtendedStartAt(null);setFastingExtendedHours(null);setWaterMl(0);setHistory({});setPhase("onboarding");setLanguage("en");
+    setProfile(null);setTargets(null);setWelcomeMsg("");setEntries([]);setActiveChallenges([]);setCompletionDates([]);setPeriodLogs([]);setSupplements([]);setWeekSuppLogs([]);setWeekOuraLogs([]);setNotificationsEnabled(true);setFastingEnabled(false);setFastingStart("09:00");setFastingEnd("21:00");setFastingMode("recurring");setFastingExtendedStartAt(null);setFastingExtendedHours(null);setWaterMl(0);setHistory({});setPhase("onboarding");setLanguage("en");
   };
 
   // Cycle phase — only when the user opted in and chose "Menstruation" as context
@@ -660,8 +753,8 @@ export default function NutritionApp() {
   const tabContent = {
     myday:   <MyDay {...sharedProps} activeChallenges={activeChallenges} checkInChallenge={checkInChallenge} setActiveTab={setActiveTab} fastingEnabled={fastingEnabled} fastingStart={fastingStart} fastingEnd={fastingEnd} fastingMode={fastingMode} fastingExtendedStartAt={fastingExtendedStartAt} fastingExtendedHours={fastingExtendedHours} lookupCommunityBarcode={lookupCommunityBarcode} saveCommunityBarcode={saveCommunityBarcode}/>,
     eat:     <Eat     profile={profile} targets={targets} entries={entries} logMeal={logMeal} cyclePhase={cyclePhase}/>,
-    ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} periodLogs={periodLogs} activeChallenges={activeChallenges} startChallenge={startChallenge} checkInChallenge={checkInChallenge} uncheckInChallenge={uncheckInChallenge} abandonChallenge={abandonChallenge} ritualStreak={ritualStreak} markChallengeDone={markChallengeDone} weekMeals={weekMeals} weekWaterLogs={weekWaterLogs} completionDates={completionDates} fastingStart={fastingStart} fastingEnd={fastingEnd}/>,
-    boost:   <Boost   profile={profile} targets={targets} entries={entries} cyclePhase={cyclePhase}/>,
+    ritual:  <Ritual  profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} periodLogs={periodLogs} activeChallenges={activeChallenges} startChallenge={startChallenge} checkInChallenge={checkInChallenge} uncheckInChallenge={uncheckInChallenge} abandonChallenge={abandonChallenge} ritualStreak={ritualStreak} markChallengeDone={markChallengeDone} weekMeals={weekMeals} weekWaterLogs={weekWaterLogs} completionDates={completionDates} fastingStart={fastingStart} fastingEnd={fastingEnd} supplements={supplements} weekSuppLogs={weekSuppLogs} ouraConnected={ouraConnected} weekOuraLogs={weekOuraLogs}/>,
+    boost:   <Boost   profile={profile} targets={targets} entries={entries} cyclePhase={cyclePhase} supplements={supplements} weekSuppLogs={weekSuppLogs} addSupplement={addSupplement} archiveSupplement={archiveSupplement} toggleSupplementTaken={toggleSupplementTaken}/>,
     asknora: <AskNora profile={profile} targets={targets} entries={entries} waterMl={waterMl} cyclePhase={cyclePhase} activeChallenges={activeChallenges} messages={askNoraMessages} sendMessage={sendAskNoraMessage} clearMessages={clearAskNoraMessages}/>,
     me:      <Me      profile={profile} saveProfile={saveProfile} targets={targets} resetProfile={resetProfile} signOut={signOut} notificationsEnabled={notificationsEnabled} saveNotifications={saveNotifications} deleteAccount={deleteAccount} fastingEnabled={fastingEnabled} fastingStart={fastingStart} fastingEnd={fastingEnd} saveFastingWindow={saveFastingWindow} fastingMode={fastingMode} fastingExtendedStartAt={fastingExtendedStartAt} fastingExtendedHours={fastingExtendedHours} saveExtendedFast={saveExtendedFast} stopExtendedFast={stopExtendedFast} periodLogs={periodLogs} cyclePhase={cyclePhase} logPeriodStart={logPeriodStart} logPeriodEnd={logPeriodEnd} deletePeriodLog={deletePeriodLog} ouraConnected={ouraConnected} ouraConnectedAt={ouraConnectedAt} connectOura={connectOura} disconnectOura={disconnectOura}/>,
   };

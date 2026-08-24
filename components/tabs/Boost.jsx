@@ -4,8 +4,6 @@ import { PlusIcon, CheckIcon, ChevronIcon } from "../NoraIcons";
 import AtmosphereBackground from "../AtmosphereBackground";
 import { useLanguage, LANGUAGE_NAMES } from "../../lib/i18n/LanguageContext";
 
-const SUPP_KEY  = "nora_supps_list";
-const TAKEN_KEY = "nora_supps_taken";
 const RECS_KEY  = "nora_boost_recs";
 
 const PM_PREFIX = "nora_pm_";
@@ -57,11 +55,14 @@ function capRecs(parsed, ironCaution) {
   };
 }
 
-export default function Boost({ profile, targets, entries, cyclePhase }) {
+export default function Boost({ profile, targets, entries, cyclePhase, supplements: supps, weekSuppLogs, addSupplement, archiveSupplement, toggleSupplementTaken }) {
   const { t, language } = useLanguage();
   const ironCaution = t("boost.ironCaution");
-  const [supps,       setSupps]       = useState([]);
-  const [taken,       setTaken]       = useState({});
+  // "taken today" is derived from weekSuppLogs (Supabase), not local state — supplements now
+  // live in NutritionApp.jsx (see addSupplement/archiveSupplement/toggleSupplementTaken), so
+  // Boost no longer owns this data, just renders it.
+  const todayStr = localDateStr();
+  const taken = Object.fromEntries((weekSuppLogs || []).filter(l => l.taken_date === todayStr).map(l => [l.supplement_id, true]));
   const [newSupp,     setNewSupp]     = useState("");
   const [adding,      setAdding]      = useState(false);
   const [recs,        setRecs]        = useState(null);
@@ -86,13 +87,8 @@ export default function Boost({ profile, targets, entries, cyclePhase }) {
   const totalFat   = foodEntries.reduce((s, e) => s + (e.fat_g     || 0), 0);
   const totalFibre = foodEntries.reduce((s, e) => s + (e.fiber_g   || 0), 0);
 
-  // Load supplements + taken + restore cached recs
+  // Restore cached recs — supplements/taken load in NutritionApp.jsx now (Supabase)
   useEffect(() => {
-    try { const s = localStorage.getItem(SUPP_KEY);  setSupps(s ? JSON.parse(s) : []); } catch {}
-    try {
-      const t = localStorage.getItem(TAKEN_KEY);
-      if (t) { const p = JSON.parse(t); if (p.date === localDateStr()) setTaken(p.taken || {}); }
-    } catch {}
     try {
       const r = localStorage.getItem(RECS_KEY);
       // Compares against profile?.language (prop, resolved synchronously) rather than the
@@ -103,13 +99,10 @@ export default function Boost({ profile, targets, entries, cyclePhase }) {
     } catch {}
   }, []);
 
-  const saveSupps  = list => { setSupps(list); try { localStorage.setItem(SUPP_KEY, JSON.stringify(list)); } catch {} };
-  const saveTaken  = t    => { setTaken(t);   try { localStorage.setItem(TAKEN_KEY, JSON.stringify({ date: localDateStr(), taken: t })); } catch {} };
-
-  const addSupp    = () => { const n = newSupp.trim(); if (!n) return; saveSupps([...supps, { id: Date.now(), name: n }]); setNewSupp(""); setAdding(false); };
-  const deleteSupp = id  => saveSupps(supps.filter(s => s.id !== id));
-  const toggleTaken= id  => saveTaken({ ...taken, [id]: !taken[id] });
-  const addToList  = name => { if (supps.some(s => s.name.toLowerCase() === name.toLowerCase())) return; saveSupps([...supps, { id: Date.now(), name }]); };
+  const addSupp    = () => { const n = newSupp.trim(); if (!n) return; addSupplement(n); setNewSupp(""); setAdding(false); };
+  const deleteSupp = id  => archiveSupplement(id);
+  const toggleTaken= id  => toggleSupplementTaken(id, todayStr);
+  const addToList  = name => { if (supps.some(s => s.name.toLowerCase() === name.toLowerCase())) return; addSupplement(name); };
 
   const loadRecs = async () => {
     setRecsLoading(true);
